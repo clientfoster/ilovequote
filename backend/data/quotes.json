@@ -1,0 +1,350 @@
+[
+  {
+    "id": "quote_standard_semixon",
+    "shareToken": "semixon-standard-2024",
+    "quoteNumber": "Q-2024-001",
+    "date": "2024-05-16",
+    "expiryDate": "2024-05-30",
+    "status": "Completed",
+    "businessDetails": {
+      "companyName": "Semixon Technologies",
+      "tagline": "We build digital solutions that help businesses grow.",
+      "email": "hello@semixon.com",
+      "phone": "+91 98765 43210",
+      "website": "https://www.semixon.com",
+      "logo": "",
+      "address": "123, Digital Tower",
+      "city": "Kozhikode",
+      "state": "Kerala",
+      "zipCode": "673006",
+      "country": "India",
+      "taxType": "GSTIN",
+      "taxId": "32ABCDE1234F1Z5",
+      "socialLinks": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/company/semixon"
+        },
+        {
+          "platform": "Instagram",
+          "url": "https://www.instagram.com/semixon"
+        }
+      ],
+      "businessSlug": "semixon-technologies"
+    },
+    "clientDetails": {
+      "name": "Swanish Healthcare Pvt. Ltd.",
+      "contactPerson": "",
+      "email": "info@swanishhealthcare.com",
+      "phone": "+91 98462 68462",
+      "website": "",
+      "address": "Kozhikode, Kerala, India\n673006, India",
+      "taxIdType": "GSTIN",
+      "taxId": "",
+      "poNumber": ""
+    },
+    "items": [
+      {
+        "id": "item-1",
+        "description": "Website Design & Development",
+        "quantity": 1,
+        "unitPrice": 25000,
+        "total": 26550,
+        "discountType": "Percentage",
+        "discountValue": 10,
+        "gstRate": 18,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 25000,
+        "discountAmount": 2500,
+        "taxableAmount": 22500,
+        "taxAmount": 4050
+      },
+      {
+        "id": "item-2",
+        "description": "Domain & Hosting",
+        "quantity": 1,
+        "unitPrice": 2500,
+        "total": 2950,
+        "discountType": "None",
+        "discountValue": 0,
+        "gstRate": 18,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 2500,
+        "discountAmount": 0,
+        "taxableAmount": 2500,
+        "taxAmount": 450
+      },
+      {
+        "id": "item-3",
+        "description": "SEO Setup",
+        "quantity": 1,
+        "unitPrice": 8000,
+        "total": 8968,
+        "discountType": "Percentage",
+        "discountValue": 5,
+        "gstRate": 18,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 8000,
+        "discountAmount": 400,
+        "taxableAmount": 7600,
+        "taxAmount": 1368
+      }
+    ],
+    "subtotal": 35500,
+    "taxRate": 18,
+    "taxAmount": 5868,
+    "totalAmount": 34468,
+    "terms": "This quote is valid for 30 days from the date above.\n50% advance payment is required to start the project.\nPayment once made is non-refundable.",
+    "quotationMeta": {
+      "quotationNumber": "Q-2024-001",
+      "clientName": "Swanish Healthcare Pvt. Ltd.",
+      "clientEmail": "info@swanishhealthcare.com",
+      "businessName": "Semixon Technologies",
+      "businessEmail": "hello@semixon.com",
+      "date": "2024-05-16",
+      "validUntil": "2024-05-30",
+      "currency": "INR"
+    },
+    "createdAt": "2026-06-13T08:45:19.771Z",
+    "updatedAt": "2026-06-13T08:45:19.773Z",
+    "source": "wizard"
+  },
+  {
+    "id": "quote_no_tax_semixon",
+    "shareToken": "semixon-no-tax-2024",
+    "quoteNumber": "Q-2024-002",
+    "date": "2024-05-16",
+    "expiryDate": "2024-05-30",
+    "status": "Completed",
+    "businessDetails": {
+      "companyName": "Semixon Technologies",
+      "tagline": "We build digital solutions that help businesses grow.",
+      "email": "hello@semixon.com",
+      "phone": "+91 98765 43210",
+      "website": "https://www.semixon.com",
+      "logo": "",
+      "address": "123, Digital Tower",
+      "city": "Kozhikode",
+      "state": "Kerala",
+      "zipCode": "673006",
+      "country": "India",
+      "taxType": "GSTIN",
+      "taxId": "32ABCDE1234F1Z5",
+      "socialLinks": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/company/semixon"
+        },
+        {
+          "platform": "Instagram",
+          "url": "https://www.instagram.com/semixon"
+        }
+      ],
+      "businessSlug": "semixon-technologies"
+    },
+    "clientDetails": {
+      "name": "Swanish Healthcare Pvt. Ltd.",
+      "contactPerson": "",
+      "email": "info@swanishhealthcare.com",
+      "phone": "+91 98462 68462",
+      "website": "",
+      "address": "Kozhikode, Kerala, India\n673006, India",
+      "taxIdType": "GSTIN",
+      "taxId": "",
+      "poNumber": ""
+    },
+    "items": [
+      {
+        "id": "item-1",
+        "description": "Website Design & Development",
+        "quantity": 1,
+        "unitPrice": 25000,
+        "total": 25000,
+        "discountType": "None",
+        "discountValue": 0,
+        "gstRate": 0,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 25000,
+        "discountAmount": 0,
+        "taxableAmount": 25000,
+        "taxAmount": 0
+      },
+      {
+        "id": "item-2",
+        "description": "Domain & Hosting (1 Year)",
+        "quantity": 1,
+        "unitPrice": 2500,
+        "total": 2500,
+        "discountType": "None",
+        "discountValue": 0,
+        "gstRate": 0,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 2500,
+        "discountAmount": 0,
+        "taxableAmount": 2500,
+        "taxAmount": 0
+      },
+      {
+        "id": "item-3",
+        "description": "SEO Setup",
+        "quantity": 1,
+        "unitPrice": 8000,
+        "total": 8000,
+        "discountType": "None",
+        "discountValue": 0,
+        "gstRate": 0,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 8000,
+        "discountAmount": 0,
+        "taxableAmount": 8000,
+        "taxAmount": 0
+      }
+    ],
+    "subtotal": 35500,
+    "taxRate": 0,
+    "taxAmount": 0,
+    "totalAmount": 35500,
+    "terms": "This quote is valid for 30 days from the date above.\n50% advance payment is required to start the project.\nPayment once made is non-refundable.",
+    "quotationMeta": {
+      "quotationNumber": "Q-2024-002",
+      "clientName": "Swanish Healthcare Pvt. Ltd.",
+      "clientEmail": "info@swanishhealthcare.com",
+      "businessName": "Semixon Technologies",
+      "businessEmail": "hello@semixon.com",
+      "date": "2024-05-16",
+      "validUntil": "2024-05-30",
+      "currency": "INR"
+    },
+    "createdAt": "2026-06-13T08:45:19.773Z",
+    "updatedAt": "2026-06-13T08:45:19.773Z",
+    "source": "wizard"
+  },
+  {
+    "id": "quote_no_discount_semixon",
+    "shareToken": "semixon-no-discount-2024",
+    "quoteNumber": "Q-2024-003",
+    "date": "2024-05-16",
+    "expiryDate": "2024-05-30",
+    "status": "Completed",
+    "businessDetails": {
+      "companyName": "Semixon Technologies",
+      "tagline": "We build digital solutions that help businesses grow.",
+      "email": "hello@semixon.com",
+      "phone": "+91 98765 43210",
+      "website": "https://www.semixon.com",
+      "logo": "",
+      "address": "123, Digital Tower",
+      "city": "Kozhikode",
+      "state": "Kerala",
+      "zipCode": "673006",
+      "country": "India",
+      "taxType": "GSTIN",
+      "taxId": "32ABCDE1234F1Z5",
+      "socialLinks": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/company/semixon"
+        },
+        {
+          "platform": "Instagram",
+          "url": "https://www.instagram.com/semixon"
+        }
+      ],
+      "businessSlug": "semixon-technologies"
+    },
+    "clientDetails": {
+      "name": "Swanish Healthcare Pvt. Ltd.",
+      "contactPerson": "",
+      "email": "info@swanishhealthcare.com",
+      "phone": "+91 98462 68462",
+      "website": "",
+      "address": "Kozhikode, Kerala, India\n673006, India",
+      "taxIdType": "GSTIN",
+      "taxId": "",
+      "poNumber": ""
+    },
+    "items": [
+      {
+        "id": "item-1",
+        "description": "Website Design & Development",
+        "quantity": 1,
+        "unitPrice": 25000,
+        "total": 29500,
+        "discountType": "None",
+        "discountValue": 0,
+        "gstRate": 18,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 25000,
+        "discountAmount": 0,
+        "taxableAmount": 25000,
+        "taxAmount": 4500
+      },
+      {
+        "id": "item-2",
+        "description": "Domain & Hosting (1 Year)",
+        "quantity": 1,
+        "unitPrice": 2500,
+        "total": 2950,
+        "discountType": "None",
+        "discountValue": 0,
+        "gstRate": 18,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 2500,
+        "discountAmount": 0,
+        "taxableAmount": 2500,
+        "taxAmount": 450
+      },
+      {
+        "id": "item-3",
+        "description": "SEO Setup",
+        "quantity": 1,
+        "unitPrice": 8000,
+        "total": 9440,
+        "discountType": "None",
+        "discountValue": 0,
+        "gstRate": 18,
+        "complimentary": false,
+        "taxInclusive": false,
+        "icon": "FileText",
+        "lineBase": 8000,
+        "discountAmount": 0,
+        "taxableAmount": 8000,
+        "taxAmount": 1440
+      }
+    ],
+    "subtotal": 35500,
+    "taxRate": 18,
+    "taxAmount": 6390,
+    "totalAmount": 41890,
+    "terms": "This quote is valid for 30 days from the date above.\n50% advance payment is required to start the project.\nPayment once made is non-refundable.",
+    "quotationMeta": {
+      "quotationNumber": "Q-2024-003",
+      "clientName": "Swanish Healthcare Pvt. Ltd.",
+      "clientEmail": "info@swanishhealthcare.com",
+      "businessName": "Semixon Technologies",
+      "businessEmail": "hello@semixon.com",
+      "date": "2024-05-16",
+      "validUntil": "2024-05-30",
+      "currency": "INR"
+    },
+    "createdAt": "2026-06-13T08:45:19.774Z",
+    "updatedAt": "2026-06-13T08:45:19.774Z",
+    "source": "wizard"
+  }
+]
