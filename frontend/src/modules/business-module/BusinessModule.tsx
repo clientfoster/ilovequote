@@ -34,15 +34,15 @@ export default function BusinessStep({
   showFooterNavigation = true,
 }: BusinessStepProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-8 items-start">
-      <div className="lg:col-span-2 xl:col-span-7 space-y-6">
-        <div className="bg-slate-50 border border-slate-200/50 rounded-2xl p-4 flex items-center gap-3">
+    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-4 md:gap-8 items-start">
+      <div className="lg:col-span-2 xl:col-span-7 space-y-4 md:space-y-6">
+        <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-4 flex items-center gap-3">
           <div className="w-8 h-8 rounded-full bg-blue-50 text-[#1D4ED8] flex items-center justify-center shrink-0">
             <Building className="w-4 h-4" />
           </div>
           <div>
             <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Step 1: Your Business Profile</h3>
-            <p className="text-[10px] text-slate-450 font-medium">
+            <p className="text-[10px] leading-4 text-slate-450 font-medium">
               Verify your brand header details, logo, company address and tax identity flags.
             </p>
           </div>
@@ -61,7 +61,7 @@ export default function BusinessStep({
             <button
               type="button"
               onClick={onNext}
-              className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-lg font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-sm"
+              className="inline-flex min-h-[44px] items-center gap-2 px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-lg font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-sm"
             >
               <span>Next: Add Client</span>
               <ChevronRight size={16} />
@@ -71,7 +71,7 @@ export default function BusinessStep({
       </div>
 
       <div className="lg:col-span-1 xl:col-span-5 lg:sticky lg:top-6 space-y-4">
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs flex flex-col">
+        <div className="bg-white rounded-xl border border-slate-200/80 p-4 md:p-5 shadow-xs flex flex-col">
           <div className="flex items-center justify-between mb-3.5 pl-1 flex-wrap gap-2">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
               Live Preview Board
@@ -90,7 +90,7 @@ export default function BusinessStep({
           <div className="space-y-4">
             <BusinessPreviewCard formData={businessValues} />
             {(clientValues.companyName || clientValues.billingAddress || clientValues.email) && (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-xs font-semibold text-slate-700 space-y-1.5">
+              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-xs font-semibold text-slate-700 space-y-1.5 break-words">
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Billing Target Client:</span>
                 <p className="text-slate-900 font-extrabold">{clientValues.companyName}</p>
                 {clientValues.billingAddress && (
@@ -106,7 +106,7 @@ export default function BusinessStep({
           </div>
         </div>
 
-        <div className="bg-white border border-slate-150 rounded-2xl p-4 shadow-xs space-y-3">
+        <div className="bg-white border border-slate-150 rounded-xl p-4 shadow-xs space-y-3">
           <div className="flex items-center gap-1.5 pb-2 border-b border-slate-100">
             <Sparkles className="w-4 h-4 text-[#1D4ED8]" />
             <h3 className="text-[10px] font-black text-slate-450 uppercase tracking-wider">
@@ -125,7 +125,7 @@ export default function BusinessStep({
                 key={item.name}
                 type="button"
                 onClick={() => onScrollToSection(item.section)}
-                className="p-2.5 text-left border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-all font-bold text-[10px] text-slate-700 flex items-center gap-1.5 group cursor-pointer"
+                className="min-h-[44px] p-2.5 text-left border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-all font-bold text-[10px] text-slate-700 flex items-center gap-1.5 group cursor-pointer"
               >
                 <span className="text-slate-400 group-hover:text-[#1D4ED8] transition-colors">{item.icon}</span>
                 <span className="truncate">{item.name}</span>

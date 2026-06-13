@@ -41,22 +41,22 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
 
   return (
     <div 
-      className="w-full bg-white border border-[#E5E7EB] rounded-[12px] shadow-lg overflow-hidden flex flex-col relative transition-all duration-300"
+      className="w-full bg-white border border-[#E5E7EB] rounded-xl shadow-lg overflow-hidden flex flex-col relative transition-all duration-300"
       id="live-invoice-profile-card"
     >
       {/* Decorative Brand Accent Line matching #1D4ED8 */}
       <div className="h-2 w-full bg-gradient-to-r from-[#1D4ED8] to-indigo-600 shrink-0" />
 
       {/* Internal Padding Body */}
-      <div className="p-6 md:p-8 space-y-6">
+      <div className="p-4 md:p-8 space-y-5 md:space-y-6">
         
         {/* TOP TEAM SECTION : Logo and Name */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5 pb-5 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
           
           <div className="flex items-center gap-4">
             {/* Logo frame */}
             {logo ? (
-              <div className="w-16 h-16 bg-white rounded-[12px] border border-slate-200/80 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
+            <div className="w-14 h-14 bg-white rounded-xl border border-slate-200/80 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
                 <img 
                   src={logo} 
                   alt="Business Logo" 
@@ -65,7 +65,7 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
                 />
               </div>
             ) : (
-              <div className="w-16 h-16 bg-slate-50 border border-slate-200 rounded-[12px] flex items-center justify-center text-[#1D4ED8] shrink-0 font-extrabold text-2xl shadow-xs">
+            <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center text-[#1D4ED8] shrink-0 font-extrabold text-2xl shadow-xs">
                 {companyName.charAt(0).toUpperCase() || <Building2 className="w-8 h-8 opacity-80" />}
               </div>
             )}
@@ -106,7 +106,7 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
         </div>
 
         {/* CORE INFORMATION SPLIT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pt-2">
           
           {/* Column A: Contact coordinates */}
           <div className="space-y-3.5">
@@ -150,7 +150,7 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
         {/* BOTTOM ACCENT: Tax and regulatory specifications */}
         {taxId && (
           <div 
-            className="mt-4 p-4 bg-slate-50 border border-slate-200/70 rounded-[12px] flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
+            className="mt-4 p-4 bg-slate-50 border border-slate-200/70 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
             id="preview-tax-indicator"
           >
             <div className="flex items-center gap-2.5">

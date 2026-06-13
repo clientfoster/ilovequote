@@ -98,12 +98,12 @@ export default function ClientForm({
   };
 
   return (
-    <form onSubmit={onSubmit} className="space-y-6" id="client-wizard-form">
+    <form onSubmit={onSubmit} className="space-y-5 md:space-y-6" id="client-wizard-form">
       <div
-        className="bg-white rounded-2xl border border-[#E5E7EB] shadow-xs overflow-hidden"
+        className="bg-white rounded-xl border border-[#E5E7EB] shadow-xs overflow-hidden"
         id="section-client-details"
       >
-        <div className="px-6 pt-6 pb-5 border-b border-slate-100">
+        <div className="px-4 pt-4 pb-4 md:px-6 md:pt-6 md:pb-5 border-b border-slate-100">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 rounded-xl bg-blue-50 text-[#2563EB] flex items-center justify-center shrink-0">
               <User size={20} />
@@ -115,8 +115,8 @@ export default function ClientForm({
           </div>
         </div>
 
-        <div className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="p-4 md:p-6 space-y-5 md:space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div className="md:col-span-2 space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Client / Company Name <span className="text-red-500">*</span>
@@ -130,7 +130,7 @@ export default function ClientForm({
                   placeholder="e.g. Microsoft, ABC Solutions"
                   id="inp-companyName"
                   {...register('companyName', { required: true })}
-                  className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all ${
+                  className={`w-full pl-10 pr-4 py-3 min-h-[44px] bg-white border rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all ${
                     errors.companyName ? 'border-red-400 ring-2 ring-red-50' : 'border-[#E5E7EB] focus:border-[#2563EB]'
                   }`}
                 />
@@ -150,7 +150,7 @@ export default function ClientForm({
                   placeholder="e.g. John Smith"
                   id="inp-contactPerson"
                   {...register('contactPerson')}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
+                  className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
                 />
               </div>
             </div>
@@ -168,7 +168,7 @@ export default function ClientForm({
                   placeholder="e.g. john@company.com"
                   id="inp-email"
                   {...register('email')}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
+                  className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
                 />
               </div>
             </div>
@@ -186,7 +186,7 @@ export default function ClientForm({
                   placeholder="+91 98765 43210"
                   id="inp-phone"
                   {...register('phone')}
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
+                  className="w-full pl-12 pr-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
                 />
               </div>
             </div>
@@ -204,14 +204,14 @@ export default function ClientForm({
                   placeholder="e.g. www.company.com"
                   id="inp-website"
                   {...register('website')}
-                  className="w-full pl-10 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
+                  className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
                 />
               </div>
             </div>
           </div>
         </div>
 
-        <div className="border-t border-slate-100 px-6 py-5" id="section-additional-details">
+        <div className="border-t border-slate-100 px-4 py-4 md:px-6 md:py-5" id="section-additional-details">
           <div className="flex items-center gap-2 mb-4">
             <div className="h-9 w-9 rounded-xl bg-violet-50 text-violet-600 flex items-center justify-center shrink-0">
               <FileText size={18} />
@@ -222,7 +222,7 @@ export default function ClientForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-1.5">
               <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
                 Tax ID Type
@@ -230,7 +230,7 @@ export default function ClientForm({
               <select
                 id="inp-taxIdType"
                 {...register('taxIdType')}
-                className="w-full px-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
+                className="w-full px-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
               >
                 <option value="GSTIN">GSTIN</option>
                 <option value="VAT">VAT</option>
@@ -248,7 +248,7 @@ export default function ClientForm({
                 placeholder="e.g. 27ABCDE1234F1Z5"
                 id="inp-taxId"
                 {...register('taxId')}
-                className="w-full px-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
+                className="w-full px-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
               />
             </div>
 
@@ -261,7 +261,7 @@ export default function ClientForm({
                 placeholder="e.g. PO12345"
                 id="inp-poNumber"
                 {...register('poNumber')}
-                className="w-full px-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
+                className="w-full px-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
               />
             </div>
 
@@ -274,13 +274,13 @@ export default function ClientForm({
                 placeholder="Kozhikode, Kerala, India 673006"
                 id="inp-billingAddress"
                 {...register('billingAddress')}
-                className="w-full px-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all leading-relaxed resize-none"
+                className="w-full px-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all leading-relaxed resize-none"
               />
             </div>
           </div>
         </div>
 
-        <div className="border-t border-slate-100 px-6 py-5" id="section-client-logo">
+        <div className="border-t border-slate-100 px-4 py-4 md:px-6 md:py-5" id="section-client-logo">
           <div className="flex items-center gap-2 mb-4">
             <div className="h-9 w-9 rounded-xl bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">
               <ImageIcon size={18} />
@@ -291,13 +291,13 @@ export default function ClientForm({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-4 items-start">
+          <div className="grid grid-cols-1 sm:grid-cols-[1fr_auto] gap-3 md:gap-4 items-start">
             <div
               onDragOver={handleDragOver}
               onDragLeave={handleDragLeave}
               onDrop={handleDrop}
               onClick={triggerFileSelect}
-              className={`min-h-24 rounded-xl border-2 border-dashed p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
+              className={`min-h-24 rounded-xl border-2 border-dashed p-4 md:p-5 flex flex-col items-center justify-center text-center cursor-pointer transition-all ${
                 isDragging
                   ? 'border-[#2563EB] bg-blue-50/50'
                   : logoUrl
@@ -340,7 +340,7 @@ export default function ClientForm({
                         e.stopPropagation();
                         triggerFileSelect();
                       }}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-[#E5E7EB] bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 transition-all"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-lg border border-[#E5E7EB] bg-white text-slate-700 text-xs font-bold hover:bg-slate-50 transition-all"
                     >
                       <RefreshCw size={13} />
                       Change Logo
@@ -348,7 +348,7 @@ export default function ClientForm({
                     <button
                       type="button"
                       onClick={removeLogo}
-                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg border border-red-100 bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-all"
+                    className="inline-flex min-h-[44px] items-center gap-1.5 px-4 py-2 rounded-lg border border-red-100 bg-red-50 text-red-600 text-xs font-bold hover:bg-red-100 transition-all"
                     >
                       <X size={13} />
                       Remove
@@ -385,7 +385,7 @@ export default function ClientForm({
                   setValue('taxIdType', 'GSTIN');
                   onLogoChange(null);
                 }}
-                className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50 transition-all"
+                className="inline-flex min-h-[44px] items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-200 text-slate-500 text-xs font-bold hover:bg-slate-50 transition-all"
                 title="Reset client image"
               >
                 <X size={13} />

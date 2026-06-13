@@ -16,7 +16,7 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
   ];
 
   return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 md:px-6 md:py-5 shadow-sm mb-6" id="wizard-container">
+    <div className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 md:px-6 md:py-5 shadow-sm mb-6 overflow-hidden" id="wizard-container">
       <div className="hidden md:flex items-center gap-3 xl:gap-5" id="wizard-desktop">
         {steps.map((step, index) => {
           const isCompleted = step.status === 'completed';
@@ -78,29 +78,18 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
         })}
       </div>
 
-      <div className="flex items-center justify-between gap-4 md:hidden" id="wizard-mobile">
-        <div className="flex min-w-0 flex-col">
+      <div className="md:hidden space-y-2" id="wizard-mobile">
+        <div className="flex items-center justify-between gap-3">
           <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#2563EB]">
-            Step {currentStep} of {steps.length}
+            Step {currentStep}/{steps.length}
           </span>
-          <h3 className="mt-1 truncate text-base font-bold text-slate-900">
-            {steps[currentStep - 1]?.name || 'Business'}
-          </h3>
         </div>
 
-        <div className="flex items-center gap-2">
-          {steps.map((step) => {
-            const isActive = step.id === currentStep;
-            const isDone = step.id < currentStep;
-            return (
-              <span
-                key={step.id}
-                className={`h-2 rounded-full transition-all duration-300 ${
-                  isActive ? 'w-8 bg-[#2563EB]' : isDone ? 'w-3 bg-emerald-500' : 'w-2 bg-slate-200'
-                }`}
-              />
-            );
-          })}
+        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
+          <div
+            className="h-full rounded-full bg-[#2563EB] transition-all duration-300"
+            style={{ width: `${(currentStep / steps.length) * 100}%` }}
+          />
         </div>
       </div>
     </div>

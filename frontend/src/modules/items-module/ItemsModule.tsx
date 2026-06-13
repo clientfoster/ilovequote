@@ -85,10 +85,10 @@ export default function ItemsWorkspace({
   };
 
   return (
-    <div className="w-full space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
-        <div className="lg:col-span-2 space-y-5">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5.5 shadow-xs">
+    <div className="w-full space-y-5 md:space-y-6 animate-fade-in">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
+        <div className="lg:col-span-2 space-y-4 md:space-y-5">
+          <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5.5 shadow-xs">
             <h1 className="text-lg font-extrabold text-slate-800 leading-tight font-display">
               Items
             </h1>
@@ -99,7 +99,7 @@ export default function ItemsWorkspace({
             <button
               type="button"
               onClick={handleAddNewItem}
-              className="mt-4.5 w-full py-3.5 bg-blue-600 hover:bg-blue-700 hover:shadow-lg text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer text-[12.5px] shadow-sm"
+              className="mt-4.5 w-full min-h-[44px] py-3.5 bg-blue-600 hover:bg-blue-700 hover:shadow-lg text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer text-[12.5px] shadow-sm"
             >
               <Plus size={15} />
               Add Item
@@ -133,7 +133,7 @@ export default function ItemsWorkspace({
           </div>
         </div>
 
-        <div className="lg:col-span-1 space-y-5 sticky top-20">
+        <div className="lg:col-span-1 space-y-4 md:space-y-5 sticky top-20">
           <BottomSummary
             items={items}
             currencySymbol={meta.currency}
@@ -144,7 +144,7 @@ export default function ItemsWorkspace({
           <ShortcutPanel onTriggerShortcut={handleShortcutTrigger} />
 
           {showFooterNavigation && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-4.5 shadow-xs space-y-3">
+            <div className="bg-white rounded-xl border border-slate-200 p-4 shadow-xs space-y-3">
               <span className="text-[9.5px] font-bold text-slate-400 uppercase tracking-widest pl-1">
                 Step Navigation
               </span>
@@ -152,7 +152,7 @@ export default function ItemsWorkspace({
                 <button
                   type="button"
                   onClick={onBack}
-                  className="inline-flex h-11.5 items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-bold px-4 rounded-xl transition-all cursor-pointer shadow-tiny"
+                  className="inline-flex min-h-[44px] h-11.5 items-center justify-center gap-1.5 bg-white border border-slate-200 hover:bg-slate-50 text-slate-650 text-xs font-bold px-4 rounded-xl transition-all cursor-pointer shadow-tiny"
                 >
                   <ChevronLeft size={15} />
                   Back
@@ -167,7 +167,7 @@ export default function ItemsWorkspace({
                     }
                     onNext();
                   }}
-                  className="inline-flex h-11.5 items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4.5 rounded-xl shadow-md shadow-blue-100 transition-all active:scale-[0.98] cursor-pointer"
+                  className="inline-flex min-h-[44px] h-11.5 items-center justify-center gap-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold px-4.5 rounded-xl shadow-md shadow-blue-100 transition-all active:scale-[0.98] cursor-pointer"
                 >
                   <span>Next Preview</span>
                   <ChevronRight size={15} />

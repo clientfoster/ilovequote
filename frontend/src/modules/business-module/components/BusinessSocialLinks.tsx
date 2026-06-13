@@ -30,7 +30,7 @@ export default function BusinessSocialLinks({ control, register, errors }: Busin
 
   return (
     <div className="space-y-4" id="social-links-section">
-      <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+      <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <Share2 className="w-5 h-5 text-[#1D4ED8]" />
           <h3 className="text-base font-bold text-slate-800 font-sans">Business Social Links</h3>
@@ -39,7 +39,7 @@ export default function BusinessSocialLinks({ control, register, errors }: Busin
           type="button"
           id="btn-add-social"
           onClick={handleAddSocial}
-          className="inline-flex items-center gap-1 text-[#1D4ED8] hover:text-blue-800 font-extrabold text-sm transition-colors cursor-pointer"
+          className="inline-flex min-h-[44px] items-center gap-1 rounded-lg px-2 text-[#1D4ED8] hover:text-blue-800 font-extrabold text-sm transition-colors cursor-pointer"
         >
           <Plus className="w-4 h-4 stroke-[2.5]" />
           + Add More
@@ -60,7 +60,7 @@ export default function BusinessSocialLinks({ control, register, errors }: Busin
                   <select
                     id={`social-platform-select-${index}`}
                     {...register(`socialLinks.${index}.platform` as const)}
-                    className="w-full bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-lg px-2.5 py-1.5 text-xs font-bold transition-all outline-hidden appearance-none cursor-pointer"
+                    className="w-full bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-lg px-2.5 py-3 min-h-[44px] text-xs font-bold transition-all outline-hidden appearance-none cursor-pointer"
                   >
                     {PREDEFINED_PLATFORMS.map((plat) => (
                       <option key={plat} value={plat}>
@@ -91,7 +91,7 @@ export default function BusinessSocialLinks({ control, register, errors }: Busin
                       return true;
                     }
                   })}
-                  className="w-full bg-white hover:bg-slate-50/50 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-lg pl-3 pr-16 py-1.5 text-xs font-medium transition-all outline-hidden placeholder:text-slate-400"
+                  className="w-full bg-white hover:bg-slate-50/50 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-lg pl-3 pr-16 py-3 min-h-[44px] text-xs font-medium transition-all outline-hidden placeholder:text-slate-400"
                 />
                 
                 {/* Visual verification badge or helper */}
@@ -106,7 +106,7 @@ export default function BusinessSocialLinks({ control, register, errors }: Busin
                   type="button"
                   id={`btn-remove-social-${index}`}
                   onClick={() => remove(index)}
-                  className="w-8 h-8 rounded-lg flex items-center justify-center bg-white border border-slate-250 hover:bg-red-50 text-slate-400 hover:text-red-700 transition-colors"
+                  className="inline-flex min-h-[44px] min-w-[44px] rounded-lg items-center justify-center bg-white border border-slate-250 hover:bg-red-50 text-slate-400 hover:text-red-700 transition-colors"
                   title="Remove this social link"
                 >
                   <Trash2 className="w-4 h-4 stroke-[1.8]" />

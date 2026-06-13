@@ -1,1 +1,16 @@
 @import "tailwindcss";
+@media (max-width: 767px) {
+  .quote-wizard-shell {
+    overflow-x: hidden;
+  }
+
+  .quote-wizard-shell button {
+    min-height: 44px;
+  }
+
+  .quote-wizard-shell input,
+  .quote-wizard-shell select,
+  .quote-wizard-shell textarea {
+    max-width: 100%;
+  }
+}

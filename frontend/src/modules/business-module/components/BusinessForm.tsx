@@ -49,10 +49,10 @@ export default function BusinessForm({ register, control, errors, watch, setValu
   };
 
   return (
-    <div className="space-y-8" id="business-form-wrapper">
+    <div className="space-y-5 md:space-y-8" id="business-form-wrapper">
       
       {/* SECTION 1: Logo & Basic Information */}
-      <div className="bg-white rounded-2xl border border-slate-150 p-6 md:p-8 space-y-6 shadow-xs" id="form-basic-section">
+      <div className="bg-white rounded-xl border border-slate-150 p-4 md:p-8 space-y-5 shadow-xs" id="form-basic-section">
         <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
           <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1D4ED8] flex items-center justify-center">
             <Building className="w-5 h-5 stroke-[2]" />
@@ -67,7 +67,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
         <BusinessLogoUpload value={logoValue} onChange={handleLogoChange} />
 
         {/* Main Inputs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5 pt-2">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
           {/* Company Name */}
           <div className="md:col-span-2 space-y-1.5" id="company-name-group">
             <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1">
@@ -81,7 +81,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
                 {...register('companyName', { 
                   required: 'Business name is required to build state directories.' 
                 })}
-                className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-850 border rounded-xl pl-4 pr-10 py-3 text-sm font-semibold transition-all outline-hidden ${
+                className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-850 border rounded-xl pl-4 pr-10 py-3 min-h-[44px] text-sm font-semibold transition-all outline-hidden ${
                   errors.companyName 
                     ? 'border-red-500 focus:border-red-550 focus:ring-4 focus:ring-red-50' 
                     : 'border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105'
@@ -133,7 +133,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
                   message: 'Must enter a valid email format, e.g., name@domain.com',
                 },
               })}
-              className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border rounded-xl px-4 py-2.5 text-sm font-semibold transition-all outline-hidden ${
+              className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border rounded-xl px-4 py-3 min-h-[44px] text-sm font-semibold transition-all outline-hidden ${
                 errors.email 
                   ? 'border-red-500 focus:border-red-550 focus:ring-4 focus:ring-red-50' 
                   : 'border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105'
@@ -160,7 +160,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
               id="biz-phone"
               placeholder="+1 (555) 000-0000"
               {...register('phone')}
-              className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105 rounded-xl px-4 py-2.5 text-sm font-semibold transition-all outline-hidden"
+              className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105 rounded-xl px-4 py-3 min-h-[44px] text-sm font-semibold transition-all outline-hidden"
             />
           </div>
 
@@ -187,7 +187,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
                   return true;
                 }
               })}
-              className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border rounded-xl px-4 py-2.5 text-sm font-semibold transition-all outline-hidden ${
+              className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border rounded-xl px-4 py-3 min-h-[44px] text-sm font-semibold transition-all outline-hidden ${
                 errors.website 
                   ? 'border-red-500 focus:border-red-550 focus:ring-4 focus:ring-red-50' 
                   : 'border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105'
@@ -215,8 +215,8 @@ export default function BusinessForm({ register, control, errors, watch, setValu
                 id="biz-slug"
                 readOnly
                 {...register('businessSlug')}
-                className="flex-1 bg-slate-50/80 text-slate-800 font-mono text-xs font-bold border border-slate-250 rounded-r-xl px-3 py-2.5 outline-hidden select-none"
-              />
+              className="flex-1 bg-slate-50/80 text-slate-800 font-mono text-xs font-bold border border-slate-250 rounded-r-xl px-3 py-3 min-h-[44px] outline-hidden select-none"
+            />
               <span className="ml-2.5 text-slate-400" title="This slug auto-updates as you type the business name!">
                 <Lock className="w-3.5 h-3.5" />
               </span>
@@ -227,17 +227,17 @@ export default function BusinessForm({ register, control, errors, watch, setValu
       </div>
 
       {/* SECTION 2: Business Address Info */}
-      <div className="bg-white rounded-2xl border border-slate-150 p-6 md:p-8 shadow-xs">
+      <div className="bg-white rounded-xl border border-slate-150 p-4 md:p-8 shadow-xs">
         <BusinessAddress register={register} errors={errors} />
       </div>
 
       {/* SECTION 3: Tax Information */}
-      <div className="bg-white rounded-2xl border border-slate-150 p-6 md:p-8 shadow-xs">
+      <div className="bg-white rounded-xl border border-slate-150 p-4 md:p-8 shadow-xs">
         <BusinessTaxInfo register={register} errors={errors} watch={watch} />
       </div>
 
       {/* SECTION 4: Social Accounts with unlimited capabilities */}
-      <div className="bg-white rounded-2xl border border-slate-150 p-6 md:p-8 shadow-xs">
+      <div className="bg-white rounded-xl border border-slate-150 p-4 md:p-8 shadow-xs">
         <BusinessSocialLinks control={control} register={register} errors={errors} />
       </div>
 
