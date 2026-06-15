@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Image, MapPin, Share2, Sparkles, Smartphone } from 'lucide-react';
+import { Building, ChevronRight, Image, MapPin, Share2, Sparkles, Smartphone } from 'lucide-react';
 import { Control, FieldErrors, UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
 import { BusinessFormValues, ClientFormValues } from '../../types';
 import BusinessForm from './components/BusinessForm';
