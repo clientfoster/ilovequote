@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, Plus, FileText, Trash2 } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, Plus, FileText, Trash2 } from 'lucide-react';
 import { ItemQuoteItem, ItemQuotationMeta } from '../../types';
 import ItemCard from './components/ItemCard';
 import ItemModal from './components/ItemModal';
@@ -113,8 +113,6 @@ export default function ItemsWorkspace({
     };
   };
 
-  const totals = calculateQuotationTotals(items);
-
   return (
     <div className="w-full space-y-5 md:space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4 md:gap-6 items-start">
@@ -162,7 +160,7 @@ export default function ItemsWorkspace({
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="hidden lg:grid grid-cols-[minmax(0,1.6fr)_90px_130px_120px_110px_120px_42px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="hidden lg:grid grid-cols-[minmax(220px,1.2fr)_74px_116px_112px_110px_120px_42px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
               <div>Item / Description</div>
               <div className="text-center">Qty</div>
               <div>Unit Price</div>
@@ -182,18 +180,18 @@ export default function ItemsWorkspace({
                   </p>
                 </div>
               ) : (
-                items.map((item, index) => {
+                items.map((item) => {
                   const row = getRowBreakdown(item);
                   return (
-                    <div key={item.id} className="px-4 py-4 lg:py-5">
-                      <div className="hidden lg:grid grid-cols-[minmax(0,1.6fr)_90px_130px_120px_110px_120px_42px] gap-3 items-center">
+                    <div key={item.id} className="px-4 py-4 lg:py-6">
+                      <div className="hidden lg:grid grid-cols-[minmax(220px,1.2fr)_74px_116px_112px_110px_120px_42px] gap-3 items-center min-h-[96px]">
                         <div className="flex items-start gap-3 min-w-0">
-                          <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border bg-indigo-50 border-indigo-100 text-indigo-600`}>
+                          <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border bg-indigo-50 border-indigo-100 text-indigo-600">
                             <QuoteIcon name={item.icon || 'Laptop'} size={22} />
                           </div>
                           <div className="min-w-0">
-                            <h4 className="text-sm font-bold text-slate-900 leading-tight">{item.name}</h4>
-                            <p className="mt-1 text-xs leading-relaxed text-slate-500 break-words">
+                            <h4 className="max-w-[165px] text-sm font-bold text-slate-900 leading-tight">{item.name}</h4>
+                            <p className="mt-1 max-w-[175px] text-xs leading-relaxed text-slate-500 break-words">
                               {item.description || 'No description provided.'}
                             </p>
                           </div>
@@ -206,16 +204,16 @@ export default function ItemsWorkspace({
                           <span className="ml-2 text-xs text-slate-500">{item.unit || 'Nos'}</span>
                         </div>
 
-                        <div className="text-sm font-mono font-bold text-slate-900">
+                        <div className="text-sm font-bold text-slate-900 font-mono">
                           {formatCurrency(item.price, meta.currency)}
                         </div>
 
                         <div className="space-y-0.5">
                           {item.discountType === 'None' || row.discount === 0 ? (
-                            <div className="text-xs font-mono text-slate-500">-</div>
+                            <div className="text-xs font-mono text-slate-400">-</div>
                           ) : (
                             <>
-                              <div className="inline-flex items-center rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-bold text-emerald-700">
+                              <div className="inline-flex items-center rounded-lg bg-emerald-50 px-2.5 py-1 text-[11px] font-bold text-emerald-700">
                                 {item.discountType === 'Percentage' ? `${item.discountValue}%` : formatCurrency(item.discountValue, meta.currency)}
                               </div>
                               <div className="text-xs font-mono text-emerald-600">- {formatCurrency(row.discount, meta.currency)}</div>
@@ -224,12 +222,13 @@ export default function ItemsWorkspace({
                         </div>
 
                         <div>
-                          <div className="inline-flex min-h-[44px] items-center rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
+                          <div className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800">
                             {item.gstRate}% GST
+                            <ChevronDown size={14} className="text-slate-400" />
                           </div>
                         </div>
 
-                        <div className="text-sm font-mono font-bold text-slate-900">
+                        <div className="text-sm font-bold text-slate-900 font-mono">
                           {formatCurrency(row.amount, meta.currency)}
                         </div>
 
