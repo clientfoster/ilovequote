@@ -29,7 +29,10 @@ export default function BusinessTaxInfo({ register, errors, watch }: BusinessTax
     <div className="space-y-4" id="tax-section">
       <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
         <Percent className="w-5 h-5 text-[#1D4ED8]" />
-        <h3 className="text-base font-bold text-slate-800">Tax Information</h3>
+        <div>
+          <h3 className="text-base font-bold text-slate-800">Tax Information <span className="text-slate-400 font-medium">(Optional)</span></h3>
+          <p className="text-xs text-slate-400 font-medium">Add your tax details if applicable</p>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
@@ -42,7 +45,7 @@ export default function BusinessTaxInfo({ register, errors, watch }: BusinessTax
             <select
               id="tax-id-type"
               {...register('taxType')}
-            className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-all outline-hidden appearance-none cursor-pointer"
+              className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-all outline-hidden appearance-none cursor-pointer"
             >
               <option value="GSTIN">GSTIN</option>
               <option value="VAT">VAT</option>

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useRef, useState } from 'react';
 import { Upload, X, RefreshCw, Sparkles, Image as ImageIcon } from 'lucide-react';
 
 interface BusinessLogoUploadProps {
@@ -14,14 +14,12 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
   const processFile = (file: File) => {
     setError(null);
 
-    // Validate type
     const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
     if (!validTypes.includes(file.type)) {
       setError('Please upload a PNG or JPG/JPEG image.');
       return;
     }
 
-    // Validate size (2MB)
     const maxSize = 2 * 1024 * 1024;
     if (file.size > maxSize) {
       setError('Image must be less than 2MB.');
@@ -85,21 +83,20 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
       <div className="flex flex-wrap items-center justify-between gap-2">
         <label className="text-[13px] font-bold text-slate-700 tracking-wider uppercase flex items-center gap-1.5">
           <ImageIcon className="w-4 h-4 text-slate-400" />
-          Business Logo
+          Business Logo <span className="text-slate-400">(Optional)</span>
         </label>
-        <span className="text-xs text-slate-400 font-medium font-mono">PNG, JPG • Max 2MB</span>
+        <span className="text-xs text-slate-400 font-medium font-mono">PNG, JPG (Recommended: 200x200px)</span>
       </div>
 
       {value ? (
-        /* Image Preview State */
-        <div 
+        <div
           className="border border-slate-100 bg-slate-50/50 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4 relative transition-all"
           id="logo-preview-card"
         >
           <div className="relative w-24 h-24 bg-white rounded-xl shadow-xs border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 group">
-            <img 
-              src={value} 
-              alt="Uploaded Business Logo" 
+            <img
+              src={value}
+              alt="Uploaded Business Logo"
               className="max-w-full max-h-full object-contain p-2"
               referrerPolicy="no-referrer"
             />
@@ -113,8 +110,10 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
               Logo uploaded successfully
               <Sparkles className="w-3.5 h-3.5 text-[#1D4ED8] fill-[#1D4ED8]/20" />
             </h4>
-            <p className="text-xs text-slate-400 font-medium">Your logo has been embedded inside the layout system and live-syncs with your invoice preview.</p>
-            
+            <p className="text-xs text-slate-400 font-medium">
+              Your logo has been embedded inside the layout system and live-syncs with your invoice preview.
+            </p>
+
             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 pt-1">
               <button
                 type="button"
@@ -138,36 +137,30 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
           </div>
         </div>
       ) : (
-        /* Empty Upload State */
         <div
           id="logo-dropzone"
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={triggerInput}
-          className={`border-2 border-dashed rounded-xl p-4 sm:p-6 text-center cursor-pointer transition-all duration-200 ${
+          className={`border-2 border-dashed rounded-xl p-4 sm:p-5 cursor-pointer transition-all duration-200 ${
             isDragging
               ? 'border-[#1D4ED8] bg-blue-50/30'
               : 'border-slate-200 hover:border-[#1D4ED8] hover:bg-slate-50/50'
           }`}
         >
-          <div className="flex flex-col items-center justify-center space-y-2.5">
-            <div className="w-10 h-10 rounded-full bg-blue-50 flex items-center justify-center text-[#1D4ED8]">
+          <div className="flex items-center gap-3 text-left">
+            <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-[#1D4ED8] shrink-0">
               <Upload className="w-5 h-5 stroke-[2.2]" />
             </div>
-            <div className="space-y-1">
-              <p className="text-sm font-bold text-slate-700">
-                Click to upload or drag & drop
-              </p>
-              <p className="text-xs text-slate-400 font-medium">
-                Support for JPG and PNG images up to 2MB in size
-              </p>
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-800">Upload Logo</p>
+              <p className="text-[11px] leading-4 text-slate-400 font-medium">PNG, JPG (Recommended: 200x200px)</p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Hidden Native File Input */}
       <input
         type="file"
         ref={fileInputRef}
@@ -178,7 +171,6 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
         data-testid="logo-file-input"
       />
 
-      {/* Upload Error Alert */}
       {error && (
         <div className="text-xs text-red-650 bg-red-50 border border-red-105/50 rounded-lg p-2.5 font-medium flex items-center gap-2">
           <div className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -188,4 +180,3 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
     </div>
   );
 }
-

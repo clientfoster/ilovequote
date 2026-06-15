@@ -26,18 +26,21 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
     <div className="space-y-4" id="address-section">
       <div className="flex items-center gap-2 pb-1 border-b border-slate-100">
         <MapPin className="w-5 h-5 text-[#1D4ED8]" />
-        <h3 className="text-base font-bold text-slate-800">Business Address</h3>
+        <div>
+          <h3 className="text-base font-bold text-slate-800">Business Address <span className="text-slate-400 font-medium">(Optional)</span></h3>
+          <p className="text-xs text-slate-400 font-medium">Add your complete business address</p>
+        </div>
       </div>
 
       {/* Street/Full Address */}
       <div className="space-y-1.5" id="address-group">
         <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-          Address
+          Address <span className="font-medium normal-case text-slate-400">(Optional)</span>
         </label>
         <input
           type="text"
           id="address-street"
-          placeholder="E.g., 204 Pine Street, Suite 100"
+          placeholder="e.g. 123, Digital Tower, Kerala, India"
           {...register('address')}
           className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
         />
@@ -47,12 +50,12 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
         {/* City */}
         <div className="space-y-1.5" id="city-group">
           <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            City
+            City <span className="font-medium normal-case text-slate-400">(Optional)</span>
           </label>
           <input
             type="text"
             id="address-city"
-            placeholder="E.g., Mumbai or San Francisco"
+            placeholder="e.g. Kozhikode"
             {...register('city')}
             className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
           />
@@ -61,12 +64,12 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
         {/* State */}
         <div className="space-y-1.5" id="state-group">
           <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            State / Region
+            State <span className="font-medium normal-case text-slate-400">(Optional)</span>
           </label>
           <input
             type="text"
             id="address-state"
-            placeholder="E.g., Maharashtra or California"
+            placeholder="e.g. Kerala"
             {...register('state')}
             className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
           />
@@ -77,12 +80,12 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
         {/* Zip/Pin Code */}
         <div className="space-y-1.5" id="zip-group">
           <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            PIN / ZIP Code
+            PIN / ZIP Code <span className="font-medium normal-case text-slate-400">(Optional)</span>
           </label>
           <input
             type="text"
             id="address-zip"
-            placeholder="E.g., 400001 or 94103"
+            placeholder="e.g. 673006"
             {...register('zipCode')}
             className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
           />
@@ -91,7 +94,7 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
         {/* Country */}
         <div className="space-y-1.5" id="country-group">
           <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            Country
+            Country <span className="font-medium normal-case text-slate-400">(Optional)</span>
           </label>
           <div className="relative">
             <select
@@ -99,7 +102,7 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
               {...register('country')}
               className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-all outline-hidden appearance-none cursor-pointer"
             >
-              <option value="">Select country...</option>
+              <option value="">Select Country</option>
               {COUNTRIES.map((country) => (
                 <option key={country.code} value={country.name}>
                   {country.name}
