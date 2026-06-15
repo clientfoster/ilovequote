@@ -84,26 +84,44 @@ export default function ItemsWorkspace({
     setIsModalOpen(true);
   };
 
+  const handleAddSection = () => {
+    onTriggerToast('Sections are managed automatically in this demo workspace.');
+  };
+
   return (
     <div className="w-full space-y-5 md:space-y-6 animate-fade-in">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 items-start">
         <div className="lg:col-span-2 space-y-4 md:space-y-5">
           <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5.5 shadow-xs">
-            <h1 className="text-lg font-extrabold text-slate-800 leading-tight font-display">
-              Items
-            </h1>
-            <p className="text-xs text-slate-400 mt-1.5 leading-relaxed font-medium">
-              Add products or services to your quote. All changes auto-calculate below.
-            </p>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+              <div className="space-y-1">
+                <h1 className="text-lg font-extrabold text-slate-800 leading-tight">
+                  Items
+                </h1>
+                <p className="text-xs text-slate-400 leading-relaxed font-medium">
+                  Add products or services to your quote.
+                </p>
+              </div>
 
-            <button
-              type="button"
-              onClick={handleAddNewItem}
-              className="mt-4.5 w-full min-h-[44px] py-3.5 bg-blue-600 hover:bg-blue-700 hover:shadow-lg text-white font-bold rounded-xl flex items-center justify-center gap-2 transition-all cursor-pointer text-[12.5px] shadow-sm"
-            >
-              <Plus size={15} />
-              Add Item
-            </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleAddSection}
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
+                >
+                  <Plus size={15} />
+                  Add Section
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAddNewItem}
+                  className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-4 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
+                >
+                  <Plus size={15} />
+                  Add Item
+                </button>
+              </div>
+            </div>
           </div>
 
           <div className="space-y-4">

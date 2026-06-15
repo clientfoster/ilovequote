@@ -78,18 +78,55 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
         })}
       </div>
 
-      <div className="md:hidden space-y-2" id="wizard-mobile">
-        <div className="flex items-center justify-between gap-3">
-          <span className="text-[11px] font-bold uppercase tracking-[0.24em] text-[#2563EB]">
-            Step {currentStep}/{steps.length}
-          </span>
+      <div className="md:hidden space-y-3" id="wizard-mobile">
+        <div className="relative px-1 pt-1">
+          <div className="absolute left-4 right-4 top-[18px] h-px bg-slate-200" />
+          <div className="absolute left-4 top-[18px] h-px bg-[#2563EB] transition-all duration-300" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }} />
+
+          <div className="relative flex items-start justify-between">
+            {steps.map((step) => {
+              const isCompleted = currentStep > step.id;
+              const isCurrent = currentStep === step.id;
+              const isUpcoming = currentStep < step.id;
+
+              return (
+                <button
+                  key={step.id}
+                  type="button"
+                  onClick={() => onStepClick?.(step.id)}
+                  className="flex flex-col items-center gap-2 min-w-0 flex-1"
+                >
+                  <span
+                    className={`flex h-8 w-8 items-center justify-center rounded-full border text-[12px] font-bold transition-all ${
+                      isCompleted
+                        ? 'border-[#2563EB] bg-[#2563EB] text-white'
+                        : isCurrent
+                          ? 'border-[#2563EB] bg-[#2563EB] text-white shadow-md shadow-blue-100'
+                          : 'border-slate-200 bg-white text-slate-400'
+                    }`}
+                  >
+                    {isCompleted ? <Check className="h-4 w-4 stroke-[2.5]" /> : step.id}
+                  </span>
+                  <span
+                    className={`text-[11px] font-semibold leading-tight ${
+                      isCurrent ? 'text-slate-900' : isUpcoming ? 'text-slate-400' : 'text-[#2563EB]'
+                    }`}
+                  >
+                    {step.name}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <div className="h-2 w-full overflow-hidden rounded-full bg-slate-100">
-          <div
-            className="h-full rounded-full bg-[#2563EB] transition-all duration-300"
-            style={{ width: `${(currentStep / steps.length) * 100}%` }}
-          />
+        <div className="flex items-center justify-between px-1">
+          <span className="text-[10px] font-bold uppercase tracking-[0.22em] text-[#2563EB]">
+            Step {currentStep} of {steps.length}
+          </span>
+          <span className="text-[10px] font-medium text-slate-400">
+            {steps[currentStep - 1]?.label}
+          </span>
         </div>
       </div>
     </div>

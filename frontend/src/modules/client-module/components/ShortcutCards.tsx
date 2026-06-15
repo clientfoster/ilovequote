@@ -12,7 +12,7 @@ export default function ShortcutCards() {
     { label: 'Client / Company Details', targetId: 'section-client-details', icon: Building2 },
     { label: 'Upload Client Logo', targetId: 'section-client-logo', icon: ImageIcon },
     { label: 'Billing Address', targetId: 'section-billing-address', icon: MapPin },
-    { label: 'Tax ID & PO Number', targetId: 'section-additional-details', icon: Coins },
+    { label: 'Additional Details', targetId: 'section-additional-details', icon: Coins },
     { label: 'Live Preview', targetId: 'section-live-preview', icon: Eye },
   ];
 
@@ -33,7 +33,7 @@ export default function ShortcutCards() {
         What You Can Add
       </h3>
       <p className="text-xs text-slate-400 font-semibold mb-4 leading-normal">
-        Quick shortcuts to navigate directly to sections
+        Add client/company details, logo, billing address and more
       </p>
 
       <div className="space-y-2.5">
