@@ -34,24 +34,24 @@ export default function ItemCard({ item, currencySymbol, onEdit, onDelete }: Ite
   return (
     <div
       id={`quote-item-card-${item.id}`}
-      className="rounded-2xl border border-slate-200 bg-white p-4.5 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md"
+      className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm transition-all duration-200 hover:border-slate-300 hover:shadow-md"
     >
       <div className="flex items-start gap-4">
-        <div className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-xl border ${style.bg} ${style.text}`}>
+        <div className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border ${style.bg} ${style.text}`}>
           <QuoteIcon name={item.icon || 'Laptop'} size={22} />
         </div>
 
         <div className="flex-1 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div>
-              <h4 className="text-sm font-bold text-slate-800 leading-tight">{item.name}</h4>
-              <p className="mt-1 text-xs text-slate-500 leading-relaxed break-words max-w-md">
+              <h4 className="max-w-[170px] text-sm font-bold text-slate-900 leading-tight">{item.name}</h4>
+              <p className="mt-1 text-xs text-slate-500 leading-relaxed break-words max-w-[190px]">
                 {item.description || 'No description provided.'}
               </p>
             </div>
 
             <div className="flex items-center gap-1 shrink-0">
-              <span className="text-sm font-black text-slate-805 font-mono">
+              <span className="text-sm font-bold text-slate-900 font-mono">
                 {item.complimentary ? 'Free' : formatCurrency(item.price, currencySymbol)}
                 {item.quantity > 1 && (
                   <span className="text-[10px] text-slate-400 font-sans font-medium block text-right mt-0.5">

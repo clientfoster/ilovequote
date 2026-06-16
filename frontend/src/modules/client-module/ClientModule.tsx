@@ -35,21 +35,21 @@ export default function ClientStep({
   showFooterNavigation = true,
 }: ClientStepProps) {
   return (
-    <div className="space-y-8 animate-fade-in">
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50/50 rounded-2xl p-5 border border-blue-100/50 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+    <div className="space-y-6 animate-fade-in">
+      <div className="rounded-2xl border border-blue-100 bg-blue-50/60 px-4 py-4 sm:px-5">
         <div className="space-y-1">
-          <h3 className="text-base font-bold text-slate-800 tracking-tight flex items-center gap-1.5">
-            <Sparkles className="text-[#2563EB] shrink-0" size={16} />
+          <h3 className="flex items-center gap-2 text-base font-bold tracking-tight text-slate-800">
+            <Sparkles className="shrink-0 text-[#2563EB]" size={16} />
             Client Information
           </h3>
-          <p className="text-xs text-slate-500 font-semibold leading-relaxed">
-            Add the recipient details that will appear in the quotation.
+          <p className="text-xs font-semibold leading-relaxed text-slate-500">
+            Add the recipient details that will appear in the quote.
           </p>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-6 xl:col-span-5">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.76fr)_320px] xl:gap-8 items-start">
+        <div>
           <ClientForm
             register={register}
             errors={errors}
@@ -60,52 +60,40 @@ export default function ClientStep({
           />
         </div>
 
-        <div className="lg:col-span-3 xl:col-span-4 lg:sticky lg:top-24">
+        <div className="lg:sticky lg:top-24">
           <LivePreview formData={formData} logoUrl={logoUrl} />
         </div>
 
-        <div className="lg:col-span-3 lg:sticky lg:top-24">
+        <div className="lg:sticky lg:top-24">
           <ShortcutCards />
         </div>
       </div>
 
-      <div className="pt-4 border-t border-slate-200">
-        <FeatureSection />
-      </div>
-
       {showFooterNavigation && (
-        <div className="pt-6 border-t border-[#E5E7EB] flex items-center justify-between">
+        <div className="pt-2 hidden lg:flex items-center justify-between gap-4">
           <button
             type="button"
             onClick={onBack}
-            className="flex items-center gap-2 px-4 py-2.5 bg-[#F1F5F9] border border-[#E5E7EB] hover:bg-[#E2E8F0] text-[#475569] rounded-lg font-bold text-xs sm:text-sm transition-all cursor-pointer"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-[#D8E0EA] bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
           >
             <ChevronLeft size={16} />
-            <span>Back to Business</span>
+            Back
           </button>
 
           <button
             type="button"
             onClick={onNext}
-            className="flex items-center gap-2 px-5 py-2.5 bg-[#2563EB] hover:bg-blue-700 text-white rounded-lg font-bold text-xs sm:text-sm transition-all cursor-pointer shadow-sm"
+            className="inline-flex min-h-[44px] items-center gap-2 rounded-xl bg-[#2563EB] px-6 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
           >
-            <span>Next: Add Items</span>
+            Next: Add Items
             <ChevronRight size={16} />
           </button>
         </div>
       )}
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-xs lg:hidden">
-        <button
-          type="button"
-          onClick={() => onTriggerToast('Client details are ready for the next step.')}
-          className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-blue-100 bg-blue-50 px-4 py-2.5 text-xs font-bold text-blue-700"
-        >
-          <ChevronRight size={14} />
-          Continue
-        </button>
+      <div className="pt-4 border-t border-slate-200">
+        <FeatureSection />
       </div>
     </div>
   );
 }
-

@@ -179,7 +179,7 @@ export default function ClientForm({
               </label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-3 flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
-                  <span className="text-lg leading-none">🇮🇳</span>
+                  <span className="text-lg leading-none">IN</span>
                 </span>
                 <input
                   type="tel"
@@ -409,4 +409,5 @@ export default function ClientForm({
     </form>
   );
 }
+
 

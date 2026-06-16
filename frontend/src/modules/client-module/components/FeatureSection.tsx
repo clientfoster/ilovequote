@@ -5,31 +5,31 @@ export default function FeatureSection() {
   const features = [
     {
       title: 'No Account Required',
-      description: 'Start managing quotes instantly without creating credentials.',
+      description: 'Use instantly without sign up',
       icon: UserMinus,
       color: 'bg-indigo-50 border-indigo-100 text-indigo-600'
     },
     {
       title: 'Auto Save',
-      description: 'All work is persistently saved locally so you never lose draft progress.',
+      description: 'Your progress is saved automatically',
       icon: Save,
       color: 'bg-emerald-50 border-emerald-100 text-emerald-600'
     },
     {
       title: 'Easy Navigation',
-      description: 'Jump seamlessly between steps with smooth layout anchors.',
+      description: 'Move between steps easily',
       icon: Compass,
       color: 'bg-sky-50 border-sky-100 text-sky-600'
     },
     {
       title: 'Mobile Friendly',
-      description: 'Fully optimized for phones, tablets, and desktop workstations.',
+      description: 'Works perfectly on all devices',
       icon: Smartphone,
       color: 'bg-amber-50 border-amber-100 text-amber-600'
     },
     {
       title: '100% Free',
-      description: 'Completely free workspace without premium credit restrictions.',
+      description: 'Create unlimited quotes for free forever',
       icon: Smile,
       color: 'bg-blue-50 border-blue-100 text-[#2563EB]'
     }

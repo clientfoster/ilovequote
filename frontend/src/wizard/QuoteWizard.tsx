@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, LoaderCircle, RefreshCw, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, LoaderCircle, Menu, Moon, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BusinessStep from '../modules/business-module/BusinessModule';
 import ClientStep from '../modules/client-module/ClientModule';
@@ -308,6 +308,14 @@ export default function QuoteWizard() {
       <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:relative md:z-30">
         <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8 md:py-4">
           <div className="flex min-w-0 items-center gap-4">
+            <button
+              type="button"
+              className="md:hidden inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100"
+              aria-label="Open menu"
+            >
+              <Menu size={22} />
+            </button>
+
             <div className="hidden md:flex items-center gap-4">
               <BrandMark />
               <div className="h-10 w-px bg-slate-200" />
@@ -321,70 +329,73 @@ export default function QuoteWizard() {
                 <p className="mt-1 text-xs text-slate-400">Build, style, and send quotation bills in less than 2 minutes.</p>
               </div>
             </div>
-            <div className="md:hidden flex w-full flex-col items-center gap-2 text-center">
+
+            <div className="md:hidden flex flex-1 items-center justify-center">
               <BrandMark />
-              <div className="flex items-center gap-2">
-                <h1 className="text-[21px] font-extrabold leading-tight text-slate-900">Create Quote</h1>
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wider text-amber-700">
-                  Draft
-                </span>
-              </div>
-              <p className="max-w-full text-[15px] leading-6 text-slate-500">
-                Build, style, and send quotation bills in less than 2 minutes.
-              </p>
             </div>
           </div>
 
           <div className="hidden items-center gap-3 md:flex">
             <button
               type="button"
-              onClick={handleReset}
               className="inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-              title="Reset"
+              aria-label="Theme toggle"
             >
-              <RefreshCw size={18} />
-            </button>
-
-            <div className="hidden sm:flex items-center gap-2 text-xs font-semibold text-slate-500">
-              {saveState === 'saving' ? (
-                <>
-                  <LoaderCircle className="h-4 w-4 animate-spin text-orange-500" />
-                  <span className="text-orange-500">Saving...</span>
-                </>
-              ) : (
-                <>
-                  <span className="h-2 w-2 rounded-full bg-emerald-500" />
-                  <span className="text-emerald-600">Saved</span>
-                </>
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleBackOrHome}
-              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-extrabold text-slate-700 shadow-sm transition-colors hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-            >
-              <ChevronLeft size={16} />
-              <span>{currentStep === 1 ? 'Home' : 'Back'}</span>
+              <Moon size={18} />
             </button>
 
             <button
               type="button"
               onClick={handleSaveDraft}
-              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-extrabold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
+              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-extrabold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
             >
-              <Save size={16} />
               Save Draft
             </button>
 
             <button
               type="button"
               onClick={handlePrimaryAction}
-              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-2xl bg-[#2F5BFF] px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition-colors hover:bg-[#244ad9]"
+              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-[#2F5BFF] px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition-colors hover:bg-[#244ad9]"
             >
-              <span>{currentStep === 4 ? 'Finalize' : 'Next Step'}</span>
+              <span>{currentStep === 4 ? 'Next: Preview' : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
               <ChevronRight size={16} />
             </button>
+
+            <div className="flex items-center gap-3 pl-1">
+              <div className="h-10 w-10 rounded-full bg-blue-100 text-[#1D4ED8] flex items-center justify-center font-extrabold text-xs">RS</div>
+              <div className="hidden xl:block">
+                <div className="flex items-center gap-1">
+                  <span className="text-sm font-semibold text-slate-700">Rahul Sharma</span>
+                  <ChevronDown size={14} className="text-slate-400" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="md:hidden inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+            aria-label="Save draft"
+            title="Save draft"
+          >
+            <Save size={16} />
+          </button>
+        </div>
+
+        <div className="md:hidden px-4 pb-3">
+          <div className="flex items-center justify-between gap-3">
+            <div className="min-w-0">
+              <h1 className="text-[22px] font-extrabold leading-tight text-slate-900">Create Quote</h1>
+              <p className="mt-1 text-[14px] leading-5 text-slate-500">
+                Build, style, and send quotation bills in less than 2 minutes.
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handlePrimaryAction}
+              className="hidden"
+            />
           </div>
         </div>
       </header>

@@ -78,6 +78,8 @@ export const DEFAULT_BUSINESS_VALUES: BusinessFormValues = {
   socialLinks: [
     { platform: 'LinkedIn', url: 'https://www.linkedin.com/company/semixon' },
     { platform: 'Instagram', url: 'https://www.instagram.com/semixon' },
+    { platform: 'Facebook', url: 'https://www.facebook.com/semixon' },
+    { platform: 'X (Twitter)', url: 'https://x.com/semixon' },
   ],
   businessSlug: DEMO_BUSINESS_SLUG,
 };

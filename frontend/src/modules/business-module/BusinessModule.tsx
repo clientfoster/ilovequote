@@ -36,18 +36,6 @@ export default function BusinessStep({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-4 md:gap-8 items-start">
       <div className="lg:col-span-2 xl:col-span-7 space-y-4 md:space-y-6">
-        <div className="bg-slate-50 border border-slate-200/50 rounded-xl p-4 flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-blue-50 text-[#1D4ED8] flex items-center justify-center shrink-0">
-            <Building className="w-4 h-4" />
-          </div>
-          <div>
-            <h3 className="text-xs font-black text-slate-800 uppercase tracking-widest">Step 1: Your Business Profile</h3>
-            <p className="text-[10px] leading-4 text-slate-450 font-medium">
-              Verify your brand header details, logo, company address and tax identity flags.
-            </p>
-          </div>
-        </div>
-
         <BusinessForm
           register={register}
           control={control}
@@ -71,7 +59,7 @@ export default function BusinessStep({
       </div>
 
       <div className="lg:col-span-1 xl:col-span-5 lg:sticky lg:top-6 space-y-4">
-        <div className="bg-white rounded-xl border border-slate-200/80 p-4 md:p-5 shadow-xs flex flex-col">
+        <div className="bg-white rounded-xl border border-slate-200/80 p-4 md:p-5 shadow-xs flex flex-col" id="wizard-step-middle">
           <div className="flex items-center justify-between mb-3.5 pl-1 flex-wrap gap-2">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
               Live Preview Board
@@ -106,29 +94,37 @@ export default function BusinessStep({
           </div>
         </div>
 
-        <div className="bg-white border border-slate-150 rounded-xl p-4 shadow-xs space-y-3">
+        <div className="lg:hidden bg-white border border-slate-150 rounded-xl p-4 shadow-xs space-y-3">
           <div className="flex items-center gap-1.5 pb-2 border-b border-slate-100">
             <Sparkles className="w-4 h-4 text-[#1D4ED8]" />
             <h3 className="text-[10px] font-black text-slate-450 uppercase tracking-wider">
-              Quick Navigate Form Controls
+              What you can add
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-1 gap-2">
             {[
-              { name: 'Business Details', section: 'form-basic-section', icon: <Building className="w-3.5 h-3.5" /> },
-              { name: 'Logo Upload', section: 'logo-upload-group', icon: <Image className="w-3.5 h-3.5" /> },
-              { name: 'Business Address', section: 'address-section', icon: <MapPin className="w-3.5 h-3.5" /> },
-              { name: 'Social Links', section: 'social-links-section', icon: <Share2 className="w-3.5 h-3.5" /> },
+              { title: 'Business Basic Details', desc: 'Add your business name, tagline, contact email, phone and website.', section: 'form-basic-section', icon: <Building className="w-4 h-4" />, color: 'text-[#1D4ED8] bg-blue-50' },
+              { title: 'Business Logo', desc: 'Upload your business logo to make your quotes look more professional.', section: 'logo-upload-inline', icon: <Image className="w-4 h-4" />, color: 'text-emerald-600 bg-emerald-50' },
+              { title: 'Business Address', desc: 'Add your complete business address that will appear on the quote.', section: 'address-section', icon: <MapPin className="w-4 h-4" />, color: 'text-violet-600 bg-violet-50' },
+              { title: 'Tax Information', desc: 'Add your GSTIN or other tax ID details if applicable.', section: 'tax-section', icon: <Share2 className="w-4 h-4" />, color: 'text-emerald-600 bg-emerald-50' },
+              { title: 'Social Links', desc: 'Add links to your social media profiles or website.', section: 'social-links-section', icon: <Share2 className="w-4 h-4" />, color: 'text-blue-600 bg-blue-50' },
+              { title: 'Live Preview', desc: 'See real-time preview of how your business details look in the quote.', section: 'wizard-step-middle', icon: <Sparkles className="w-4 h-4" />, color: 'text-sky-600 bg-sky-50' },
             ].map((item) => (
               <button
-                key={item.name}
+                key={item.title}
                 type="button"
                 onClick={() => onScrollToSection(item.section)}
-                className="min-h-[44px] p-2.5 text-left border border-slate-100 rounded-xl bg-slate-50/50 hover:bg-slate-50 transition-all font-bold text-[10px] text-slate-700 flex items-center gap-1.5 group cursor-pointer"
+                className="min-h-[44px] w-full rounded-xl border border-slate-100 bg-white px-3 py-3 text-left transition-all hover:border-slate-200 hover:shadow-sm flex items-center gap-3 group cursor-pointer"
               >
-                <span className="text-slate-400 group-hover:text-[#1D4ED8] transition-colors">{item.icon}</span>
-                <span className="truncate">{item.name}</span>
+                <span className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${item.color}`}>
+                  {item.icon}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block text-sm font-extrabold text-slate-900 leading-tight">{item.title}</span>
+                  <span className="mt-0.5 block text-[11px] leading-4 font-medium text-slate-500">{item.desc}</span>
+                </span>
+                <ChevronRight className="h-4 w-4 shrink-0 text-slate-300 group-hover:text-[#1D4ED8]" />
               </button>
             ))}
           </div>
