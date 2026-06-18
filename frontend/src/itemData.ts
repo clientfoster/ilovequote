@@ -3,8 +3,8 @@ import { ItemQuoteItem, ItemQuotationMeta } from './types';
 export const INITIAL_ITEMS: ItemQuoteItem[] = [];
 export const INITIAL_META: ItemQuotationMeta = {
   quotationNumber: 'Q-2024-001',
-  clientName: 'Swanish Healthcare Pvt. Ltd.',
-  clientEmail: 'info@swanishhealthcare.com',
+  clientName: '',
+  clientEmail: '',
   businessName: 'Semixon Technologies',
   businessEmail: 'hello@semixon.com',
   date: '2024-05-16',

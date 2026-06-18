@@ -54,6 +54,41 @@ const stripHeavyBusinessFields = (business: BusinessFormValues): BusinessFormVal
   socialLinks: business.socialLinks.map((link) => ({ ...link })),
 });
 
+const LEGACY_DEMO_CLIENT_VALUES = {
+  companyName: 'Swanish Healthcare Pvt. Ltd.',
+  contactPerson: 'Dr. Swanish',
+  email: 'info@swanishhealthcare.com',
+  phone: '+91 98462 68462',
+  website: 'https://www.swanishhealthcare.com',
+  taxIdType: 'GSTIN',
+  taxId: '32ABCDE1234F1Z5',
+  poNumber: 'PO12345',
+  billingAddress: 'Kozhikode, Kerala, India\n673006, India',
+  city: 'Kozhikode',
+  state: 'Kerala',
+  zipCode: '673006',
+  country: 'India',
+} as const;
+
+const normalizeClientDraft = (draft: Partial<ClientFormValues> | null | undefined): ClientFormValues => {
+  const merged = { ...DEFAULT_CLIENT_VALUES, ...(draft ?? {}) };
+  const looksLikeLegacyDemo =
+    merged.companyName === LEGACY_DEMO_CLIENT_VALUES.companyName &&
+    merged.contactPerson === LEGACY_DEMO_CLIENT_VALUES.contactPerson &&
+    merged.email === LEGACY_DEMO_CLIENT_VALUES.email &&
+    merged.phone === LEGACY_DEMO_CLIENT_VALUES.phone &&
+    merged.website === LEGACY_DEMO_CLIENT_VALUES.website &&
+    merged.taxId === LEGACY_DEMO_CLIENT_VALUES.taxId &&
+    merged.poNumber === LEGACY_DEMO_CLIENT_VALUES.poNumber &&
+    merged.billingAddress === LEGACY_DEMO_CLIENT_VALUES.billingAddress &&
+    merged.city === LEGACY_DEMO_CLIENT_VALUES.city &&
+    merged.state === LEGACY_DEMO_CLIENT_VALUES.state &&
+    merged.zipCode === LEGACY_DEMO_CLIENT_VALUES.zipCode &&
+    merged.country === LEGACY_DEMO_CLIENT_VALUES.country;
+
+  return looksLikeLegacyDemo ? DEFAULT_CLIENT_VALUES : merged;
+};
+
 const buildQuotePayload = (
   businessDetails: BusinessFormValues,
   clientDetails: ClientFormValues,
@@ -236,8 +271,9 @@ export default function QuoteWizard() {
       const clientDraft = localStorage.getItem(CLIENT_DRAFT_KEY);
       if (clientDraft) {
         const parsed = JSON.parse(clientDraft);
-        resetClient({ ...DEFAULT_CLIENT_VALUES, ...parsed });
-        setClientData({ ...DEFAULT_CLIENT_VALUES, ...parsed });
+        const normalizedClient = normalizeClientDraft(parsed);
+        resetClient(normalizedClient);
+        setClientData(normalizedClient);
       }
 
       const itemsDraft = localStorage.getItem(ITEMS_DRAFT_KEY);
