@@ -1,0 +1,53 @@
+@import "tailwindcss";
+@media (max-width: 767px) {
+  .quote-wizard-shell {
+    overflow-x: hidden;
+  }
+
+  .quote-wizard-shell button {
+    min-height: 44px;
+  }
+
+  .quote-wizard-shell input,
+  .quote-wizard-shell select,
+  .quote-wizard-shell textarea {
+    max-width: 100%;
+  }
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  
+  body, html {
+    background: #ffffff !important;
+    color: #000000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+  }
+
+  /* Reset outer layout spacing for clean full-page prints */
+  .quote-wizard-shell {
+    padding: 0 !important;
+    margin: 0 !important;
+    background: transparent !important;
+  }
+
+  .mx-auto {
+    margin: 0 !important;
+    max-width: 100% !important;
+    width: 100% !important;
+  }
+
+  /* Remove card borders, backgrounds, and shadows during print for a clean sheet look */
+  .border, .border-slate-200 {
+    border-color: #e2e8f0 !important;
+  }
+
+  /* Enable exact color/background printing in browsers */
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+}

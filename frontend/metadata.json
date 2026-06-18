@@ -1,0 +1,8 @@
+{
+  "name": "Business Profile Setup",
+  "description": "Premium step form to design, validate, and preview your business information with automated local drafts, real-time interactive screens, and dynamic QR portfolio links.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
