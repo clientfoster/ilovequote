@@ -36,6 +36,53 @@ import BrandMark from '../components/BrandMark';
 import { DEFAULT_BUSINESS_VALUES } from '../wizard/WizardState';
 
 const STORAGE_KEY = 'ilovequote_business_draft';
+const LEGACY_DEMO_BUSINESS_VALUES = {
+  companyName: 'Semixon Technologies',
+  tagline: 'We build digital solutions that help businesses grow.',
+  email: 'hello@semixon.com',
+  phone: '+91 98765 43210',
+  website: 'https://www.semixon.com',
+  logo: '',
+  address: '123, Digital Tower',
+  city: 'Kozhikode',
+  state: 'Kerala',
+  zipCode: '673006',
+  country: 'India',
+  taxType: 'GSTIN',
+  taxId: '32ABCDE1234F1Z5',
+  socialLinks: [
+    { platform: 'LinkedIn', url: 'https://www.linkedin.com/company/semixon' },
+    { platform: 'Instagram', url: 'https://www.instagram.com/semixon' },
+    { platform: 'Facebook', url: 'https://www.facebook.com/semixon' },
+    { platform: 'X (Twitter)', url: 'https://x.com/semixon' },
+  ],
+  businessSlug: 'semixon-technologies',
+} as const;
+
+const normalizeBusinessDraft = (draft: Partial<BusinessFormValues> | null | undefined): BusinessFormValues => {
+  const merged = {
+    ...DEFAULT_BUSINESS_VALUES,
+    ...(draft ?? {}),
+    socialLinks: draft?.socialLinks?.length ? draft.socialLinks : DEFAULT_BUSINESS_VALUES.socialLinks,
+  };
+
+  const looksLikeLegacyDemo =
+    merged.companyName === LEGACY_DEMO_BUSINESS_VALUES.companyName &&
+    merged.tagline === LEGACY_DEMO_BUSINESS_VALUES.tagline &&
+    merged.email === LEGACY_DEMO_BUSINESS_VALUES.email &&
+    merged.phone === LEGACY_DEMO_BUSINESS_VALUES.phone &&
+    merged.website === LEGACY_DEMO_BUSINESS_VALUES.website &&
+    merged.address === LEGACY_DEMO_BUSINESS_VALUES.address &&
+    merged.city === LEGACY_DEMO_BUSINESS_VALUES.city &&
+    merged.state === LEGACY_DEMO_BUSINESS_VALUES.state &&
+    merged.zipCode === LEGACY_DEMO_BUSINESS_VALUES.zipCode &&
+    merged.country === LEGACY_DEMO_BUSINESS_VALUES.country &&
+    merged.taxType === LEGACY_DEMO_BUSINESS_VALUES.taxType &&
+    merged.taxId === LEGACY_DEMO_BUSINESS_VALUES.taxId &&
+    merged.businessSlug === LEGACY_DEMO_BUSINESS_VALUES.businessSlug;
+
+  return looksLikeLegacyDemo ? DEFAULT_BUSINESS_VALUES : merged;
+};
 
 export default function BusinessPage() {
   const [activeTab, setActiveTab] = useState<'business' | 'dashboard' | 'quotes' | 'templates' | 'portfolio' | 'qrcodes' | 'settings'>('business');
@@ -50,11 +97,7 @@ export default function BusinessPage() {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
         const parsed = JSON.parse(saved);
-        return {
-          ...DEFAULT_BUSINESS_VALUES,
-          ...parsed,
-          socialLinks: parsed.socialLinks?.length ? parsed.socialLinks : DEFAULT_BUSINESS_VALUES.socialLinks,
-        };
+        return normalizeBusinessDraft(parsed);
       }
     } catch (e) {
       console.error('Failed to load local storage business draft', e);
