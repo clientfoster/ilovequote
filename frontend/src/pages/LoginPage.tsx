@@ -21,7 +21,9 @@ interface LoginPageProps {
 type FlowMode = 'signup' | 'login';
 type SignupStep = 'email' | 'otp' | 'password';
 
-const API_BASE = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3001';
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') ? '/api' : 'http://localhost:3001');
 
 async function apiRequest<T>(path: string, body: Record<string, unknown>) {
   const response = await fetch(`${API_BASE}${path}`, {

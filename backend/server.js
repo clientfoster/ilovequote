@@ -1341,7 +1341,11 @@ app.use((req, res) => {
   res.status(404).json({ error: 'Not found', path: req.path });
 });
 
-app.listen(PORT, () => {
-  console.log(`Quote backend running on ${PUBLIC_BASE_URL}`);
-  console.log(`Seeded quotes: ${quotes.length}`);
-});
+if (process.env.VERCEL !== '1') {
+  app.listen(PORT, () => {
+    console.log(`Quote backend running on ${PUBLIC_BASE_URL}`);
+    console.log(`Seeded quotes: ${quotes.length}`);
+  });
+}
+
+export default app;
