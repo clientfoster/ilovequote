@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layers3, FolderGit2, QrCode } from 'lucide-react';
 
 // Shell & Pages Imports
 import Layout from './components/Layout';
+import LoginPage from './pages/LoginPage';
 import DashboardPage from './pages/DashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import BusinessPage from './pages/BusinessPage';
@@ -15,16 +16,60 @@ import QRPortfolioPage from './pages/QRPortfolioPage';
 import CreateQuotePage from './pages/CreateQuotePage';
 import SettingsPage from './pages/SettingsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
+import { isAuthenticated } from './auth';
+
+type ProtectedRouteProps = {
+  isAuthed: boolean;
+  children: React.ReactNode;
+};
+
+function ProtectedRoute({ isAuthed, children }: ProtectedRouteProps) {
+  if (!isAuthed) {
+    return <Navigate to="/login" replace />;
+  }
+
+  return <>{children}</>;
+}
 
 export default function App() {
+  const [isAuthed, setIsAuthed] = useState(() => isAuthenticated());
+
   return (
     <Router>
       <Routes>
-        <Route path="/create-quote" element={<CreateQuotePage />} />
+        <Route
+          path="/login"
+          element={
+            isAuthed ? (
+              <Navigate to="/dashboard" replace />
+            ) : (
+              <LoginPage
+                onLogin={() => {
+                  setIsAuthed(true);
+                }}
+              />
+            )
+          }
+        />
 
-        <Route element={<Layout />}>
+        <Route
+          path="/create-quote"
+          element={
+            <ProtectedRoute isAuthed={isAuthed}>
+              <CreateQuotePage />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          element={
+            <ProtectedRoute isAuthed={isAuthed}>
+              <Layout onLogout={() => setIsAuthed(false)} />
+            </ProtectedRoute>
+          }
+        >
           {/* Default entry point redirects directly to /dashboard as requested */}
-          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="/" element={<Navigate to={isAuthed ? '/dashboard' : '/login'} replace />} />
 
           <Route path="/dashboard" element={<DashboardPage />} />
 
@@ -60,7 +105,7 @@ export default function App() {
           />
 
           {/* Fallback route handles unexpected slugs */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to={isAuthed ? '/dashboard' : '/login'} replace />} />
         </Route>
       </Routes>
     </Router>

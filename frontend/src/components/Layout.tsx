@@ -6,6 +6,7 @@ import {
   LayoutDashboard, 
   Layers3, 
   HelpCircle,
+  LogOut,
   Settings as SettingsIcon,
   QrCode,
   FileText,
@@ -17,10 +18,15 @@ import {
   X
 } from 'lucide-react';
 import BrandMark from './BrandMark';
+import { signOut } from '../auth';
 
 const BUSINESS_DRAFT_KEY = 'ilovequote_business_draft';
 
-export default function Layout() {
+interface LayoutProps {
+  onLogout?: () => void;
+}
+
+export default function Layout({ onLogout }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showToast, setShowToast] = useState(false);
@@ -37,6 +43,12 @@ export default function Layout() {
     setTimeout(() => {
       setShowToast(false);
     }, 3500);
+  };
+
+  const handleLogout = () => {
+    signOut();
+    onLogout?.();
+    navigate('/login');
   };
 
   // Close mobile sidebar on route change
@@ -73,7 +85,7 @@ export default function Layout() {
       )}
 
       <div className="flex h-full w-full flex-1 flex-col overflow-hidden">
-        <header className="shrink-0 border-b border-[#E5E7EB] bg-white">
+        <header className="hidden shrink-0 border-b border-[#E5E7EB] bg-white lg:block">
           <div className="flex items-center justify-between px-4 py-3.5 lg:px-5">
             <div className="flex items-center gap-3">
               <button
@@ -104,6 +116,14 @@ export default function Layout() {
               <button type="button" className="flex items-center gap-2 text-[14px] font-medium text-slate-800">
                 Rahul Sharma
                 <span className="text-slate-500">▾</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+              >
+                <LogOut className="h-4 w-4" />
+                Logout
               </button>
             </div>
           </div>
@@ -272,6 +292,14 @@ export default function Layout() {
                   <div className="p-4 border-t border-slate-100 bg-slate-50/50">
                     <p className="text-[10px] font-bold text-slate-700">Help Desk</p>
                     <p className="text-[9px] text-slate-400 leading-tight mt-0.5">help@ilovequote.com</p>
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
+                    >
+                      <LogOut className="h-3.5 w-3.5" />
+                      Logout
+                    </button>
                   </div>
                 </div>
               </div>

@@ -1,18 +1,35 @@
 import express from 'express';
-import { randomBytes, randomUUID } from 'node:crypto';
+import { pbkdf2Sync, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { Resend } from 'resend';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'quotes.json');
+const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const PORT = Number(process.env.PORT || 3001);
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
+const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const OTP_TTL_MS = 10 * 60 * 1000;
+const VERIFICATION_TTL_MS = 15 * 60 * 1000;
 
 const app = express();
+const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
 app.use(express.json({ limit: '5mb' }));
+app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  if (req.method === 'OPTIONS') {
+    res.sendStatus(204);
+    return;
+  }
+  next();
+});
 
 const DEFAULT_TERMS = [
   'This quote is valid for 30 days from the date above.',
@@ -113,6 +130,55 @@ function currentIsoDate() {
 
 function randomToken(prefix) {
   return `${prefix}-${randomBytes(4).toString('hex')}`;
+}
+
+function normalizeEmail(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
+}
+
+function hashPassword(password, salt = randomBytes(16).toString('hex')) {
+  const derived = pbkdf2Sync(String(password), salt, 120000, 32, 'sha256').toString('hex');
+  return { salt, hash: derived };
+}
+
+function verifyPassword(password, salt, hash) {
+  const candidate = pbkdf2Sync(String(password), salt, 120000, 32, 'sha256');
+  const expected = Buffer.from(String(hash), 'hex');
+  return expected.length === candidate.length && timingSafeEqual(candidate, expected);
+}
+
+function generateOtp() {
+  return String(randomInt(0, 1_000_000)).padStart(6, '0');
+}
+
+async function sendOtpEmail({ email, otp }) {
+  if (!resend) {
+    return { provider: 'dev', skipped: true };
+  }
+
+  const { data, error } = await resend.emails.send({
+    from: RESEND_FROM_EMAIL,
+    to: [email],
+    subject: 'Your login code for ilovequote',
+    html: `
+      <div style="font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;color:#0f172a">
+        <h2 style="margin:0 0 12px;color:#1d4ed8">Your login code</h2>
+        <p style="margin:0 0 16px">Use this one-time code to finish signing in:</p>
+        <div style="display:inline-block;padding:14px 18px;border-radius:14px;background:#eff6ff;font-size:28px;font-weight:800;letter-spacing:0.3em">${otp}</div>
+        <p style="margin:16px 0 0;color:#64748b">This code expires in 10 minutes.</p>
+      </div>
+    `,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Resend failed to send OTP email');
+  }
+
+  return { provider: 'resend', id: data?.id || null };
 }
 
 function getBaseUrl(req) {
@@ -401,9 +467,68 @@ async function loadQuotes() {
 }
 
 let quotes = await loadQuotes();
+let users = [];
+const pendingOtps = new Map();
+const verificationTokens = new Map();
+const authTokens = new Map();
+
+async function loadUsers() {
+  await mkdir(DATA_DIR, { recursive: true });
+  try {
+    const raw = await readFile(USERS_FILE, 'utf8');
+    const parsed = JSON.parse(raw);
+    const storedUsers = Array.isArray(parsed) ? parsed : parsed.users;
+    if (Array.isArray(storedUsers)) {
+      users = storedUsers;
+      return;
+    }
+  } catch {
+    // fall through to empty store
+  }
+
+  users = [];
+  await writeFile(USERS_FILE, JSON.stringify({ users }, null, 2), 'utf8');
+}
+
+await loadUsers();
 
 async function persistQuotes() {
   await writeFile(STORE_FILE, JSON.stringify(quotes, null, 2), 'utf8');
+}
+
+async function persistUsers() {
+  await writeFile(USERS_FILE, JSON.stringify({ users }, null, 2), 'utf8');
+}
+
+function makePublicUser(user) {
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.name,
+    createdAt: user.createdAt,
+  };
+}
+
+function createAuthToken(userId) {
+  const token = randomBytes(24).toString('hex');
+  authTokens.set(token, {
+    userId,
+    createdAt: new Date().toISOString(),
+    expiresAt: Date.now() + 7 * 24 * 60 * 60 * 1000,
+  });
+  return token;
+}
+
+function getAuthenticatedUser(req) {
+  const header = req.headers.authorization || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : '';
+  const session = authTokens.get(token);
+  if (!session || session.expiresAt < Date.now()) {
+    if (token) authTokens.delete(token);
+    return null;
+  }
+
+  return users.find((user) => user.id === session.userId) || null;
 }
 
 function publicShareUrl(req, quote) {
@@ -919,6 +1044,192 @@ function renderSharePage(quote, req) {
 
 app.get('/api/health', (_req, res) => {
   res.json({ ok: true, service: 'quote-backend', quotes: quotes.length });
+});
+
+app.post('/api/auth/request-otp', async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    if (!isValidEmail(email)) {
+      res.status(400).json({ error: 'Please provide a valid email address.' });
+      return;
+    }
+
+    const otp = generateOtp();
+    const sessionId = randomUUID();
+    pendingOtps.set(sessionId, {
+      email,
+      otp,
+      attempts: 0,
+      expiresAt: Date.now() + OTP_TTL_MS,
+    });
+
+    const delivery = await sendOtpEmail({ email, otp });
+    console.log(`[auth] OTP for ${email}: ${otp} via ${delivery.provider}`);
+
+    res.json({
+      ok: true,
+      sessionId,
+      expiresInSeconds: Math.floor(OTP_TTL_MS / 1000),
+      message: 'OTP sent to your email address.',
+      devOtp: resend ? undefined : otp,
+      emailProvider: delivery.provider,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Unable to create OTP session',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/auth/verify-otp', async (req, res) => {
+  const sessionId = String(req.body?.sessionId || '');
+  const email = normalizeEmail(req.body?.email);
+  const otp = String(req.body?.otp || '').trim();
+  const session = pendingOtps.get(sessionId);
+
+  if (!session || session.expiresAt < Date.now()) {
+    pendingOtps.delete(sessionId);
+    res.status(400).json({ error: 'OTP session expired. Please request a new code.' });
+    return;
+  }
+
+  if (session.email !== email) {
+    res.status(400).json({ error: 'This OTP session does not match the email address.' });
+    return;
+  }
+
+  session.attempts += 1;
+  if (session.attempts > 5) {
+    pendingOtps.delete(sessionId);
+    res.status(429).json({ error: 'Too many attempts. Please request a fresh OTP.' });
+    return;
+  }
+
+  if (session.otp !== otp) {
+    res.status(400).json({ error: 'Incorrect OTP. Please try again.' });
+    return;
+  }
+
+  const verificationToken = randomBytes(24).toString('hex');
+  verificationTokens.set(verificationToken, {
+    email,
+    sessionId,
+    expiresAt: Date.now() + VERIFICATION_TTL_MS,
+  });
+  pendingOtps.delete(sessionId);
+
+  res.json({
+    ok: true,
+    verificationToken,
+    message: 'OTP verified successfully.',
+  });
+});
+
+app.post('/api/auth/register', async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || '');
+    const name = String(req.body?.name || '').trim();
+    const verificationToken = String(req.body?.verificationToken || '');
+    const verification = verificationTokens.get(verificationToken);
+
+    if (!verification || verification.expiresAt < Date.now()) {
+      verificationTokens.delete(verificationToken);
+      res.status(400).json({ error: 'Verification expired. Please verify the OTP again.' });
+      return;
+    }
+
+    if (verification.email !== email) {
+      res.status(400).json({ error: 'Verification token does not match this email address.' });
+      return;
+    }
+
+    if (password.length < 8) {
+      res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+      return;
+    }
+
+    const existing = users.find((user) => user.email === email);
+    const passwordState = hashPassword(password);
+    const user = existing
+      ? {
+          ...existing,
+          name: name || existing.name || email.split('@')[0],
+          passwordHash: passwordState.hash,
+          passwordSalt: passwordState.salt,
+          updatedAt: new Date().toISOString(),
+          emailVerifiedAt: new Date().toISOString(),
+        }
+      : {
+          id: randomUUID(),
+          email,
+          name: name || email.split('@')[0],
+          passwordHash: passwordState.hash,
+          passwordSalt: passwordState.salt,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          emailVerifiedAt: new Date().toISOString(),
+        };
+
+    users = existing ? users.map((entry) => (entry.email === email ? user : entry)) : [user, ...users];
+    await persistUsers();
+    verificationTokens.delete(verificationToken);
+
+    const authToken = createAuthToken(user.id);
+    res.status(201).json({
+      ok: true,
+      user: makePublicUser(user),
+      authToken,
+      message: 'Account created successfully.',
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Unable to register account',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const email = normalizeEmail(req.body?.email);
+    const password = String(req.body?.password || '');
+    const user = users.find((entry) => entry.email === email);
+
+    if (!user) {
+      res.status(404).json({ error: 'No account found for that email address.' });
+      return;
+    }
+
+    if (!user.passwordHash || !user.passwordSalt || !verifyPassword(password, user.passwordSalt, user.passwordHash)) {
+      res.status(401).json({ error: 'Incorrect password.' });
+      return;
+    }
+
+    const authToken = createAuthToken(user.id);
+    res.json({
+      ok: true,
+      user: makePublicUser(user),
+      authToken,
+      message: 'Signed in successfully.',
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Unable to sign in',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.get('/api/auth/me', (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Not signed in.' });
+    return;
+  }
+
+  res.json({ ok: true, user: makePublicUser(user) });
 });
 
 app.get('/api/quotes', (req, res) => {
