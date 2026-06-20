@@ -1,15 +1,6 @@
 import React from 'react';
-import { 
-  Building2, 
-  Mail, 
-  Phone, 
-  Globe, 
-  MapPin, 
-  Receipt, 
-  Sparkles,
-  ExternalLink,
-  ShieldAlert
-} from 'lucide-react';
+import { Globe, Mail, MapPin, Phone, Receipt } from 'lucide-react';
+import { QRCodeSVG } from 'qrcode.react';
 import { BusinessFormValues } from '../../../types';
 
 interface BusinessPreviewCardProps {
@@ -17,161 +8,94 @@ interface BusinessPreviewCardProps {
 }
 
 export default function BusinessPreviewCard({ formData }: BusinessPreviewCardProps) {
-  const companyName = formData.companyName || 'Semixon Creative Agency';
-  const tagline = formData.tagline || 'Elevating digital experiences with modern design.';
-  const email = formData.email || 'hello@semixon.co';
-  const phone = formData.phone || '+1 (555) 000-0000';
-  const website = formData.website || 'https://semixon.co';
+  const companyName = formData.companyName || 'Semixon';
+  const tagline = formData.tagline || 'my first quotation';
+  const email = formData.email || 'hello@semixon.com';
+  const phone = formData.phone || '+91 98765 43210';
+  const website = formData.website || 'https://www.semixon.com';
+  const address = formData.address || '123, Digital Tower, Kerala, India';
+  const taxId = formData.taxId || '32ABCDE1234F1Z5';
+  const portfolioSlug = formData.businessSlug || 'semixon';
+  const qrUrl = `${window.location.origin}/portfolio/${portfolioSlug}`;
   const logo = formData.logo || '';
-  const taxId = formData.taxId || '22AAAAA0000A1Z5';
-  const taxType = formData.taxType || 'GSTIN';
-
-  // Combine full mailing address elegantly
-  const addressParts = [
-    formData.address,
-    formData.city,
-    formData.state,
-    formData.zipCode,
-    formData.country
-  ].filter(Boolean);
-  
-  const fullAddress = addressParts.length > 0 
-    ? addressParts.join(', ') 
-    : '204 Pine Street, Suite 100, San Francisco, CA, 94103, United States';
 
   return (
-    <div 
-      className="w-full bg-white border border-[#E5E7EB] rounded-xl shadow-lg overflow-hidden flex flex-col relative transition-all duration-300"
-      id="live-invoice-profile-card"
-    >
-      {/* Decorative Brand Accent Line matching #1D4ED8 */}
-      <div className="h-2 w-full bg-gradient-to-r from-[#1D4ED8] to-indigo-600 shrink-0" />
-
-      {/* Internal Padding Body */}
-      <div className="p-4 md:p-8 space-y-5 md:space-y-6">
-        
-        {/* TOP TEAM SECTION : Logo and Name */}
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-slate-100">
-          
-          <div className="flex items-center gap-4">
-            {/* Logo frame */}
-            {logo ? (
-            <div className="w-14 h-14 bg-white rounded-xl border border-slate-200/80 p-2 flex items-center justify-center overflow-hidden shrink-0 shadow-xs">
-                <img 
-                  src={logo} 
-                  alt="Business Logo" 
-                  className="max-w-full max-h-full object-contain"
-                  referrerPolicy="no-referrer"
-                />
-              </div>
-            ) : (
-            <div className="w-14 h-14 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center text-[#1D4ED8] shrink-0 font-extrabold text-2xl shadow-xs">
-                {companyName.charAt(0).toUpperCase() || <Building2 className="w-8 h-8 opacity-80" />}
-              </div>
-            )}
-
-            <div>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <h4 className="text-lg font-black text-slate-900 tracking-tight leading-snug">
-                  {companyName}
-                </h4>
-                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold bg-blue-50 text-[#1D4ED8] uppercase tracking-wider">
-                  Active
-                </span>
-              </div>
-              <p className="text-xs text-slate-400 font-medium tracking-wide mt-0.5">Business Profile Preview</p>
+    <div className="overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
+      <div className="bg-[#0A0C14] px-4 pb-3 pt-4 text-white">
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex items-start gap-3">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white">
+              {logo ? (
+                <img src={logo} alt={`${companyName} logo`} className="h-full w-full object-cover" />
+              ) : (
+                <div className="flex h-full w-full items-center justify-center bg-white">
+                  <span className="text-[16px] font-black leading-none text-[#2457F0]">S</span>
+                </div>
+              )}
+            </div>
+            <div className="pt-0.5">
+              <p className="text-[18px] font-black leading-none tracking-[-0.03em]">
+                {companyName.toUpperCase()}
+              </p>
+              <p className="mt-4 max-w-[230px] text-[13px] leading-5 text-white/90">{tagline}</p>
             </div>
           </div>
 
-          <div className="text-left sm:text-right shrink-0">
-            <span className="text-[10px] font-mono tracking-wider font-extrabold text-[#1D4ED8] uppercase block">
-              /portfolio/{formData.businessSlug || 'semixon'}
-            </span>
-            <span className="text-[10px] text-slate-400 font-semibold mt-0.5 block flex items-center justify-start sm:justify-end gap-1">
-              Live link auto-generation
-              <ExternalLink className="w-3 h-3 text-[#1D4ED8]" />
-            </span>
+          <div className="flex flex-col items-center">
+            <p className="mb-1 text-center text-[9px] font-semibold uppercase leading-4 tracking-[0.12em] text-white/92">
+              Scan to view
+              <br />
+              our portfolio
+            </p>
+            <div className="rounded-[20px] bg-white/8 p-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
+              <div className="flex h-[82px] w-[82px] items-center justify-center rounded-[18px] bg-white p-2">
+                <QRCodeSVG value={qrUrl} size={58} level="M" includeMargin={false} bgColor="#FFFFFF" fgColor="#0F172A" />
+              </div>
+            </div>
           </div>
-
         </div>
 
-        {/* PROFILE SUMMARY SECTION */}
-        <div className="space-y-2">
-          <p className="text-xs font-black uppercase text-slate-400 tracking-widest">
-            Description / Overview
-          </p>
-          <p className="text-sm text-slate-705 leading-relaxed font-medium">
-            {tagline}
-          </p>
+        <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-white/8">
+          <div className="h-full w-[114px] rounded-full bg-[#2457F0]" />
+        </div>
+      </div>
+
+      <div className="px-4 py-4">
+        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_360px]">
+          <div>
+            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">From</p>
+            <p className="mt-1 text-[15px] font-semibold text-[#2457F0]">{companyName}</p>
+            <p className="mt-2 text-[12px] leading-5 text-slate-600">{tagline}</p>
+
+            <div className="mt-3 space-y-1.5 text-[12px] text-slate-700">
+              <div className="flex items-center gap-2">
+                <Mail className="h-4 w-4 shrink-0 text-[#2457F0]" />
+                <span>{email}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4 shrink-0 text-[#2457F0]" />
+                <span>{phone}</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <Globe className="h-4 w-4 shrink-0 text-[#2457F0]" />
+                <span>{website.replace(/^https?:\/\//, '')}</span>
+              </div>
+              <div className="flex items-start gap-2">
+                <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#2457F0]" />
+                <span>{address}</span>
+              </div>
+            </div>
+          </div>
         </div>
 
-        {/* CORE INFORMATION SPLIT */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 pt-2">
-          
-          {/* Column A: Contact coordinates */}
-          <div className="space-y-3.5">
-            <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1">
-              Contact Channels
-            </h5>
-
-            <div className="space-y-2.5 text-xs text-slate-600">
-              <div className="flex items-center gap-2">
-                <Mail className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="font-semibold text-slate-800 break-all">{email}</span>
-              </div>
-              
-              <div className="flex items-center gap-2">
-                <Phone className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="font-semibold text-slate-800">{phone}</span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <Globe className="w-4 h-4 text-slate-400 shrink-0" />
-                <span className="font-bold text-[#1D4ED8] hover:underline cursor-pointer">{website}</span>
-              </div>
-            </div>
-
+        <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
+          <div className="flex items-center gap-2">
+            <Receipt className="h-4 w-4 text-[#2457F0]" />
+            <span className="text-[12px] font-semibold text-slate-700">GSTIN</span>
           </div>
-
-          {/* Column B: Mailing coordinates */}
-          <div className="space-y-3.5">
-            <h5 className="text-[10px] font-black uppercase tracking-wider text-slate-400 border-b border-slate-100 pb-1">
-              Physical Location
-            </h5>
-
-            <div className="flex items-start gap-2 text-xs text-slate-600">
-              <MapPin className="w-4 h-4 text-slate-400 shrink-0 mt-0.5" />
-              <span className="font-semibold leading-relaxed text-slate-800">{fullAddress}</span>
-            </div>
-          </div>
-
+          <span className="text-[12px] font-semibold text-slate-800">{taxId}</span>
         </div>
-
-        {/* BOTTOM ACCENT: Tax and regulatory specifications */}
-        {taxId && (
-          <div 
-            className="mt-4 p-4 bg-slate-50 border border-slate-200/70 rounded-xl flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
-            id="preview-tax-indicator"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="w-8 h-8 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center shrink-0">
-                <Receipt className="w-4 h-4" />
-              </div>
-              <div>
-                <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest">GST Number</p>
-                <p className="text-xs font-black text-slate-800 font-mono mt-0.5">{taxId}</p>
-              </div>
-            </div>
-            
-            <div className="inline-flex items-center gap-1 text-[10px] text-emerald-600 bg-emerald-50 px-2.5 py-1 rounded-full font-bold uppercase tracking-wider shrink-0 self-start sm:self-center">
-              <Sparkles className="w-3 h-3 text-emerald-500 fill-emerald-500/20" />
-              Tax Verified Quote
-            </div>
-          </div>
-        )}
-
       </div>
     </div>
   );
 }
-

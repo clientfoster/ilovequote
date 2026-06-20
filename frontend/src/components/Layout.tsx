@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, useNavigate, useLocation, Link, NavLink } from 'react-router-dom';
-import { 
+import {
   PlusCircle, 
+  Building2,
   LayoutDashboard, 
   Layers3, 
-  FolderGit2, 
-  HelpCircle, 
+  HelpCircle,
   Settings as SettingsIcon,
   QrCode,
   FileText,
+  Users,
+  ShoppingBag,
   Smartphone,
   CheckCircle2,
   Menu,
@@ -44,10 +46,14 @@ export default function Layout() {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
     { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4" /> },
+    { path: '/clients', label: 'Clients', icon: <Users className="w-4 h-4" /> },
+    { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4" /> },
+    { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" /> },
     { path: '/templates', label: 'Templates', icon: <Layers3 className="w-4 h-4" /> },
-    { path: '/portfolio', label: 'My Portfolio', icon: <FolderGit2 className="w-4 h-4" />, highlight: true },
-    { path: '/qr-codes', label: 'QR Codes', icon: <QrCode className="w-4 h-4" /> },
+    { path: '/portfolio', label: 'My Portfolio', icon: <QrCode className="w-4 h-4" /> },
+    { path: '/qr-codes', label: 'QR Portfolio', icon: <QrCode className="w-4 h-4" /> },
     { path: '/settings', label: 'Settings', icon: <SettingsIcon className="w-4 h-4" /> },
+    { path: '/help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" /> },
   ];
 
   return (
@@ -56,10 +62,10 @@ export default function Layout() {
       {/* Toast Alert popups */}
       {showToast && (
         <div 
-          className="fixed top-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl z-55 flex items-center gap-2 border border-slate-700 animate-slide-in"
+          className="fixed top-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-xl shadow-2xl z-55 flex items-center gap-2 border border-slate-700"
           id="toast-notification"
         >
-          <div className="w-2 h-2 rounded-full bg-blue-500 animate-ping" />
+          <div className="w-2 h-2 rounded-full bg-blue-500" />
           <span>{toastMessage}</span>
         </div>
       )}
@@ -112,30 +118,11 @@ export default function Layout() {
                   </span>
                   <span>{item.label}</span>
                 </div>
-                {item.highlight && (
-                  <span className="w-2 h-2 rounded-full bg-[#1D4ED8]" />
-                )}
               </NavLink>
             );
           })}
         </nav>
 
-        {/* Sidebar Footer Help Section */}
-        <div className="p-4 border-t border-slate-100 bg-slate-50/50">
-          <div className="flex items-start gap-3">
-            <HelpCircle className="w-5 h-5 text-slate-400 shrink-0 mt-0.5" />
-            <div>
-              <p className="text-[11px] font-bold text-slate-700">Help & Support</p>
-              <p className="text-[10px] text-slate-400 leading-normal mt-0.5">Need help setting up your invoice? Talk to our engineers.</p>
-              <button 
-                onClick={() => triggerToast('Support portal offline. Contact us at help@ilovequote.com.')}
-                className="text-[10px] text-[#2563EB] font-bold inline-block mt-1 hover:underline bg-transparent border-none p-0 cursor-pointer text-left"
-              >
-                Documentation
-              </button>
-            </div>
-          </div>
-        </div>
       </aside>
 
       {/* MOBILE HEADER BAR & SIDEBAR COMPONENT */}
@@ -183,7 +170,7 @@ export default function Layout() {
             />
             
             {/* Menu container popup panel */}
-            <div className="relative w-64 bg-white h-full flex flex-col justify-between shadow-2xl border-r border-slate-150 animate-slide-in-left">
+            <div className="relative w-64 bg-white h-full flex flex-col justify-between shadow-2xl border-r border-slate-150">
               <div>
                 <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50">
                   <div className="flex items-center gap-1.5">
@@ -232,7 +219,6 @@ export default function Layout() {
                           </span>
                           <span>{item.label}</span>
                         </div>
-                        {item.highlight && <span className="w-1.5 h-1.5 rounded-full bg-[#1D4ED8]" />}
                       </NavLink>
                     );
                   })}

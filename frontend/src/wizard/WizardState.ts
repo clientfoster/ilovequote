@@ -17,18 +17,18 @@ export const ITEMS_DRAFT_KEY = 'ilovequote_draft_items';
 export const ITEMS_META_KEY = 'ilovequote_draft_meta';
 export const QUOTES_STORAGE_KEY = 'ilovequote_saved_quotes';
 export const SETTINGS_STORAGE_KEY = 'ilovequote_app_settings';
-export const DEMO_BUSINESS_NAME = 'Semixon Technologies';
+export const DEMO_BUSINESS_NAME = 'Semixon';
 export const DEMO_BUSINESS_TAGLINE = 'We build digital solutions that help businesses grow.';
 export const DEMO_BUSINESS_EMAIL = 'hello@semixon.com';
-export const DEMO_BUSINESS_PHONE = '9618055526';
+export const DEMO_BUSINESS_PHONE = '+91 98765 43210';
 export const DEMO_BUSINESS_WEBSITE = 'https://www.semixon.com';
-export const DEMO_BUSINESS_ADDRESS = '123, Digital Tower';
+export const DEMO_BUSINESS_ADDRESS = '123, Digital Tower, Kerala, India';
 export const DEMO_BUSINESS_CITY = 'Kozhikode';
 export const DEMO_BUSINESS_STATE = 'Kerala';
 export const DEMO_BUSINESS_ZIP = '673006';
 export const DEMO_BUSINESS_COUNTRY = 'India';
 export const DEMO_BUSINESS_TAX_ID = '32ABCDE1234F1Z5';
-export const DEMO_BUSINESS_SLUG = 'semixon-technologies';
+export const DEMO_BUSINESS_SLUG = 'semixon';
 
 export interface WizardState {
   currentStep: QuoteWizardStep;

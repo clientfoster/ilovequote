@@ -5,7 +5,13 @@ import { Layers3, FolderGit2, QrCode } from 'lucide-react';
 // Shell & Pages Imports
 import Layout from './components/Layout';
 import DashboardPage from './pages/DashboardPage';
+import ClientsPage from './pages/ClientsPage';
+import BusinessPage from './pages/BusinessPage';
+import ItemsPage from './pages/ItemsPage';
+import HelpSupportPage from './pages/HelpSupportPage';
 import QuotesPage from './pages/QuotesPage';
+import PortfolioPage from './pages/PortfolioPage';
+import QRPortfolioPage from './pages/QRPortfolioPage';
 import CreateQuotePage from './pages/CreateQuotePage';
 import SettingsPage from './pages/SettingsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
@@ -22,9 +28,14 @@ export default function App() {
 
           <Route path="/dashboard" element={<DashboardPage />} />
 
+          <Route path="/clients" element={<ClientsPage />} />
+          <Route path="/items" element={<ItemsPage />} />
+
           <Route path="/quotes" element={<QuotesPage onTriggerToast={() => {}} />} />
 
+          <Route path="/business" element={<BusinessPage />} />
           <Route path="/settings" element={<SettingsPage onTriggerToast={() => {}} />} />
+          <Route path="/help-support" element={<HelpSupportPage />} />
 
           {/* Placeholder subviews for Coming Soon products */}
           <Route
@@ -40,24 +51,12 @@ export default function App() {
 
           <Route
             path="/portfolio"
-            element={
-              <PlaceholderPage
-                title="Business Portfolio Launcher"
-                description="Exhibit your active proposals, live client feedback reviews, and recent achievements inside your public portfolio web link, connected directly to your custom brand slug."
-                icon={<FolderGit2 className="w-8 h-8" />}
-              />
-            }
+            element={<PortfolioPage />}
           />
 
           <Route
             path="/qr-codes"
-            element={
-              <PlaceholderPage
-                title="Smart QR Generator"
-                description="Print customized visual QR sticker cards for your offices or retail shelves. When scanned, customers will instantly see your active quote pages and client booking calendars."
-                icon={<QrCode className="w-8 h-8" />}
-              />
-            }
+            element={<QRPortfolioPage />}
           />
 
           {/* Fallback route handles unexpected slugs */}

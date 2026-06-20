@@ -1,427 +1,350 @@
-import React, { useState, useEffect } from 'react';
-import { 
-  FileText, 
-  Trash2, 
-  Edit3, 
-  Eye, 
-  Search, 
-  PlusCircle, 
-  Calendar, 
-  DollarSign, 
-  Printer, 
-  X, 
-  XSquare, 
-  HelpCircle,
-  Building,
-  User,
-  Tags,
-  CheckCircle,
-  Globe,
-  Mail,
-  Phone,
-  Percent
+import React, { useState } from 'react';
+import {
+  Bell,
+  ChevronDown,
+  Copy,
+  Crown,
+  Download,
+  Eye,
+  Filter,
+  FileText,
+  Grid2x2,
+  Link2,
+  List,
+  MoreVertical,
+  PencilLine,
+  Search,
+  Trash2,
 } from 'lucide-react';
-import { useNavigate, useOutletContext } from 'react-router-dom';
-import { Quote } from '../types';
 
-const QUOTES_STORAGE_KEY = 'ilovequote_saved_quotes';
-const BUSINESS_DRAFT_KEY = 'ilovequote_business_draft';
+const statusTabs = ['Draft', 'Sent', 'Viewed', 'Accepted', 'Expired'] as const;
 
-interface QuotesPageProps {
-  onTriggerToast?: (message: string) => void;
-}
+const rows = [
+  {
+    quoteNumber: 'Q-2026-001',
+    title: 'Website Development Package 2026',
+    clientName: 'Dr. Swanish',
+    businessName: 'Swanish Healthcare',
+    amount: '₹35,500',
+    createdOn: '16 May 2024',
+    createdTime: '10:30 AM',
+    status: 'Created',
+    shareLink: 'ilovequote.com/q/swanish-healthcare-q2026001',
+    accent: 'bg-[#EEF2FF] text-[#2457F0]',
+  },
+  {
+    quoteNumber: 'Q-2026-002',
+    title: 'SEO Marketing Services',
+    clientName: 'John Smith',
+    businessName: 'Bright Future Pvt Ltd',
+    amount: '₹22,000',
+    createdOn: '14 May 2024',
+    createdTime: '03:15 PM',
+    status: 'Viewed',
+    shareLink: 'ilovequote.com/q/bright-future-q2026002',
+    accent: 'bg-[#E9FCEB] text-[#22C55E]',
+  },
+  {
+    quoteNumber: 'Q-2026-003',
+    title: 'Logo Design & Branding',
+    clientName: 'Amit Verma',
+    businessName: 'ABC Company',
+    amount: '₹12,500',
+    createdOn: '12 May 2024',
+    createdTime: '11:20 AM',
+    status: 'Sent',
+    shareLink: 'ilovequote.com/q/abc-company-q2026003',
+    accent: 'bg-[#FFF0E1] text-[#F97316]',
+  },
+  {
+    quoteNumber: 'Q-2026-004',
+    title: 'E-commerce Website',
+    clientName: 'Neha Kapoor',
+    businessName: 'Fashion World',
+    amount: '₹75,000',
+    createdOn: '09 May 2024',
+    createdTime: '05:45 PM',
+    status: 'Accepted',
+    shareLink: 'ilovequote.com/q/fashion-world-q2026004',
+    accent: 'bg-[#FFF0F0] text-[#F43F5E]',
+  },
+  {
+    quoteNumber: 'Q-2026-005',
+    title: 'Mobile App Development',
+    clientName: 'Ravi Kumar',
+    businessName: 'TechNova Inc.',
+    amount: '₹1,25,000',
+    createdOn: '07 May 2024',
+    createdTime: '09:10 AM',
+    status: 'Draft',
+    shareLink: 'ilovequote.com/q/technova-q2026005',
+    accent: 'bg-[#EDE7FF] text-[#7C3AED]',
+  },
+  {
+    quoteNumber: 'Q-2026-006',
+    title: 'Social Media Marketing',
+    clientName: 'Priya Nair',
+    businessName: 'GreenLeaf Cafe',
+    amount: '₹18,000',
+    createdOn: '06 May 2024',
+    createdTime: '02:35 PM',
+    status: 'Viewed',
+    shareLink: 'ilovequote.com/q/greenleaf-cafe-q2026006',
+    accent: 'bg-[#E9FCEB] text-[#22C55E]',
+  },
+] as const;
 
-export default function QuotesPage({ onTriggerToast: propTriggerToast }: QuotesPageProps) {
-  const context = useOutletContext<{ onTriggerToast: (msg: string) => void }>();
-  const onTriggerToast = propTriggerToast || context?.onTriggerToast || (() => {});
-  const [quotes, setQuotes] = useState<Quote[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedQuote, setSelectedQuote] = useState<Quote | null>(null);
-  const navigate = useNavigate();
+const statusStyles: Record<string, string> = {
+  Created: 'bg-[#EEF2FF] text-[#2457F0]',
+  Viewed: 'bg-[#E8FAEF] text-[#16A34A]',
+  Sent: 'bg-[#F1EDFF] text-[#7C3AED]',
+  Accepted: 'bg-[#E9FCEB] text-[#16A34A]',
+  Draft: 'bg-[#F3F4F6] text-[#475569]',
+  Expired: 'bg-[#FFF4E6] text-[#F59E0B]',
+};
 
-  // Load quotes from Local Storage
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(QUOTES_STORAGE_KEY);
-      if (saved) {
-        setQuotes(JSON.parse(saved));
-      }
-    } catch (e) {
-      console.error("Error reading saved quotes", e);
-    }
-  }, []);
-
-  const handleDelete = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation();
-    if (window.confirm('Are you sure you want to delete this quote permanently?')) {
-      const updated = quotes.filter(q => q.id !== id);
-      setQuotes(updated);
-      try {
-        localStorage.setItem(QUOTES_STORAGE_KEY, JSON.stringify(updated));
-        onTriggerToast('Quote deleted successfully');
-      } catch (err) {
-        onTriggerToast('Error deleting quote');
-      }
-    }
-  };
-
-  const handleEdit = (quote: Quote, e: React.MouseEvent) => {
-    e.stopPropagation();
-    try {
-      // Pack the editing quote into the active draft key
-      // We also save a special key representing editing mode so we know which quote is being edited rather than creating a new copy
-      localStorage.setItem('ilovequote_editing_quote_id', quote.id);
-      
-      const draftFormValues = {
-        ...quote.businessDetails,
-        // Carry along the client details, items, etc. in specialized keys so the wizard page can parse and reload them!
-        _clientName: quote.clientDetails.name,
-        _clientEmail: quote.clientDetails.email,
-        _clientPhone: quote.clientDetails.phone,
-        _clientAddress: quote.clientDetails.address,
-        _quoteNumber: quote.quoteNumber,
-        _items: JSON.stringify(quote.items),
-        _date: quote.date,
-        _expiryDate: quote.expiryDate,
-        _taxRate: quote.taxRate,
-        _terms: quote.terms
-      };
-      
-      localStorage.setItem(BUSINESS_DRAFT_KEY, JSON.stringify(draftFormValues));
-      onTriggerToast(`Editing ${quote.quoteNumber}`);
-      navigate('/create-quote');
-    } catch (err) {
-      console.error(err);
-      onTriggerToast('Unable to edit quote');
-    }
-  };
-
-  // Filter quotes based on search query
-  const filteredQuotes = quotes.filter(q => {
-    const qnum = (q.quoteNumber || '').toLowerCase();
-    const bname = (q.businessDetails?.companyName || '').toLowerCase();
-    const cname = (q.clientDetails?.name || '').toLowerCase();
-    const status = (q.status || '').toLowerCase();
-    const query = searchQuery.toLowerCase();
-    return qnum.includes(query) || bname.includes(query) || cname.includes(query) || status.includes(query);
-  });
+export default function QuotesPage() {
+  const [openMenuIndex, setOpenMenuIndex] = useState<number | null>(null);
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] p-4 md:p-8" id="quotes-page-wrapper">
-      <div className="max-w-7xl mx-auto space-y-6">
-        
-        {/* UPPER TITLE ROW */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-200">
+    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-4 md:px-6 md:py-6">
+      <div className="mx-auto max-w-[1450px] space-y-5">
+        <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl md:text-2xl font-black text-slate-900 tracking-tight flex items-center gap-2">
-              <FileText className="w-5 h-5 text-[#1D4ED8]" />
-              My Saved Quotes
-            </h2>
-            <p className="text-xs text-slate-400 mt-1 font-medium">Manage and view standard quotes made in your offline environment.</p>
+            <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-slate-900">My Quotes</h1>
+            <p className="mt-2 text-[15px] font-medium text-slate-500">
+              Manage, share and download all your price quotes in one place.
+            </p>
           </div>
-          
-          <div>
-            <button
-              onClick={() => {
-                localStorage.removeItem('ilovequote_editing_quote_id'); // Clear editing state
-                navigate('/create-quote');
-              }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-[#1D4ED8] hover:bg-blue-800 text-white text-xs font-bold rounded-xl transition-all cursor-pointer shadow-lg shadow-blue-100 active:scale-95 transform hover:-translate-y-0.5"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Create New Quote
+
+          <div className="flex items-center gap-3">
+            <button type="button" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[13px] font-semibold text-slate-700 shadow-sm">
+              <Crown className="h-4 w-4 text-[#F5A524]" />
+              Upgrade to Pro
+            </button>
+            <button type="button" className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm">
+              <Bell className="h-[18px] w-[18px]" />
+              <span className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
+                3
+              </span>
+            </button>
+            <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full bg-[#2457F0] text-[13px] font-semibold text-white shadow-sm">
+              RS
+            </button>
+            <button type="button" className="flex items-center gap-2 text-[14px] font-medium text-slate-800">
+              Rahul Sharma
+              <ChevronDown className="h-4 w-4 text-slate-500" />
             </button>
           </div>
         </div>
 
-        {/* SEARCH FILTER */}
-        <div className="bg-white border border-slate-150 rounded-2xl p-4 shadow-xs flex items-center gap-3">
-          <Search className="w-4 h-4 text-slate-400 shrink-0" />
-          <input
-            type="text"
-            placeholder="Search quotes by number, business name or client name..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-transparent border-none text-xs text-slate-800 font-semibold focus:outline-hidden"
-          />
-          {searchQuery && (
-            <button 
-              onClick={() => setSearchQuery('')}
-              className="p-1 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-600 transition-colors cursor-pointer text-xs"
-            >
-              ✕
-            </button>
-          )}
-        </div>
-
-        {/* LIST TABLE OR EMPTY GRID */}
-        {filteredQuotes.length === 0 ? (
-          <div className="bg-white border border-slate-155 rounded-3xl p-12 text-center flex flex-col items-center justify-center space-y-4 shadow-xs">
-            <div className="w-16 h-16 rounded-full bg-slate-50 text-slate-350 flex items-center justify-center">
-              <FileText className="w-8 h-8 stroke-[1.5]" />
-            </div>
-            <div className="space-y-1">
-              <h3 className="text-sm font-extrabold text-slate-800">No Quotes Found</h3>
-              <p className="text-xs text-slate-450 font-medium max-w-sm mx-auto">
-                {searchQuery ? "No results match your current search constraints." : "You haven't saved any quotation proposals yet. Click Create New Quote to begin!"}
-              </p>
-            </div>
-            {!searchQuery && (
-              <button
-                onClick={() => navigate('/create-quote')}
-                className="px-4 py-2 bg-blue-50 hover:bg-blue-100 text-[#1D4ED8] text-xs font-bold rounded-xl transition-colors cursor-pointer"
-              >
-                Create First Quote Now
+        <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
+          <div className="flex items-center justify-between gap-4 border-b border-slate-200 px-5 py-4">
+            <div className="flex items-center gap-3 overflow-x-auto">
+              <button type="button" className="whitespace-nowrap border-b-2 border-[#2457F0] px-1 pb-3 text-[15px] font-semibold text-[#2457F0]">
+                All Quotes
               </button>
-            )}
+              {statusTabs.map((tab) => (
+                <button
+                  key={tab}
+                  type="button"
+                  className="whitespace-nowrap border-b-2 border-transparent px-1 pb-3 text-[15px] font-semibold text-slate-500"
+                >
+                  {tab}
+                </button>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-4">
+              <div className="flex h-11 w-[290px] items-center gap-3 rounded-xl border border-slate-200 bg-white px-4 shadow-sm">
+                <Search className="h-5 w-5 shrink-0 text-slate-800" />
+                <input
+                  type="text"
+                  defaultValue=""
+                  placeholder="Search quotes by name or client..."
+                  className="w-full border-none bg-transparent text-[14px] font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                />
+              </div>
+
+              <button type="button" className="inline-flex h-11 min-w-[175px] items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 text-[14px] font-medium text-slate-700 shadow-sm">
+                <span className="inline-flex items-center gap-2">
+                  <Filter className="h-4.5 w-4.5 text-slate-700" />
+                  All Status
+                </span>
+                <ChevronDown className="h-4 w-4 text-slate-500" />
+              </button>
+
+              <div className="h-9 w-px bg-slate-200" />
+
+              <div className="inline-flex rounded-xl border border-slate-200 bg-white p-1 shadow-sm">
+                <button type="button" className="flex h-10 w-10 items-center justify-center rounded-lg bg-[#2457F0] text-white" aria-label="List view">
+                  <List className="h-4.5 w-4.5" />
+                </button>
+                <button type="button" className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-700" aria-label="Grid view">
+                  <Grid2x2 className="h-4.5 w-4.5" />
+                </button>
+              </div>
+            </div>
           </div>
-        ) : (
-          <div className="bg-white border border-slate-150 rounded-2xl shadow-xs overflow-hidden">
-            <div className="overflow-x-auto w-full">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="border-b border-slate-100 bg-slate-50/50 text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                    <th className="py-4 px-6">Quote Number</th>
-                    <th className="py-4 px-6">Business Name</th>
-                    <th className="py-4 px-6">Client Name</th>
-                    <th className="py-4 px-6">Date</th>
-                    <th className="py-4 px-6">Total Amount</th>
-                    <th className="py-4 px-6 text-center">Status</th>
-                    <th className="py-4 px-6 text-right">Actions</th>
+
+          <div className="overflow-x-auto">
+            <table className="min-w-[1320px] w-full border-collapse text-left">
+              <thead className="bg-[#FBFCFF]">
+                <tr className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500">
+                  <th className="px-4 py-4 md:px-5">Quote Name</th>
+                  <th className="px-4 py-4 md:px-5">Client</th>
+                  <th className="px-4 py-4 md:px-5">Amount</th>
+                  <th className="px-4 py-4 md:px-5">Status</th>
+                  <th className="px-4 py-4 md:px-5">Created On</th>
+                  <th className="px-4 py-4 md:px-5">Share Link</th>
+                  <th className="px-4 py-4 md:px-5 text-center">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {rows.map((row, index) => (
+                  <tr key={row.quoteNumber} className="border-t border-slate-200/70 text-[14px]">
+                    <td className="px-4 py-5 md:px-5">
+                      <div className="flex items-center gap-3">
+                        <div className={`flex h-10 w-10 items-center justify-center rounded-xl ${row.accent}`}>
+                          <FileText className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <p className="font-semibold text-slate-900">{row.title}</p>
+                          <p className="mt-1 text-[12px] text-slate-500">{row.quoteNumber}</p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-5 md:px-5">
+                      <div>
+                        <p className="font-medium text-slate-900">{row.businessName}</p>
+                        <p className="mt-1 text-[12px] text-slate-500">{row.clientName}</p>
+                      </div>
+                    </td>
+                    <td className="px-4 py-5 md:px-5 font-semibold text-slate-900">{row.amount}</td>
+                    <td className="px-4 py-5 md:px-5">
+                      <span className={`inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold ${statusStyles[row.status]}`}>
+                        {row.status}
+                      </span>
+                    </td>
+                    <td className="px-4 py-5 md:px-5">
+                      <p className="font-medium text-slate-700">{row.createdOn}</p>
+                      <p className="mt-1 text-[12px] text-slate-500">{row.createdTime}</p>
+                    </td>
+                    <td className="px-4 py-5 md:px-5">
+                      <div className="flex flex-col items-start gap-1.5">
+                        <button type="button" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm">
+                          <Link2 className="h-4.5 w-4.5" />
+                        </button>
+                        <p className="max-w-[180px] break-all text-[13px] leading-5 text-slate-500">{row.shareLink}</p>
+                        <button type="button" className="text-[13px] font-semibold text-[#2457F0]">
+                          Copy
+                        </button>
+                      </div>
+                    </td>
+                    <td className="px-4 py-5 md:px-5">
+                        <div className="flex items-center justify-center gap-3">
+                        <button type="button" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                          <Eye className="h-4.5 w-4.5 text-[#2457F0]" />
+                        </button>
+                        <button type="button" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                          <Link2 className="h-4.5 w-4.5 text-[#22C55E]" />
+                        </button>
+                        <button type="button" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                          <Download className="h-4.5 w-4.5 text-[#EF4444]" />
+                        </button>
+                        <button type="button" className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                          <Copy className="h-4.5 w-4.5 text-[#7C3AED]" />
+                        </button>
+                          <div className="relative">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setOpenMenuIndex(openMenuIndex === index ? null : index);
+                              }}
+                              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
+                            >
+                              <MoreVertical className="h-4.5 w-4.5 text-slate-700" />
+                            </button>
+                            {openMenuIndex === index && (
+                            <div className="absolute right-0 top-12 z-20 w-36 rounded-xl border border-slate-200 bg-white p-2 shadow-xl">
+                              <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50">
+                                <PencilLine className="h-4 w-4" />
+                                Rename
+                              </button>
+                              <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-slate-700 hover:bg-slate-50">
+                                <Copy className="h-4 w-4" />
+                                Duplicate
+                              </button>
+                              <button type="button" className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-[13px] font-medium text-red-600 hover:bg-red-50">
+                                <Trash2 className="h-4 w-4" />
+                                Delete
+                              </button>
+                            </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
                   </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 text-xs font-bold text-slate-700">
-                  {filteredQuotes.map((quote) => (
-                    <tr 
-                      key={quote.id} 
-                      className="hover:bg-slate-50/40 transition-colors group cursor-pointer"
-                      onClick={() => setSelectedQuote(quote)}
-                    >
-                      <td className="py-4 px-6 text-[#1D4ED8] font-mono font-bold">
-                        {quote.quoteNumber}
-                      </td>
-                      <td className="py-4 px-6 text-slate-900 font-extrabold">
-                        {quote.businessDetails?.companyName || 'N/A'}
-                      </td>
-                      <td className="py-4 px-6 font-semibold flex items-center gap-1.5 matches-client">
-                        <div className="w-6 h-6 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center text-[10px] uppercase font-black">
-                          {(quote.clientDetails?.name || 'C').charAt(0)}
-                        </div>
-                        {quote.clientDetails?.name || 'N/A'}
-                      </td>
-                      <td className="py-4 px-6 text-slate-450 font-medium">
-                        {quote.date}
-                      </td>
-                      <td className="py-4 px-6 text-slate-900 font-black">
-                        ${quote.totalAmount.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </td>
-                      <td className="py-4 px-6 text-center">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wide border ${
-                          quote.status === 'Completed'
-                            ? 'bg-emerald-50 text-emerald-700 border-emerald-100'
-                            : 'bg-amber-50 text-amber-700 border-amber-100'
-                        }`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${quote.status === 'Completed' ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                          {quote.status}
-                        </span>
-                      </td>
-                      <td className="py-4 px-6 text-right" onClick={(e) => e.stopPropagation()}>
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => setSelectedQuote(quote)}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-all cursor-pointer"
-                            title="View Quote PDF"
-                          >
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => handleEdit(quote, e)}
-                            className="p-2 text-slate-400 hover:text-amber-600 hover:bg-amber-50 rounded-lg transition-all cursor-pointer"
-                            title="Edit Quote"
-                          >
-                            <Edit3 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={(e) => handleDelete(quote.id, e)}
-                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-all cursor-pointer"
-                            title="Delete Quote"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="flex flex-col gap-4 border-t border-slate-200/70 px-5 py-4 md:flex-row md:items-center md:justify-between">
+            <p className="text-[14px] font-medium text-slate-600">Showing 1 to 6 of 25 quotes</p>
+
+            <div className="flex items-center gap-2">
+              <button type="button" className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50">
+                <span className="text-[18px] leading-none">{'<'}</span>
+              </button>
+              <button type="button" className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-[#2457F0] bg-[#F4F7FF] text-sm font-semibold text-[#2457F0]">
+                1
+              </button>
+              {[2, 3, 4, 5].map((page) => (
+                <button
+                  key={page}
+                  type="button"
+                  className="flex h-10 w-10 items-center justify-center rounded-[10px] border border-transparent text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {page}
+                </button>
+              ))}
+              <button type="button" className="flex h-10 w-10 items-center justify-center rounded-lg text-slate-500 hover:bg-slate-50">
+                <span className="text-[18px] leading-none">{'>'}</span>
+              </button>
+
+              <div className="ml-4 flex items-center gap-3 text-[14px] font-medium text-slate-600">
+                <span>Rows per page</span>
+                <button type="button" className="inline-flex h-10 items-center gap-2 rounded-[10px] border border-slate-200 bg-white px-4 text-sm font-medium text-slate-800 shadow-sm">
+                  10
+                  <ChevronDown className="h-4 w-4 text-slate-500" />
+                </button>
+              </div>
             </div>
           </div>
-        )}
+        </section>
 
-        {/* DETAILED MODAL PREVIEW FOR SELECTED QUOTE */}
-        {selectedQuote && (
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overflow-y-auto">
-            <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full border border-slate-150 overflow-hidden flex flex-col my-8 animate-fade-in max-h-[90vh]">
-              
-              {/* MODAL TITLE HEADER BAR */}
-              <div className="bg-slate-50 border-b border-slate-150 px-6 py-4 flex items-center justify-between shrink-0">
-                <div className="flex items-center gap-2">
-                  <FileText className="w-5 h-5 text-[#1D4ED8]" />
-                  <span className="font-extrabold text-[#1D4ED8] font-mono">{selectedQuote.quoteNumber}</span>
-                  <span className="text-xs text-slate-400">({selectedQuote.status} Document)</span>
+        <div className="rounded-[14px] border border-slate-200 bg-[#EEF3FF] px-5 py-4 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-4">
+            {[
+              { label: 'Viewed', text: 'Client has viewed the quote', color: 'text-[#2457F0]' },
+              { label: 'Sent', text: 'Quote has been sent to client', color: 'text-[#7C3AED]' },
+              { label: 'Accepted', text: 'Client has accepted the quote', color: 'text-[#16A34A]' },
+              { label: 'Expired', text: 'Quote has expired', color: 'text-slate-700' },
+            ].map((item) => (
+              <div key={item.label} className="flex items-center gap-3 rounded-2xl px-2 py-1">
+                <div className={`flex h-10 w-10 items-center justify-center rounded-full bg-white ${item.color}`}>
+                  <Eye className="h-4.5 w-4.5" />
                 </div>
-                <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => window.print()}
-                    className="p-2 text-slate-500 hover:text-slate-800 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-all flex items-center gap-1.5 text-xs font-bold cursor-pointer shadow-xs"
-                  >
-                    <Printer className="w-4 h-4" />
-                    Print / PDF
-                  </button>
-                  <button
-                    onClick={() => setSelectedQuote(null)}
-                    className="p-2 text-slate-400 hover:text-slate-700 bg-white hover:bg-slate-100 border border-slate-200 rounded-xl transition-colors cursor-pointer"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                <div>
+                  <p className="text-[13px] font-medium text-slate-900">{item.label}</p>
+                  <p className="text-[12px] text-slate-600">{item.text}</p>
                 </div>
               </div>
-
-              {/* DETAILED PRINTABLE PROPOSAL SHEET BODY */}
-              <div className="flex-1 overflow-y-auto p-8 md:p-12 space-y-8 font-sans" id="print-area">
-                
-                {/* 1. BRAND HEADER BLOCK */}
-                <div className="flex flex-col md:flex-row justify-between items-start gap-6 pb-6 border-b border-slate-100">
-                  <div className="space-y-3.5">
-                    {selectedQuote.businessDetails?.logo ? (
-                      <div className="w-16 h-16 bg-white border border-slate-100 rounded-2xl flex items-center justify-center overflow-hidden shadow-xs">
-                        <img 
-                          src={selectedQuote.businessDetails.logo} 
-                          alt="Logo" 
-                          className="max-h-full max-w-full object-contain p-2"
-                        />
-                      </div>
-                    ) : (
-                      <div className="w-12 h-12 bg-[#1D4ED8] rounded-xl flex items-center justify-center text-white text-lg font-black font-mono shadow-md">
-                        {selectedQuote.businessDetails?.companyName?.slice(0, 2).toUpperCase() || 'IQ'}
-                      </div>
-                    )}
-                    <div>
-                      <h3 className="text-lg font-black text-slate-900 tracking-tight">
-                        {selectedQuote.businessDetails?.companyName || 'Semixon Ltd'}
-                      </h3>
-                      {selectedQuote.businessDetails?.tagline && (
-                        <p className="text-[11px] text-slate-500 italic mt-0.5">{selectedQuote.businessDetails.tagline}</p>
-                      )}
-                    </div>
-                  </div>
-
-                  <div className="space-y-1 text-left md:text-right text-xs text-slate-505 font-medium">
-                    <span className="inline-block bg-[#1D4ED8]/10 text-[#1D4ED8] uppercase text-[10px] font-black tracking-widest px-3 py-1 rounded-full mb-2">
-                      Quotation Proposal
-                    </span>
-                    <p className="font-extrabold text-slate-800">Quote #: {selectedQuote.quoteNumber}</p>
-                    <p>Date: {selectedQuote.date}</p>
-                    <p>Expiry: {selectedQuote.expiryDate || 'N/A'}</p>
-                  </div>
-                </div>
-
-                {/* 2. TWO-COLUMN ADRESS DETAILS: FROM vs TO */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 text-xs leading-relaxed font-semibold">
-                  {/* From Business Address */}
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prepared By:</h4>
-                    <div className="space-y-1 text-slate-700">
-                      <p className="font-extrabold text-slate-900">{selectedQuote.businessDetails?.companyName}</p>
-                      {selectedQuote.businessDetails?.address && <p>{selectedQuote.businessDetails.address}</p>}
-                      <p>
-                        {[selectedQuote.businessDetails?.city, selectedQuote.businessDetails?.state, selectedQuote.businessDetails?.zipCode].filter(Boolean).join(', ')}
-                      </p>
-                      {selectedQuote.businessDetails?.email && <p>Email: {selectedQuote.businessDetails.email}</p>}
-                      {selectedQuote.businessDetails?.phone && <p>Phone: {selectedQuote.businessDetails.phone}</p>}
-                      {selectedQuote.businessDetails?.taxId && (
-                        <p className="font-mono text-slate-500 text-[11px] font-bold">
-                          {selectedQuote.businessDetails.taxType || 'GSTIN'}: {selectedQuote.businessDetails.taxId}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* To Client Address */}
-                  <div className="space-y-2">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Prepared For:</h4>
-                    <div className="space-y-1 text-slate-700">
-                      <p className="font-extrabold text-slate-900">{selectedQuote.clientDetails?.name || 'N/A'}</p>
-                      {selectedQuote.clientDetails?.address && <p className="whitespace-pre-line">{selectedQuote.clientDetails.address}</p>}
-                      {selectedQuote.clientDetails?.email && <p>Email: {selectedQuote.clientDetails.email}</p>}
-                      {selectedQuote.clientDetails?.phone && <p>Phone: {selectedQuote.clientDetails.phone}</p>}
-                    </div>
-                  </div>
-                </div>
-
-                {/* 3. ITEMIZATION LINES TABLE */}
-                <div className="border border-slate-150 rounded-2xl overflow-hidden mt-4">
-                  <table className="w-full text-xs text-left border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-150 bg-slate-50/70 font-black text-slate-400 uppercase tracking-widest">
-                        <th className="py-3 px-4">#</th>
-                        <th className="py-3 px-4">Item Description</th>
-                        <th className="py-3 px-4 text-center">Qty</th>
-                        <th className="py-3 px-4 text-right">Unit Price</th>
-                        <th className="py-3 px-4 text-right">Total</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-150 font-bold text-slate-700">
-                      {(selectedQuote.items || []).map((item, index) => (
-                        <tr key={index}>
-                          <td className="py-3 px-4 text-slate-400 font-mono">{index + 1}</td>
-                          <td className="py-3 px-4 text-slate-905 font-extrabold whitespace-pre-line">{item.description}</td>
-                          <td className="py-3 px-4 text-center">{item.quantity}</td>
-                          <td className="py-3 px-4 text-right">${item.unitPrice.toFixed(2)}</td>
-                          <td className="py-3 px-4 text-right text-slate-900 font-black">${item.total.toFixed(2)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 4. TOTALS CALCULATION BOX */}
-                <div className="flex flex-col sm:flex-row justify-between items-start gap-6 pt-4 text-xs">
-                  {/* Terms Notes */}
-                  <div className="flex-1 space-y-2">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest flex items-center gap-1">
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      Invoice Terms & Guidelines:
-                    </h4>
-                    <p className="text-[11px] text-slate-505 leading-relaxed font-medium whitespace-pre-line bg-slate-50 border border-slate-100 rounded-xl p-3.5">
-                      {selectedQuote.terms || '--'}
-                    </p>
-                  </div>
-
-                  {/* Calculations breakdown */}
-                  <div className="w-full sm:w-64 space-y-2 shrink-0 font-bold text-slate-650">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span className="text-slate-900">${selectedQuote.subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Tax (GST ({selectedQuote.taxRate}%))</span>
-                      <span className="text-slate-900">${selectedQuote.taxAmount.toFixed(2)}</span>
-                    </div>
-                    <div className="w-full h-[1px] bg-slate-150 my-1" />
-                    <div className="flex justify-between text-sm text-[#1D4ED8] font-black">
-                      <span>Total Amount</span>
-                      <span>${selectedQuote.totalAmount.toFixed(2)}</span>
-                    </div>
-                  </div>
-                </div>
-
-              </div>
-
-            </div>
+            ))}
           </div>
-        )}
-
+        </div>
       </div>
     </div>
   );
