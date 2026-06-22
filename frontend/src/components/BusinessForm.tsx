@@ -77,7 +77,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
               <input
                 type="text"
                 id="biz-company-name"
-                placeholder="E.g., Semixon Creative Agency"
+                placeholder="E.g., Your Business Name"
                 {...register('companyName', { 
                   required: 'Business name is required to build state directories.' 
                 })}

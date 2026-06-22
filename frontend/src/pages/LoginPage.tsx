@@ -14,6 +14,7 @@ import {
 import BrandMark from '../components/BrandMark';
 import { AuthUser } from '../auth';
 import { signIn } from '../auth';
+import { apiRequest } from '../api';
 
 interface LoginPageProps {
   onLogin?: (user: AuthUser) => void;
@@ -21,26 +22,6 @@ interface LoginPageProps {
 
 type FlowMode = 'signup' | 'login';
 type SignupStep = 'email' | 'otp' | 'password';
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') ? '/api' : 'http://localhost:3001');
-
-async function apiRequest<T>(path: string, body: Record<string, unknown>) {
-  const response = await fetch(`${API_BASE}${path}`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(body),
-  });
-
-  const payload = (await response.json().catch(() => ({}))) as T & { error?: string; message?: string };
-  if (!response.ok) {
-    throw new Error(payload.error || payload.message || 'Request failed');
-  }
-  return payload;
-}
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
@@ -51,7 +32,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   });
   const [step, setStep] = useState<SignupStep>('email');
   const [email, setEmail] = useState('you@business.com');
-  const [name, setName] = useState('Rahul Sharma');
+  const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -87,7 +68,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     try {
       const result = await apiRequest<{ sessionId: string; message?: string; devOtp?: string }>(
         '/api/auth/request-otp',
-        { email, name },
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, name }),
+        },
       );
       setSessionId(result.sessionId);
       setStep('otp');
@@ -110,7 +94,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     try {
       const result = await apiRequest<{ verificationToken: string; message?: string }>(
         '/api/auth/verify-otp',
-        { email, sessionId, otp },
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, sessionId, otp }),
+        },
       );
       setVerificationToken(result.verificationToken);
       setStep('password');
@@ -142,10 +129,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       const result = await apiRequest<{ authToken: string; user: { id: string; email: string; name: string }; message?: string }>(
         '/api/auth/register',
         {
-          email,
-          name,
-          password,
-          verificationToken,
+          method: 'POST',
+          body: JSON.stringify({
+            email,
+            name,
+            password,
+            verificationToken,
+          }),
         },
       );
       signIn(result.authToken, result.user);
@@ -168,8 +158,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       const result = await apiRequest<{ authToken: string; user: { id: string; email: string; name: string } }>(
         '/api/auth/login',
         {
-          email,
-          password: loginPassword,
+          method: 'POST',
+          body: JSON.stringify({
+            email,
+            password: loginPassword,
+          }),
         },
       );
       signIn(result.authToken, result.user);

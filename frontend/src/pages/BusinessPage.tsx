@@ -1,28 +1,29 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Building2,
   ChevronDown,
-  Globe,
-  Mail,
-  MapPin,
-  Phone,
   Upload,
 } from 'lucide-react';
 import BusinessPreviewCard from '../modules/business-module/components/BusinessPreviewCard';
-import { DEFAULT_BUSINESS_VALUES } from '../wizard/WizardState';
+import { DEFAULT_BUSINESS_VALUES, BUSINESS_DRAFT_KEY } from '../wizard/WizardState';
+import { getScopedStorageKey } from '../auth';
 
 const fieldShell =
   'w-full rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-[14px] text-[#334155] outline-none shadow-sm';
 
-const socialLinks = [
-  { label: 'LinkedIn', url: 'https://linkedin.com/company/semixon', badge: 'in' },
-  { label: 'Instagram', url: 'https://instagram.com/semixon', badge: 'ig' },
-  { label: 'Facebook', url: 'https://facebook.com/semixon', badge: 'f' },
-  { label: 'X', url: 'https://x.com/semixon', badge: 'x' },
-];
-
 export default function BusinessPage() {
-  const business = DEFAULT_BUSINESS_VALUES;
+  const [business, setBusiness] = useState(DEFAULT_BUSINESS_VALUES);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(getScopedStorageKey(BUSINESS_DRAFT_KEY));
+      if (raw) {
+        setBusiness({ ...DEFAULT_BUSINESS_VALUES, ...JSON.parse(raw) });
+      }
+    } catch {
+      setBusiness(DEFAULT_BUSINESS_VALUES);
+    }
+  }, []);
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-6 sm:px-6 lg:px-8">
@@ -62,7 +63,7 @@ export default function BusinessPage() {
                 <label className="text-[13px] font-semibold text-slate-700">
                   Company Name <span className="text-red-500">*</span>
                 </label>
-                <div className={fieldShell}>{business.companyName}</div>
+                <div className={fieldShell}>{business.companyName || ''}</div>
               </div>
 
               <div className="space-y-2">
@@ -70,7 +71,7 @@ export default function BusinessPage() {
                   <label className="text-[13px] font-semibold text-slate-700">Tagline / Business Description</label>
                   <span className="text-[11px] text-slate-400">(Optional)</span>
                 </div>
-                <div className={fieldShell}>e.g. We build digital solutions that help businesses grow.</div>
+                <div className={fieldShell}>{business.tagline || ''}</div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-2">
@@ -79,7 +80,7 @@ export default function BusinessPage() {
                     <label className="text-[13px] font-semibold text-slate-700">Email</label>
                     <span className="text-[11px] text-slate-400">(Optional)</span>
                   </div>
-                  <div className={fieldShell}>{business.email}</div>
+                  <div className={fieldShell}>{business.email || ''}</div>
                 </div>
 
                 <div className="space-y-2">
@@ -90,7 +91,7 @@ export default function BusinessPage() {
                   <div className="flex items-center gap-3 rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-[14px] text-[#334155] shadow-sm">
                     <span className="text-[18px]">🇮🇳</span>
                     <ChevronDown className="h-4 w-4 text-slate-500" />
-                    <span className="ml-2">{business.phone}</span>
+                    <span className="ml-2">{business.phone || ''}</span>
                   </div>
                 </div>
               </div>
@@ -100,7 +101,7 @@ export default function BusinessPage() {
                   <label className="text-[13px] font-semibold text-slate-700">Website</label>
                   <span className="text-[11px] text-slate-400">(Optional)</span>
                 </div>
-                <div className={fieldShell}>{business.website}</div>
+                <div className={fieldShell}>{business.website || ''}</div>
               </div>
 
               <div className="space-y-2">
@@ -127,26 +128,26 @@ export default function BusinessPage() {
                   <label className="text-[13px] font-semibold text-slate-700">Business Address</label>
                   <span className="text-[11px] text-slate-400">(Optional)</span>
                 </div>
-                <div className={`${fieldShell} min-h-[92px]`}>{business.address}</div>
+                <div className={`${fieldShell} min-h-[92px]`}>{business.address || ''}</div>
               </div>
 
               <div className="grid gap-4 md:grid-cols-4">
                 <div className="space-y-2">
                   <label className="text-[13px] font-semibold text-slate-700">City</label>
-                  <div className={fieldShell}>{business.city}</div>
+                    <div className={fieldShell}>{business.city || ''}</div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[13px] font-semibold text-slate-700">State</label>
-                  <div className={fieldShell}>{business.state}</div>
+                    <div className={fieldShell}>{business.state || ''}</div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[13px] font-semibold text-slate-700">PIN / ZIP Code</label>
-                  <div className={fieldShell}>{business.zipCode}</div>
+                    <div className={fieldShell}>{business.zipCode || ''}</div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[13px] font-semibold text-slate-700">Country</label>
                   <div className="flex items-center justify-between rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-[14px] text-[#334155] shadow-sm">
-                    <span>{business.country}</span>
+                    <span>{business.country || ''}</span>
                     <ChevronDown className="h-4 w-4 text-slate-500" />
                   </div>
                 </div>
@@ -161,13 +162,13 @@ export default function BusinessPage() {
                 <div className="space-y-2">
                   <label className="text-[13px] font-semibold text-slate-700">Tax ID Type</label>
                   <div className="flex items-center justify-between rounded-[10px] border border-slate-200 bg-white px-4 py-3 text-[14px] text-[#334155] shadow-sm">
-                    <span>Select Tax ID Type</span>
+                    <span>{business.taxType || 'Select Tax ID Type'}</span>
                     <ChevronDown className="h-4 w-4 text-slate-500" />
                   </div>
                 </div>
                 <div className="space-y-2">
                   <label className="text-[13px] font-semibold text-slate-700">Tax ID / GST Number</label>
-                  <div className={fieldShell}>{business.taxId}</div>
+                  <div className={fieldShell}>{business.taxId || ''}</div>
                 </div>
               </div>
 
@@ -177,17 +178,23 @@ export default function BusinessPage() {
               </div>
 
               <div className="grid gap-3 md:grid-cols-2">
-                {socialLinks.map((link) => (
-                  <div
-                    key={link.label}
-                    className="flex items-center gap-3 rounded-[10px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm"
-                  >
-                    <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FF] text-[12px] font-bold uppercase text-[#1650FF]">
-                      {link.badge}
+                {(business.socialLinks || []).length > 0 ? (
+                  business.socialLinks.map((link) => (
+                    <div
+                      key={`${link.platform}-${link.url}`}
+                      className="flex items-center gap-3 rounded-[10px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm"
+                    >
+                      <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-[#EEF3FF] text-[12px] font-bold uppercase text-[#1650FF]">
+                        {link.platform.slice(0, 2)}
+                      </div>
+                      <div className="min-w-0 flex-1 truncate text-[14px] text-slate-700">{link.url}</div>
                     </div>
-                    <div className="min-w-0 flex-1 truncate text-[14px] text-slate-700">{link.url}</div>
+                  ))
+                ) : (
+                  <div className="rounded-[10px] border border-dashed border-slate-200 bg-slate-50 px-3 py-4 text-sm text-slate-500">
+                    No social links saved yet.
                   </div>
-                ))}
+                )}
               </div>
 
               <button

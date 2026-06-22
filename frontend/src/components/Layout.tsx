@@ -20,7 +20,7 @@ import {
   UserPlus
 } from 'lucide-react';
 import BrandMark from './BrandMark';
-import { signOut } from '../auth';
+import { getDisplayAuthUser, signOut } from '../auth';
 
 const BUSINESS_DRAFT_KEY = 'ilovequote_business_draft';
 
@@ -55,14 +55,9 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     navigate('/dashboard');
   };
 
-  const displayName = userName?.trim() || 'Account';
-  const initials = displayName
-    .split(' ')
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((part) => part[0]?.toUpperCase() ?? '')
-    .join('')
-    .slice(0, 2) || 'A';
+  const authUser = getDisplayAuthUser();
+  const displayName = userName?.trim() || authUser.displayName;
+  const initials = authUser.initials;
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -131,7 +126,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                     </button>
                     <div className="flex flex-col items-start leading-tight">
                       <span className="text-[13px] font-semibold text-slate-800">{displayName}</span>
-                      <span className="text-[11px] text-slate-500">{userName ? 'Signed in' : 'Account'}</span>
+                      <span className="text-[11px] text-slate-500">{userName ? 'Signed in' : 'Guest'}</span>
                     </div>
                   </div>
                   <button

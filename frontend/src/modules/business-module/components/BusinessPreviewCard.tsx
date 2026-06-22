@@ -8,14 +8,14 @@ interface BusinessPreviewCardProps {
 }
 
 export default function BusinessPreviewCard({ formData }: BusinessPreviewCardProps) {
-  const companyName = formData.companyName || 'Semixon';
-  const tagline = formData.tagline || 'my first quotation';
-  const email = formData.email || 'hello@semixon.com';
-  const phone = formData.phone || '+91 98765 43210';
-  const website = formData.website || 'https://www.semixon.com';
-  const address = formData.address || '123, Digital Tower, Kerala, India';
-  const taxId = formData.taxId || '32ABCDE1234F1Z5';
-  const portfolioSlug = formData.businessSlug || 'semixon';
+  const companyName = formData.companyName || 'Your Business';
+  const tagline = formData.tagline || '';
+  const email = formData.email || '';
+  const phone = formData.phone || '';
+  const website = formData.website || '';
+  const address = formData.address || '';
+  const taxId = formData.taxId || '';
+  const portfolioSlug = formData.businessSlug || 'your-business';
   const qrUrl = `${window.location.origin}/portfolio/${portfolioSlug}`;
   const logo = formData.logo || '';
 

@@ -13,6 +13,7 @@ import {
   Upload,
   User,
 } from 'lucide-react';
+import { getDisplayAuthUser } from '../auth';
 
 const innerNav = [
   { label: 'Profile Settings', icon: User, active: true },
@@ -36,6 +37,11 @@ const quickLinks = [
 ];
 
 export default function SettingsPage() {
+  const { user, displayName, initials, email } = getDisplayAuthUser();
+  const memberSince = user?.createdAt
+    ? new Intl.DateTimeFormat('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }).format(new Date(user.createdAt))
+    : 'Recently joined';
+
   return (
     <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
       <div className="px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
@@ -103,7 +109,7 @@ export default function SettingsPage() {
                     <div className="mb-4 text-[14px] font-semibold text-slate-900">Profile Picture</div>
                     <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
                       <div className="relative h-20 w-20 shrink-0 rounded-full bg-[#1650FF] text-[28px] font-medium text-white shadow-sm">
-                        <span className="absolute inset-0 flex items-center justify-center">RS</span>
+                        <span className="absolute inset-0 flex items-center justify-center">{initials}</span>
                         <span className="absolute -bottom-1 -right-1 flex h-7 w-7 items-center justify-center rounded-full border-2 border-white bg-white text-[#1650FF] shadow-sm">
                           <Upload className="h-4 w-4" />
                         </span>
@@ -121,14 +127,14 @@ export default function SettingsPage() {
                   <div>
                     <label className="mb-3 block text-[14px] font-semibold text-slate-900">Full Name</label>
                     <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 text-[15px] text-slate-700 shadow-sm">
-                      Rahul Sharma
+                      {displayName}
                     </div>
                   </div>
 
                   <div>
                     <label className="mb-3 block text-[14px] font-semibold text-slate-900">Email Address</label>
                     <div className="rounded-xl border border-slate-200 bg-white px-4 py-4 text-[15px] text-slate-700 shadow-sm">
-                      rahul.sharma@example.com
+                      {email || 'your-email@example.com'}
                     </div>
                   </div>
 
@@ -174,7 +180,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <div className="text-[13px] font-semibold text-slate-500">User ID</div>
-                      <div className="mt-1 text-[15px] font-semibold text-slate-900">USR-567890</div>
+                      <div className="mt-1 text-[15px] font-semibold text-slate-900">{user?.id || 'Local account'}</div>
                     </div>
                   </div>
 
@@ -184,7 +190,7 @@ export default function SettingsPage() {
                     </div>
                     <div>
                       <div className="text-[13px] font-semibold text-slate-500">Member Since</div>
-                      <div className="mt-1 text-[15px] font-semibold text-slate-900">16 May 2024</div>
+                      <div className="mt-1 text-[15px] font-semibold text-slate-900">{memberSince}</div>
                     </div>
                   </div>
 

@@ -147,7 +147,7 @@ export default function ClientForm({
                 </span>
                 <input
                   type="text"
-                  placeholder="e.g. John Smith"
+                  placeholder="e.g. Your client name"
                   id="inp-contactPerson"
                   {...register('contactPerson')}
                   className="w-full pl-10 pr-4 py-3 bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"

@@ -67,6 +67,26 @@ export function setStoredAuthUser(user: AuthUser) {
   localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(user.email || user.name || 'signed_in'));
 }
 
+export function getDisplayAuthUser() {
+  const user = getStoredAuthUser();
+  const displayName = user?.name?.trim() || user?.email?.trim() || 'Account';
+  const initials =
+    displayName
+      .split(' ')
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((part) => part[0]?.toUpperCase() ?? '')
+      .join('')
+      .slice(0, 2) || 'A';
+
+  return {
+    user,
+    displayName,
+    initials,
+    email: user?.email || '',
+  };
+}
+
 export function getScopedStorageKey(baseKey: string) {
   return `${baseKey}:${getAuthScope()}`;
 }

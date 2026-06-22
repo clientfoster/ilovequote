@@ -1,8 +1,9 @@
 import express from 'express';
 import { pbkdf2Sync, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { MongoClient } from 'mongodb';
 import { Resend } from 'resend';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -11,6 +12,8 @@ const DATA_DIR = path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'quotes.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const PORT = Number(process.env.PORT || 3001);
+const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
+const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'ilovequote';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
@@ -19,6 +22,10 @@ const VERIFICATION_TTL_MS = 15 * 60 * 1000;
 
 const app = express();
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+const mongoClient = new MongoClient(MONGODB_URI);
+let mongoDb = null;
+let usersCollection = null;
+let quotesCollection = null;
 app.use(express.json({ limit: '5mb' }));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
@@ -38,31 +45,28 @@ const DEFAULT_TERMS = [
 ];
 
 const DEMO_BUSINESS = {
-  companyName: 'Semixon Technologies',
-  tagline: 'We build digital solutions that help businesses grow.',
-  email: 'hello@semixon.com',
-  phone: '+91 98765 43210',
-  website: 'https://www.semixon.com',
+  companyName: '',
+  tagline: '',
+  email: '',
+  phone: '',
+  website: '',
   logo: '',
-  address: '123, Digital Tower',
-  city: 'Kozhikode',
-  state: 'Kerala',
-  zipCode: '673006',
-  country: 'India',
+  address: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  country: '',
   taxType: 'GSTIN',
-  taxId: '32ABCDE1234F1Z5',
-  socialLinks: [
-    { platform: 'LinkedIn', url: 'https://www.linkedin.com/company/semixon' },
-    { platform: 'Instagram', url: 'https://www.instagram.com/semixon' },
-  ],
-  businessSlug: 'semixon-technologies',
+  taxId: '',
+  socialLinks: [],
+  businessSlug: '',
 };
 
 const DEMO_CLIENT = {
-  name: 'Swanish Healthcare Pvt. Ltd.',
-  email: 'info@swanishhealthcare.com',
-  phone: '+91 98462 68462',
-  address: 'Kozhikode, Kerala, India\n673006, India',
+  name: '',
+  email: '',
+  phone: '',
+  address: '',
 };
 
 function formatMoney(value) {
@@ -181,6 +185,43 @@ async function sendOtpEmail({ email, otp }) {
   return { provider: 'resend', id: data?.id || null };
 }
 
+async function ensureMongo() {
+  if (mongoDb && usersCollection && quotesCollection) {
+    return;
+  }
+
+  if (!mongoDb) {
+    await mongoClient.connect();
+  }
+
+  mongoDb = mongoClient.db(MONGODB_DB_NAME);
+  usersCollection = mongoDb.collection('users');
+  quotesCollection = mongoDb.collection('quotes');
+  await Promise.all([
+    usersCollection.createIndex({ email: 1 }, { unique: true }),
+    quotesCollection.createIndex({ ownerUserId: 1 }),
+    quotesCollection.createIndex({ shareToken: 1 }, { unique: true }),
+    quotesCollection.createIndex({ quoteNumber: 1 }),
+  ]);
+}
+
+function stripMongoId(doc) {
+  if (!doc) return doc;
+  const { _id, ...rest } = doc;
+  return rest;
+}
+
+async function readLegacyJsonArray(filePath, key) {
+  try {
+    const raw = await readFile(filePath, 'utf8');
+    const parsed = JSON.parse(raw);
+    const items = Array.isArray(parsed) ? parsed : parsed?.[key];
+    return Array.isArray(items) ? items : [];
+  } catch {
+    return [];
+  }
+}
+
 function getBaseUrl(req) {
   const forwardedProto = req.headers['x-forwarded-proto'];
   const proto = Array.isArray(forwardedProto)
@@ -255,21 +296,21 @@ function summarizeItems(items) {
 
 function buildBusinessDetails(source = {}) {
   return {
-    companyName: source.companyName || source.businessName || DEMO_BUSINESS.companyName,
-    tagline: source.tagline || source.businessTagline || DEMO_BUSINESS.tagline,
-    email: source.email || DEMO_BUSINESS.email,
-    phone: source.phone || DEMO_BUSINESS.phone,
-    website: source.website || DEMO_BUSINESS.website,
+    companyName: source.companyName || source.businessName || '',
+    tagline: source.tagline || source.businessTagline || '',
+    email: source.email || '',
+    phone: source.phone || '',
+    website: source.website || '',
     logo: source.logo || '',
-    address: source.address || DEMO_BUSINESS.address,
-    city: source.city || DEMO_BUSINESS.city,
-    state: source.state || DEMO_BUSINESS.state,
-    zipCode: source.zipCode || DEMO_BUSINESS.zipCode,
-    country: source.country || DEMO_BUSINESS.country,
-    taxType: source.taxType || DEMO_BUSINESS.taxType,
-    taxId: source.taxId || DEMO_BUSINESS.taxId,
-    socialLinks: Array.isArray(source.socialLinks) ? source.socialLinks : DEMO_BUSINESS.socialLinks,
-    businessSlug: slugify(source.businessSlug || source.companyName || DEMO_BUSINESS.businessSlug),
+    address: source.address || '',
+    city: source.city || '',
+    state: source.state || '',
+    zipCode: source.zipCode || '',
+    country: source.country || '',
+    taxType: source.taxType || 'GSTIN',
+    taxId: source.taxId || '',
+    socialLinks: Array.isArray(source.socialLinks) ? source.socialLinks : [],
+    businessSlug: slugify(source.businessSlug || source.companyName || source.businessName || 'business'),
   };
 }
 
@@ -282,12 +323,12 @@ function buildClientDetails(source = {}) {
   if (postalCountry) addressParts.push(postalCountry);
 
   return {
-    name: source.companyName || source.name || DEMO_CLIENT.name,
+    name: source.companyName || source.name || '',
     contactPerson: source.contactPerson || '',
-    email: source.email || DEMO_CLIENT.email,
-    phone: source.phone || DEMO_CLIENT.phone,
+    email: source.email || '',
+    phone: source.phone || '',
     website: source.website || '',
-    address: source.address || addressParts.join('\n') || DEMO_CLIENT.address,
+    address: source.address || addressParts.join('\n') || '',
     taxIdType: source.taxIdType || 'GSTIN',
     taxId: source.taxId || '',
     poNumber: source.poNumber || '',
@@ -450,21 +491,22 @@ function buildSeedQuotes() {
 }
 
 async function loadQuotes() {
-  await mkdir(DATA_DIR, { recursive: true });
-  try {
-    const raw = await readFile(STORE_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    const quotes = Array.isArray(parsed) ? parsed : parsed.quotes;
-    if (Array.isArray(quotes) && quotes.length > 0) {
-      return quotes;
-    }
-  } catch {
-    // fall through to seed data
+  await ensureMongo();
+  const storedQuotes = await quotesCollection.find({}).sort({ createdAt: -1 }).toArray();
+  if (storedQuotes.length > 0) {
+    quotes = storedQuotes.map(stripMongoId);
+    return quotes;
   }
 
-  const seedQuotes = buildSeedQuotes();
-  await writeFile(STORE_FILE, JSON.stringify(seedQuotes, null, 2), 'utf8');
-  return seedQuotes;
+  const legacyQuotes = await readLegacyJsonArray(STORE_FILE, 'quotes');
+  if (legacyQuotes.length > 0) {
+    quotes = legacyQuotes;
+    await quotesCollection.insertMany(legacyQuotes);
+    return quotes;
+  }
+
+  quotes = [];
+  return quotes;
 }
 
 let quotes = await loadQuotes();
@@ -474,21 +516,21 @@ const verificationTokens = new Map();
 const authTokens = new Map();
 
 async function loadUsers() {
-  await mkdir(DATA_DIR, { recursive: true });
-  try {
-    const raw = await readFile(USERS_FILE, 'utf8');
-    const parsed = JSON.parse(raw);
-    const storedUsers = Array.isArray(parsed) ? parsed : parsed.users;
-    if (Array.isArray(storedUsers)) {
-      users = storedUsers;
-      return;
-    }
-  } catch {
-    // fall through to empty store
+  await ensureMongo();
+  const storedUsers = await usersCollection.find({}).sort({ createdAt: 1 }).toArray();
+  if (storedUsers.length > 0) {
+    users = storedUsers.map(stripMongoId);
+    return users;
+  }
+
+  const legacyUsers = await readLegacyJsonArray(USERS_FILE, 'users');
+  if (legacyUsers.length > 0) {
+    users = legacyUsers;
+    await usersCollection.insertMany(legacyUsers);
+    return users;
   }
 
   users = [];
-  await writeFile(USERS_FILE, JSON.stringify({ users }, null, 2), 'utf8');
   return users;
 }
 
@@ -499,11 +541,19 @@ async function refreshUsers() {
 }
 
 async function persistQuotes() {
-  await writeFile(STORE_FILE, JSON.stringify(quotes, null, 2), 'utf8');
+  await ensureMongo();
+  await quotesCollection.deleteMany({});
+  if (quotes.length > 0) {
+    await quotesCollection.insertMany(quotes);
+  }
 }
 
 async function persistUsers() {
-  await writeFile(USERS_FILE, JSON.stringify({ users }, null, 2), 'utf8');
+  await ensureMongo();
+  await usersCollection.deleteMany({});
+  if (users.length > 0) {
+    await usersCollection.insertMany(users);
+  }
 }
 
 function makePublicUser(user) {
@@ -1251,7 +1301,7 @@ app.get('/api/quotes', (req, res) => {
     ? quotes.filter((quote) => !quote.ownerUserId || quote.ownerUserId === user.id)
     : quotes.filter((quote) => !quote.ownerUserId);
   res.json({
-    items: visibleQuotes.map((quote) => quoteSummary(quote, req)),
+    items: visibleQuotes,
   });
 });
 
@@ -1277,6 +1327,67 @@ app.post('/api/quotes', async (req, res) => {
   }
 });
 
+app.patch('/api/quotes/:id', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    const quote = findQuoteById(req.params.id, user?.id || null);
+    if (!quote) {
+      res.status(404).json({ error: 'Quote not found' });
+      return;
+    }
+
+    if (quote.ownerUserId && quote.ownerUserId !== user?.id) {
+      res.status(403).json({ error: 'You do not have permission to modify this quote.' });
+      return;
+    }
+
+    if (typeof req.body?.quoteNumber === 'string' && req.body.quoteNumber.trim()) {
+      quote.quoteNumber = req.body.quoteNumber.trim();
+    }
+
+    if (typeof req.body?.status === 'string') {
+      quote.status = req.body.status;
+    }
+
+    if (req.body?.businessDetails) {
+      quote.businessDetails = { ...quote.businessDetails, ...req.body.businessDetails };
+    }
+
+    if (req.body?.clientDetails) {
+      quote.clientDetails = { ...quote.clientDetails, ...req.body.clientDetails };
+    }
+
+    if (Array.isArray(req.body?.items)) {
+      quote.items = req.body.items;
+    }
+
+    if (typeof req.body?.terms === 'string') {
+      quote.terms = req.body.terms;
+    }
+
+    if (typeof req.body?.date === 'string') {
+      quote.date = req.body.date;
+    }
+
+    if (typeof req.body?.expiryDate === 'string') {
+      quote.expiryDate = req.body.expiryDate;
+    }
+
+    if (typeof req.body?.taxRate === 'number') {
+      quote.taxRate = req.body.taxRate;
+    }
+
+    quote.updatedAt = new Date().toISOString();
+    await persistQuotes();
+    res.json({ ok: true, quote });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to update quote',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 app.get('/api/quotes/:id', (req, res) => {
   const user = getAuthenticatedUser(req);
   const quote = findQuoteById(req.params.id, user?.id || null);
@@ -1290,6 +1401,24 @@ app.get('/api/quotes/:id', (req, res) => {
     shareUrl: publicShareUrl(req, quote),
     pdfUrl: `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(quote.id)}/pdf`,
   });
+});
+
+app.delete('/api/quotes/:id', async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  const quote = findQuoteById(req.params.id, user?.id || null);
+  if (!quote) {
+    res.status(404).json({ error: 'Quote not found' });
+    return;
+  }
+
+  if (quote.ownerUserId && quote.ownerUserId !== user?.id) {
+    res.status(403).json({ error: 'You do not have permission to delete this quote.' });
+    return;
+  }
+
+  quotes = quotes.filter((entry) => entry.id !== quote.id);
+  await persistQuotes();
+  res.json({ ok: true });
 });
 
 app.post('/api/quotes/:id/share', (req, res) => {
@@ -1360,7 +1489,7 @@ app.get('/', (req, res) => {
   <div class="card">
     <h1>Quote backend is running</h1>
     <p>Use <code>/api/quotes</code> to list quotes, <code>/share/:token</code> for the share page, and <code>/api/quotes/:id/pdf</code> for the PDF download.</p>
-    <p>Open the seeded demo quote here: <a href="/share/${encodeURIComponent(quotes[0]?.shareToken || '')}">/share/${escapeHtml(quotes[0]?.shareToken || '')}</a></p>
+    <p>No seeded demo quote is loaded. Create a quote to generate a share link.</p>
   </div>
 </body>
 </html>`);

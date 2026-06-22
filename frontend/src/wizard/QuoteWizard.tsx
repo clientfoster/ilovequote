@@ -26,7 +26,8 @@ import {
   SETTINGS_STORAGE_KEY as SETTINGS_STORAGE_KEY_BASE,
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
-import { getScopedStorageKey } from '../auth';
+import { getDisplayAuthUser, getScopedStorageKey } from '../auth';
+import { createQuote } from '../quoteApi';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
   if (!termsStr) return [];
@@ -55,39 +56,8 @@ const stripHeavyBusinessFields = (business: BusinessFormValues): BusinessFormVal
   socialLinks: business.socialLinks.map((link) => ({ ...link })),
 });
 
-const LEGACY_DEMO_CLIENT_VALUES = {
-  companyName: 'Swanish Healthcare Pvt. Ltd.',
-  contactPerson: 'Dr. Swanish',
-  email: 'info@swanishhealthcare.com',
-  phone: '+91 98462 68462',
-  website: 'https://www.swanishhealthcare.com',
-  taxIdType: 'GSTIN',
-  taxId: '32ABCDE1234F1Z5',
-  poNumber: 'PO12345',
-  billingAddress: 'Kozhikode, Kerala, India\n673006, India',
-  city: 'Kozhikode',
-  state: 'Kerala',
-  zipCode: '673006',
-  country: 'India',
-} as const;
-
 const normalizeClientDraft = (draft: Partial<ClientFormValues> | null | undefined): ClientFormValues => {
-  const merged = { ...DEFAULT_CLIENT_VALUES, ...(draft ?? {}) };
-  const looksLikeLegacyDemo =
-    merged.companyName === LEGACY_DEMO_CLIENT_VALUES.companyName &&
-    merged.contactPerson === LEGACY_DEMO_CLIENT_VALUES.contactPerson &&
-    merged.email === LEGACY_DEMO_CLIENT_VALUES.email &&
-    merged.phone === LEGACY_DEMO_CLIENT_VALUES.phone &&
-    merged.website === LEGACY_DEMO_CLIENT_VALUES.website &&
-    merged.taxId === LEGACY_DEMO_CLIENT_VALUES.taxId &&
-    merged.poNumber === LEGACY_DEMO_CLIENT_VALUES.poNumber &&
-    merged.billingAddress === LEGACY_DEMO_CLIENT_VALUES.billingAddress &&
-    merged.city === LEGACY_DEMO_CLIENT_VALUES.city &&
-    merged.state === LEGACY_DEMO_CLIENT_VALUES.state &&
-    merged.zipCode === LEGACY_DEMO_CLIENT_VALUES.zipCode &&
-    merged.country === LEGACY_DEMO_CLIENT_VALUES.country;
-
-  return looksLikeLegacyDemo ? DEFAULT_CLIENT_VALUES : merged;
+  return { ...DEFAULT_CLIENT_VALUES, ...(draft ?? {}) };
 };
 
 const buildQuotePayload = (
@@ -149,6 +119,7 @@ const saveQuotesSafely = (key: string, nextQuote: ReturnType<typeof buildQuotePa
 
 export default function QuoteWizard() {
   const navigate = useNavigate();
+  const { displayName, initials } = getDisplayAuthUser();
   const BUSINESS_DRAFT_KEY = getScopedStorageKey(BUSINESS_DRAFT_KEY_BASE);
   const CLIENT_DRAFT_KEY = getScopedStorageKey(CLIENT_DRAFT_KEY_BASE);
   const CLIENT_LOGO_KEY = getScopedStorageKey(CLIENT_LOGO_KEY_BASE);
@@ -426,15 +397,20 @@ export default function QuoteWizard() {
       taxRate,
       termsAndConditions,
     );
-    const saved = saveQuotesSafely(QUOTES_STORAGE_KEY, payload);
-    if (!saved) {
-      setSaveState('idle');
-      onTriggerToast('Could not save quote because browser storage is full. Try deleting older quotes first.');
-      return;
+    try {
+      await createQuote(payload);
+      onTriggerToast('Quote saved successfully');
+      navigate('/quotes');
+    } catch {
+      const saved = saveQuotesSafely(QUOTES_STORAGE_KEY, payload);
+      if (!saved) {
+        setSaveState('idle');
+        onTriggerToast('Could not save quote.');
+        return;
+      }
+      onTriggerToast('Quote saved locally');
+      navigate('/quotes');
     }
-
-    onTriggerToast('Quote ready');
-    navigate('/quotes');
   };
 
   return (
@@ -496,10 +472,10 @@ export default function QuoteWizard() {
             </button>
 
             <div className="flex items-center gap-3 pl-1">
-              <div className="h-10 w-10 rounded-full bg-blue-100 text-[#1D4ED8] flex items-center justify-center font-extrabold text-xs">RS</div>
+              <div className="h-10 w-10 rounded-full bg-blue-100 text-[#1D4ED8] flex items-center justify-center font-extrabold text-xs">{initials}</div>
               <div className="hidden xl:block">
                 <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-slate-700">Rahul Sharma</span>
+                  <span className="text-sm font-semibold text-slate-700">{displayName}</span>
                   <ChevronDown size={14} className="text-slate-400" />
                 </div>
               </div>

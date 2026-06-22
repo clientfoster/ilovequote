@@ -117,10 +117,10 @@ export default function App() {
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/items" element={<ItemsPage />} />
 
-          <Route path="/quotes" element={<QuotesPage onTriggerToast={() => {}} />} />
+          <Route path="/quotes" element={<QuotesPage />} />
 
           <Route path="/business" element={<BusinessPage />} />
-          <Route path="/settings" element={<SettingsPage onTriggerToast={() => {}} />} />
+          <Route path="/settings" element={<SettingsPage />} />
           <Route path="/help-support" element={<HelpSupportPage />} />
 
           {/* Placeholder subviews for Coming Soon products */}

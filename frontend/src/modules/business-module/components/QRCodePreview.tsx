@@ -22,9 +22,9 @@ interface QRCodePreviewProps {
 }
 
 export default function QRCodePreview({ formData }: QRCodePreviewProps) {
-  const companyName = formData.companyName || 'Semixon Agency';
-  const tagline = formData.tagline || 'Elevating digital experiences with modern design.';
-  const slug = formData.businessSlug || 'semixon';
+  const companyName = formData.companyName || 'Your Business';
+  const tagline = formData.tagline || '';
+  const slug = formData.businessSlug || 'your-business';
   const phone = formData.phone || '';
   const website = formData.website || '';
   

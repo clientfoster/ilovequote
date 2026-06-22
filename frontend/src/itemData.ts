@@ -2,14 +2,14 @@ import { ItemQuoteItem, ItemQuotationMeta } from './types';
 
 export const INITIAL_ITEMS: ItemQuoteItem[] = [];
 export const INITIAL_META: ItemQuotationMeta = {
-  quotationNumber: 'Q-2024-001',
+  quotationNumber: '',
   clientName: '',
   clientEmail: '',
-  businessName: 'Semixon Technologies',
-  businessEmail: 'hello@semixon.com',
-  date: '2024-05-16',
-  validUntil: '2024-05-30',
-  currency: 'â‚¹',
+  businessName: '',
+  businessEmail: '',
+  date: new Date().toISOString().split('T')[0],
+  validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  currency: '?',
 };
 
 export interface ShortcutCard {

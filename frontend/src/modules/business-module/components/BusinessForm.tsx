@@ -71,7 +71,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
               <input
                 type="text"
                 id="biz-company-name"
-                placeholder="Semixon"
+                placeholder="Your company name"
                 {...register('companyName', { 
                   required: 'Company name is required to build the quote.' 
                 })}
@@ -102,7 +102,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
             </div>
             <textarea
               id="biz-tagline"
-              placeholder="We build digital solutions that help businesses grow."
+              placeholder="Describe what your business does."
               {...register('tagline')}
               className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105 rounded-xl px-4 py-3 text-sm font-semibold transition-all outline-hidden h-24 max-h-40 placeholder:text-slate-400"
             />
@@ -117,7 +117,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
             <input
               type="text"
               id="biz-email"
-              placeholder="hello@semixon.com"
+              placeholder="hello@yourbusiness.com"
               {...register('email', {
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -161,7 +161,7 @@ export default function BusinessForm({ register, control, errors, watch, setValu
             <input
               type="text"
               id="biz-website"
-              placeholder="https://www.semixon.com"
+              placeholder="https://www.yourbusiness.com"
               {...register('website', {
                 validate: (v) => {
                   if (!v) return true;
