@@ -20,6 +20,7 @@ import {
   ArrowRight,
 } from 'lucide-react';
 import { Quote } from '../types';
+import { getScopedStorageKey } from '../auth';
 
 type DashboardQuote = Quote & {
   title: string;
@@ -32,8 +33,6 @@ type DashboardQuote = Quote & {
   clientInitials: string;
   accent: string;
 };
-
-const QUOTES_STORAGE_KEY = 'ilovequote_saved_quotes';
 
 const sampleQuotes: DashboardQuote[] = [
   {
@@ -273,6 +272,7 @@ const quoteStatusOptions = ['All Status', 'Created', 'Viewed', 'Sent', 'Accepted
 
 export default function DashboardPage() {
   const navigate = useNavigate();
+  const QUOTES_STORAGE_KEY = getScopedStorageKey('ilovequote_saved_quotes');
   const [quotes, setQuotes] = useState<DashboardQuote[]>(sampleQuotes);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<(typeof quoteStatusOptions)[number]>('All Status');

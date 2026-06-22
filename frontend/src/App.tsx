@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Layers3, FolderGit2, QrCode } from 'lucide-react';
 
@@ -16,23 +16,66 @@ import QRPortfolioPage from './pages/QRPortfolioPage';
 import CreateQuotePage from './pages/CreateQuotePage';
 import SettingsPage from './pages/SettingsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
-import { isAuthenticated } from './auth';
+import {
+  AuthUser,
+  getAuthToken,
+  getStoredAuthUser,
+  isAuthenticated,
+  setStoredAuthUser,
+  signOut,
+} from './auth';
 
-type ProtectedRouteProps = {
-  isAuthed: boolean;
-  children: React.ReactNode;
-};
-
-function ProtectedRoute({ isAuthed, children }: ProtectedRouteProps) {
-  if (!isAuthed) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return <>{children}</>;
-}
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') ? '/api' : 'http://localhost:3001');
 
 export default function App() {
   const [isAuthed, setIsAuthed] = useState(() => isAuthenticated());
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredAuthUser());
+
+  useEffect(() => {
+    const token = getAuthToken();
+    if (!token) {
+      setCurrentUser(null);
+      setIsAuthed(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function loadCurrentUser() {
+      try {
+        const response = await fetch(`${API_BASE}/api/auth/me`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error('Session expired');
+        }
+
+        const payload = (await response.json()) as { user?: AuthUser };
+        if (!cancelled && payload.user) {
+          setStoredAuthUser(payload.user);
+          setCurrentUser(payload.user);
+          setIsAuthed(true);
+        }
+      } catch {
+        if (!cancelled) {
+          signOut();
+          setCurrentUser(null);
+          setIsAuthed(false);
+        }
+      }
+    }
+
+    loadCurrentUser();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <Router>
@@ -44,8 +87,9 @@ export default function App() {
               <Navigate to="/dashboard" replace />
             ) : (
               <LoginPage
-                onLogin={() => {
+                onLogin={(user) => {
                   setIsAuthed(true);
+                  setCurrentUser(user);
                 }}
               />
             )
@@ -53,25 +97,22 @@ export default function App() {
         />
 
         <Route
-          path="/create-quote"
           element={
-            <ProtectedRoute isAuthed={isAuthed}>
-              <CreateQuotePage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          element={
-            <ProtectedRoute isAuthed={isAuthed}>
-              <Layout onLogout={() => setIsAuthed(false)} />
-            </ProtectedRoute>
+            <Layout
+              isAuthed={isAuthed}
+              userName={currentUser?.name}
+              onLogout={() => {
+                setIsAuthed(false);
+                setCurrentUser(null);
+              }}
+            />
           }
         >
-          {/* Default entry point redirects directly to /dashboard as requested */}
-          <Route path="/" element={<Navigate to={isAuthed ? '/dashboard' : '/login'} replace />} />
+          {/* Default entry point now always opens the app shell for guests and signed-in users alike. */}
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/create-quote" element={<CreateQuotePage />} />
 
           <Route path="/clients" element={<ClientsPage />} />
           <Route path="/items" element={<ItemsPage />} />
@@ -105,7 +146,7 @@ export default function App() {
           />
 
           {/* Fallback route handles unexpected slugs */}
-          <Route path="*" element={<Navigate to={isAuthed ? '/dashboard' : '/login'} replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Route>
       </Routes>
     </Router>

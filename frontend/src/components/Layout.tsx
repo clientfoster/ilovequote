@@ -15,7 +15,9 @@ import {
   Smartphone,
   CheckCircle2,
   Menu,
-  X
+  X,
+  LogIn,
+  UserPlus
 } from 'lucide-react';
 import BrandMark from './BrandMark';
 import { signOut } from '../auth';
@@ -23,10 +25,12 @@ import { signOut } from '../auth';
 const BUSINESS_DRAFT_KEY = 'ilovequote_business_draft';
 
 interface LayoutProps {
+  isAuthed: boolean;
+  userName?: string;
   onLogout?: () => void;
 }
 
-export default function Layout({ onLogout }: LayoutProps) {
+export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const [showToast, setShowToast] = useState(false);
@@ -48,8 +52,17 @@ export default function Layout({ onLogout }: LayoutProps) {
   const handleLogout = () => {
     signOut();
     onLogout?.();
-    navigate('/login');
+    navigate('/dashboard');
   };
+
+  const displayName = userName?.trim() || 'Account';
+  const initials = displayName
+    .split(' ')
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? '')
+    .join('')
+    .slice(0, 2) || 'A';
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -110,21 +123,44 @@ export default function Layout({ onLogout }: LayoutProps) {
                 </span>
                 <CheckCircle2 className="h-4.5 w-4.5" />
               </button>
-              <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1D4ED8] text-[13px] font-semibold text-white shadow-sm">
-                RS
-              </button>
-              <button type="button" className="flex items-center gap-2 text-[14px] font-medium text-slate-800">
-                Rahul Sharma
-                <span className="text-slate-500">▾</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
-                <LogOut className="h-4 w-4" />
-                Logout
-              </button>
+              {isAuthed ? (
+                <>
+                  <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+                    <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1D4ED8] text-[12px] font-semibold text-white shadow-sm">
+                      {initials}
+                    </button>
+                    <div className="flex flex-col items-start leading-tight">
+                      <span className="text-[13px] font-semibold text-slate-800">{displayName}</span>
+                      <span className="text-[11px] text-slate-500">{userName ? 'Signed in' : 'Account'}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Link
+                    to="/login?mode=login"
+                    className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  >
+                    <LogIn className="h-4 w-4" />
+                    Login
+                  </Link>
+                  <Link
+                    to="/login?mode=signup"
+                    className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-blue-800"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    Sign Up
+                  </Link>
+                </div>
+              )}
             </div>
           </div>
         </header>
@@ -213,6 +249,24 @@ export default function Layout({ onLogout }: LayoutProps) {
               </div>
 
               <div className="flex items-center gap-2">
+                {!isAuthed && (
+                  <div className="flex items-center gap-2">
+                    <Link
+                      to="/login?mode=login"
+                      className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-2.5 py-1.5 text-[11px] font-semibold text-slate-700 shadow-sm"
+                    >
+                      <LogIn className="h-3.5 w-3.5" />
+                      Login
+                    </Link>
+                    <Link
+                      to="/login?mode=signup"
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#1D4ED8] px-2.5 py-1.5 text-[11px] font-semibold text-white shadow-sm"
+                    >
+                      <UserPlus className="h-3.5 w-3.5" />
+                      Sign Up
+                    </Link>
+                  </div>
+                )}
                 <button
                   onClick={() => {
                     localStorage.removeItem('ilovequote_editing_quote_id');
@@ -223,9 +277,16 @@ export default function Layout({ onLogout }: LayoutProps) {
                 >
                   <PlusCircle className="w-4 h-4" />
                 </button>
-                <div className="h-8 w-8 rounded-full bg-[#1D4ED8] flex items-center justify-center text-white text-[10px] font-extrabold shadow-inner border border-white">
-                  JD
-                </div>
+                {isAuthed ? (
+                  <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm">
+                    <div className="h-7 w-7 rounded-full bg-[#1D4ED8] flex items-center justify-center text-white text-[10px] font-extrabold shadow-inner border border-white">
+                      {initials}
+                    </div>
+                    <span className="max-w-[120px] truncate text-[12px] font-semibold text-slate-800">
+                      {displayName}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </header>
 
@@ -292,14 +353,33 @@ export default function Layout({ onLogout }: LayoutProps) {
                   <div className="p-4 border-t border-slate-100 bg-slate-50/50">
                     <p className="text-[10px] font-bold text-slate-700">Help Desk</p>
                     <p className="text-[9px] text-slate-400 leading-tight mt-0.5">help@ilovequote.com</p>
-                    <button
-                      type="button"
-                      onClick={handleLogout}
-                      className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
-                    >
-                      <LogOut className="h-3.5 w-3.5" />
-                      Logout
-                    </button>
+                    {isAuthed ? (
+                      <button
+                        type="button"
+                        onClick={handleLogout}
+                        className="mt-3 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
+                      >
+                        <LogOut className="h-3.5 w-3.5" />
+                        Logout
+                      </button>
+                    ) : (
+                      <div className="mt-3 flex gap-2">
+                        <Link
+                          to="/login?mode=login"
+                          className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
+                        >
+                          <LogIn className="h-3.5 w-3.5" />
+                          Login
+                        </Link>
+                        <Link
+                          to="/login?mode=signup"
+                          className="inline-flex items-center gap-1.5 rounded-lg bg-[#1D4ED8] px-3 py-2 text-[11px] font-semibold text-white shadow-sm"
+                        >
+                          <UserPlus className="h-3.5 w-3.5" />
+                          Sign Up
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>

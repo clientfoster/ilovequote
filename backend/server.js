@@ -310,7 +310,7 @@ function buildQuotationMeta(source = {}, businessDetails, clientDetails) {
   };
 }
 
-function buildQuoteFromPayload(payload = {}) {
+function buildQuoteFromPayload(payload = {}, ownerUserId = null) {
   const isWizardPayload = Array.isArray(payload.itemsData) || payload.businessData || payload.clientData || payload.quotationMeta;
 
   const businessDetails = buildBusinessDetails(payload.businessDetails || payload.businessData || payload);
@@ -360,6 +360,7 @@ function buildQuoteFromPayload(payload = {}) {
     createdAt: payload.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     source: isWizardPayload ? 'wizard' : 'api',
+    ownerUserId,
   };
 }
 
@@ -488,9 +489,14 @@ async function loadUsers() {
 
   users = [];
   await writeFile(USERS_FILE, JSON.stringify({ users }, null, 2), 'utf8');
+  return users;
 }
 
 await loadUsers();
+
+async function refreshUsers() {
+  return loadUsers();
+}
 
 async function persistQuotes() {
   await writeFile(STORE_FILE, JSON.stringify(quotes, null, 2), 'utf8');
@@ -535,8 +541,12 @@ function publicShareUrl(req, quote) {
   return `${getBaseUrl(req)}/share/${quote.shareToken}`;
 }
 
-function findQuoteById(id) {
-  return quotes.find((quote) => quote.id === id || quote.shareToken === id || quote.quoteNumber === id);
+function findQuoteById(id, ownerUserId = null) {
+  return quotes.find((quote) => {
+    const matchesId = quote.id === id || quote.shareToken === id || quote.quoteNumber === id;
+    const matchesOwner = !quote.ownerUserId || !ownerUserId || quote.ownerUserId === ownerUserId;
+    return matchesId && matchesOwner;
+  });
 }
 
 function findQuoteByToken(token) {
@@ -1128,6 +1138,7 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 
 app.post('/api/auth/register', async (req, res) => {
   try {
+    await refreshUsers();
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
     const name = String(req.body?.name || '').trim();
@@ -1193,6 +1204,7 @@ app.post('/api/auth/register', async (req, res) => {
 
 app.post('/api/auth/login', async (req, res) => {
   try {
+    await refreshUsers();
     const email = normalizeEmail(req.body?.email);
     const password = String(req.body?.password || '');
     const user = users.find((entry) => entry.email === email);
@@ -1222,7 +1234,8 @@ app.post('/api/auth/login', async (req, res) => {
   }
 });
 
-app.get('/api/auth/me', (req, res) => {
+app.get('/api/auth/me', async (req, res) => {
+  await refreshUsers();
   const user = getAuthenticatedUser(req);
   if (!user) {
     res.status(401).json({ error: 'Not signed in.' });
@@ -1233,15 +1246,23 @@ app.get('/api/auth/me', (req, res) => {
 });
 
 app.get('/api/quotes', (req, res) => {
+  const user = getAuthenticatedUser(req);
+  const visibleQuotes = user
+    ? quotes.filter((quote) => !quote.ownerUserId || quote.ownerUserId === user.id)
+    : quotes.filter((quote) => !quote.ownerUserId);
   res.json({
-    items: quotes.map((quote) => quoteSummary(quote, req)),
+    items: visibleQuotes.map((quote) => quoteSummary(quote, req)),
   });
 });
 
 app.post('/api/quotes', async (req, res) => {
   try {
-    const quote = buildQuoteFromPayload(req.body || {});
-    quotes = [quote, ...quotes.filter((entry) => entry.id !== quote.id && entry.shareToken !== quote.shareToken)];
+    const user = getAuthenticatedUser(req);
+    const quote = buildQuoteFromPayload(req.body || {}, user?.id || null);
+    quotes = [
+      quote,
+      ...quotes.filter((entry) => entry.id !== quote.id && entry.shareToken !== quote.shareToken),
+    ];
     await persistQuotes();
     res.status(201).json({
       quote,
@@ -1257,7 +1278,8 @@ app.post('/api/quotes', async (req, res) => {
 });
 
 app.get('/api/quotes/:id', (req, res) => {
-  const quote = findQuoteById(req.params.id);
+  const user = getAuthenticatedUser(req);
+  const quote = findQuoteById(req.params.id, user?.id || null);
   if (!quote) {
     res.status(404).json({ error: 'Quote not found' });
     return;
@@ -1271,9 +1293,15 @@ app.get('/api/quotes/:id', (req, res) => {
 });
 
 app.post('/api/quotes/:id/share', (req, res) => {
-  const quote = findQuoteById(req.params.id);
+  const user = getAuthenticatedUser(req);
+  const quote = findQuoteById(req.params.id, user?.id || null);
   if (!quote) {
     res.status(404).json({ error: 'Quote not found' });
+    return;
+  }
+
+  if (quote.ownerUserId && quote.ownerUserId !== user?.id) {
+    res.status(403).json({ error: 'You do not have permission to modify this quote.' });
     return;
   }
 
@@ -1300,7 +1328,8 @@ app.get('/share/:token', (req, res) => {
 });
 
 app.get('/api/quotes/:id/pdf', (req, res) => {
-  const quote = findQuoteById(req.params.id);
+  const user = getAuthenticatedUser(req);
+  const quote = findQuoteById(req.params.id, user?.id || null);
   if (!quote) {
     res.status(404).json({ error: 'Quote not found' });
     return;

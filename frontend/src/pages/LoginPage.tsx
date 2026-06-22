@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
   CheckCircle2,
@@ -12,10 +12,11 @@ import {
   Sparkles,
 } from 'lucide-react';
 import BrandMark from '../components/BrandMark';
+import { AuthUser } from '../auth';
 import { signIn } from '../auth';
 
 interface LoginPageProps {
-  onLogin?: () => void;
+  onLogin?: (user: AuthUser) => void;
 }
 
 type FlowMode = 'signup' | 'login';
@@ -43,7 +44,11 @@ async function apiRequest<T>(path: string, body: Record<string, unknown>) {
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
-  const [mode, setMode] = useState<FlowMode>('signup');
+  const location = useLocation();
+  const [mode, setMode] = useState<FlowMode>(() => {
+    const modeParam = new URLSearchParams(location.search).get('mode');
+    return modeParam === 'login' ? 'login' : 'signup';
+  });
   const [step, setStep] = useState<SignupStep>('email');
   const [email, setEmail] = useState('you@business.com');
   const [name, setName] = useState('Rahul Sharma');
@@ -59,6 +64,13 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [devOtp, setDevOtp] = useState('');
+
+  useEffect(() => {
+    const modeParam = new URLSearchParams(location.search).get('mode');
+    if (modeParam === 'login' || modeParam === 'signup') {
+      setMode(modeParam);
+    }
+  }, [location.search]);
 
   const stepIndex = useMemo(() => {
     if (step === 'email') return 1;
@@ -127,7 +139,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
     setBusy(true);
     try {
-      const result = await apiRequest<{ authToken: string; user: { email: string }; message?: string }>(
+      const result = await apiRequest<{ authToken: string; user: { id: string; email: string; name: string }; message?: string }>(
         '/api/auth/register',
         {
           email,
@@ -136,7 +148,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           verificationToken,
         },
       );
-      signIn(result.authToken, result.user.email);
+      signIn(result.authToken, result.user);
       onLogin?.();
       navigate('/dashboard');
     } catch (err) {
@@ -153,14 +165,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setBusy(true);
 
     try {
-      const result = await apiRequest<{ authToken: string; user: { email: string } }>(
+      const result = await apiRequest<{ authToken: string; user: { id: string; email: string; name: string } }>(
         '/api/auth/login',
         {
           email,
           password: loginPassword,
         },
       );
-      signIn(result.authToken, result.user.email);
+      signIn(result.authToken, result.user);
       onLogin?.();
       navigate('/dashboard');
     } catch (err) {
