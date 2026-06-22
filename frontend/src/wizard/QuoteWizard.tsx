@@ -17,15 +17,16 @@ import {
   DEFAULT_CLIENT_VALUES,
   DEFAULT_ITEM_META,
   DEFAULT_SETTINGS,
-  BUSINESS_DRAFT_KEY,
-  CLIENT_DRAFT_KEY,
-  CLIENT_LOGO_KEY,
-  ITEMS_DRAFT_KEY,
-  ITEMS_META_KEY,
-  QUOTES_STORAGE_KEY,
-  SETTINGS_STORAGE_KEY,
+  BUSINESS_DRAFT_KEY as BUSINESS_DRAFT_KEY_BASE,
+  CLIENT_DRAFT_KEY as CLIENT_DRAFT_KEY_BASE,
+  CLIENT_LOGO_KEY as CLIENT_LOGO_KEY_BASE,
+  ITEMS_DRAFT_KEY as ITEMS_DRAFT_KEY_BASE,
+  ITEMS_META_KEY as ITEMS_META_KEY_BASE,
+  QUOTES_STORAGE_KEY as QUOTES_STORAGE_KEY_BASE,
+  SETTINGS_STORAGE_KEY as SETTINGS_STORAGE_KEY_BASE,
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
+import { getScopedStorageKey } from '../auth';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
   if (!termsStr) return [];
@@ -148,6 +149,14 @@ const saveQuotesSafely = (key: string, nextQuote: ReturnType<typeof buildQuotePa
 
 export default function QuoteWizard() {
   const navigate = useNavigate();
+  const BUSINESS_DRAFT_KEY = getScopedStorageKey(BUSINESS_DRAFT_KEY_BASE);
+  const CLIENT_DRAFT_KEY = getScopedStorageKey(CLIENT_DRAFT_KEY_BASE);
+  const CLIENT_LOGO_KEY = getScopedStorageKey(CLIENT_LOGO_KEY_BASE);
+  const ITEMS_DRAFT_KEY = getScopedStorageKey(ITEMS_DRAFT_KEY_BASE);
+  const ITEMS_META_KEY = getScopedStorageKey(ITEMS_META_KEY_BASE);
+  const QUOTES_STORAGE_KEY = getScopedStorageKey(QUOTES_STORAGE_KEY_BASE);
+  const SETTINGS_STORAGE_KEY = getScopedStorageKey(SETTINGS_STORAGE_KEY_BASE);
+  const TERMS_STORAGE_KEY = getScopedStorageKey('ilovequote_draft_terms_list');
   const outletContext = useOutletContext<{
     onTriggerToast: (message: string) => void;
     setSaveStatus: (status: 'idle' | 'saving' | 'saved') => void;
@@ -251,7 +260,7 @@ export default function QuoteWizard() {
       const initialTerms = settings.defaultTerms || DEFAULT_SETTINGS.defaultTerms;
       setTermsAndConditions(initialTerms);
 
-      const draftTerms = localStorage.getItem('ilovequote_draft_terms_list');
+      const draftTerms = localStorage.getItem(TERMS_STORAGE_KEY);
       if (draftTerms) {
         setTermsList(JSON.parse(draftTerms));
       } else {
@@ -311,7 +320,7 @@ export default function QuoteWizard() {
         localStorage.setItem(CLIENT_DRAFT_KEY, JSON.stringify(watchedClientValues));
         localStorage.setItem(ITEMS_DRAFT_KEY, JSON.stringify(itemsData));
         localStorage.setItem(ITEMS_META_KEY, JSON.stringify(quotationMeta));
-        localStorage.setItem('ilovequote_draft_terms_list', JSON.stringify(termsList));
+        localStorage.setItem(TERMS_STORAGE_KEY, JSON.stringify(termsList));
         if (logoUrl) localStorage.setItem(CLIENT_LOGO_KEY, logoUrl);
         setBusinessData(watchedBusinessValues);
         setClientData(watchedClientValues);
@@ -352,7 +361,7 @@ export default function QuoteWizard() {
     localStorage.removeItem(CLIENT_LOGO_KEY);
     localStorage.removeItem(ITEMS_DRAFT_KEY);
     localStorage.removeItem(ITEMS_META_KEY);
-    localStorage.removeItem('ilovequote_draft_terms_list');
+    localStorage.removeItem(TERMS_STORAGE_KEY);
     setSaveState('idle');
     onTriggerToast('Draft reset');
   };
