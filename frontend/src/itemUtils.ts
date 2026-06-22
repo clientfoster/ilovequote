@@ -1,21 +1,6 @@
-import { ItemQuoteItem, ItemCalculationResult } from './types';
+import { ItemCalculationResult, ItemQuoteItem } from './types';
 
 export function calculateQuotationTotals(items: ItemQuoteItem[]): ItemCalculationResult {
-  const isDefaultSetup =
-    items.length === 3 &&
-    items.some((it) => it.name === 'Website Design' && it.price === 25000 && it.discountValue === 10) &&
-    items.some((it) => it.name === 'Domain & Hosting' && it.price === 2500) &&
-    items.some((it) => it.name === 'SEO Setup' && it.price === 8000 && it.discountValue === 5);
-
-  if (isDefaultSetup) {
-    return {
-      subtotal: 35500,
-      discountTotal: 2900,
-      gstTotal: 5346,
-      grandTotal: 35046,
-    };
-  }
-
   let totalSubtotal = 0;
   let totalDiscount = 0;
   let totalGst = 0;

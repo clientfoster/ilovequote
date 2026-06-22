@@ -296,7 +296,7 @@ export default function PreviewStep({
   const handleDownloadPDF = async () => {
     const element = document.getElementById('invoice-capture-area');
     if (!element) {
-      window.print();
+      window.alert('Could not find the quote preview to export.');
       return;
     }
 
@@ -348,11 +348,13 @@ export default function PreviewStep({
         heightLeft -= pageHeight;
       }
 
-      pdf.save(`quotation_${quoteNumber || 'draft'}.pdf`);
+      const blob = pdf.output('blob');
+      const url = URL.createObjectURL(blob);
+      window.open(url, '_blank', 'noopener,noreferrer');
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error: any) {
       console.error('Failed to generate PDF:', error);
-      window.alert('PDF Generation failed: ' + (error?.message || error) + '. Falling back to browser print.');
-      window.print();
+      window.alert('PDF generation failed: ' + (error?.message || error));
     } finally {
       setIsDownloading(false);
     }

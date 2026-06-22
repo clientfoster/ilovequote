@@ -601,8 +601,8 @@ export default function QuoteWizard() {
                   remarks={`Prepared for ${watchedClientValues.companyName || 'your client'} by ${watchedBusinessValues.companyName || 'your business'}.`}
                   onSaveDraft={handleSaveDraft}
                   onCopyLink={() => onTriggerToast('Share link copied to clipboard.')}
-                  onPrint={() => window.print()}
-                  onDownloadPDF={() => window.print()}
+                  onPrint={() => onTriggerToast('Print is disabled. Use Download instead.')}
+                  onDownloadPDF={() => onTriggerToast('Use the Download button in the preview to open the PDF.')}
                   onSendToClient={async () => onTriggerToast('Preview send action completed.')}
                   onPrev={() => setCurrentStep(3)}
                 />

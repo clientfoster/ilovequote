@@ -405,91 +405,6 @@ function buildQuoteFromPayload(payload = {}, ownerUserId = null) {
   };
 }
 
-function buildSeedQuotes() {
-  const standard = buildQuoteFromPayload({
-    id: 'quote_standard_semixon',
-    shareToken: 'semixon-standard-2024',
-    status: 'Completed',
-    businessDetails: DEMO_BUSINESS,
-    clientDetails: DEMO_CLIENT,
-    quotationMeta: {
-      quotationNumber: 'Q-2024-001',
-      clientName: DEMO_CLIENT.name,
-      clientEmail: DEMO_CLIENT.email,
-      businessName: DEMO_BUSINESS.companyName,
-      businessEmail: DEMO_BUSINESS.email,
-      date: '2024-05-16',
-      validUntil: '2024-05-30',
-      currency: 'INR',
-    },
-    items: [
-      { id: 'item-1', name: 'Website Design & Development', unitPrice: 25000, quantity: 1, discountType: 'Percentage', discountValue: 10, gstRate: 18 },
-      { id: 'item-2', name: 'Domain & Hosting', unitPrice: 2500, quantity: 1, discountType: 'None', discountValue: 0, gstRate: 18 },
-      { id: 'item-3', name: 'SEO Setup', unitPrice: 8000, quantity: 1, discountType: 'Percentage', discountValue: 5, gstRate: 18 },
-    ],
-    taxRate: 18,
-    terms: DEFAULT_TERMS.join('\n'),
-  });
-  standard.taxAmount = 5868;
-  standard.totalAmount = 34468;
-
-  const noTax = buildQuoteFromPayload({
-    id: 'quote_no_tax_semixon',
-    shareToken: 'semixon-no-tax-2024',
-    status: 'Completed',
-    businessDetails: DEMO_BUSINESS,
-    clientDetails: DEMO_CLIENT,
-    quotationMeta: {
-      quotationNumber: 'Q-2024-002',
-      clientName: DEMO_CLIENT.name,
-      clientEmail: DEMO_CLIENT.email,
-      businessName: DEMO_BUSINESS.companyName,
-      businessEmail: DEMO_BUSINESS.email,
-      date: '2024-05-16',
-      validUntil: '2024-05-30',
-      currency: 'INR',
-    },
-    items: [
-      { id: 'item-1', name: 'Website Design & Development', unitPrice: 25000, quantity: 1 },
-      { id: 'item-2', name: 'Domain & Hosting (1 Year)', unitPrice: 2500, quantity: 1 },
-      { id: 'item-3', name: 'SEO Setup', unitPrice: 8000, quantity: 1 },
-    ],
-    taxRate: 0,
-    terms: DEFAULT_TERMS.join('\n'),
-  });
-  noTax.totalAmount = 35500;
-  noTax.taxAmount = 0;
-
-  const noDiscount = buildQuoteFromPayload({
-    id: 'quote_no_discount_semixon',
-    shareToken: 'semixon-no-discount-2024',
-    status: 'Completed',
-    businessDetails: DEMO_BUSINESS,
-    clientDetails: DEMO_CLIENT,
-    quotationMeta: {
-      quotationNumber: 'Q-2024-003',
-      clientName: DEMO_CLIENT.name,
-      clientEmail: DEMO_CLIENT.email,
-      businessName: DEMO_BUSINESS.companyName,
-      businessEmail: DEMO_BUSINESS.email,
-      date: '2024-05-16',
-      validUntil: '2024-05-30',
-      currency: 'INR',
-    },
-    items: [
-      { id: 'item-1', name: 'Website Design & Development', unitPrice: 25000, quantity: 1, gstRate: 18 },
-      { id: 'item-2', name: 'Domain & Hosting (1 Year)', unitPrice: 2500, quantity: 1, gstRate: 18 },
-      { id: 'item-3', name: 'SEO Setup', unitPrice: 8000, quantity: 1, gstRate: 18 },
-    ],
-    taxRate: 18,
-    terms: DEFAULT_TERMS.join('\n'),
-  });
-  noDiscount.taxAmount = 6390;
-  noDiscount.totalAmount = 41890;
-
-  return [standard, noTax, noDiscount];
-}
-
 async function loadQuotes() {
   await ensureMongo();
   const storedQuotes = await quotesCollection.find({}).sort({ createdAt: -1 }).toArray();
@@ -1489,7 +1404,7 @@ app.get('/', (req, res) => {
   <div class="card">
     <h1>Quote backend is running</h1>
     <p>Use <code>/api/quotes</code> to list quotes, <code>/share/:token</code> for the share page, and <code>/api/quotes/:id/pdf</code> for the PDF download.</p>
-    <p>No seeded demo quote is loaded. Create a quote to generate a share link.</p>
+    <p>No saved quote is loaded yet. Create a quote to generate a share link.</p>
   </div>
 </body>
 </html>`);

@@ -105,7 +105,7 @@ export default function ItemsWorkspace({
   };
 
   const handleAddSection = () => {
-    onTriggerToast('Sections are managed automatically in this demo workspace.');
+    onTriggerToast('Sections are managed automatically in this workspace.');
   };
 
   const getRowBreakdown = (item: ItemQuoteItem) => {
@@ -457,4 +457,3 @@ export default function ItemsWorkspace({
     </div>
   );
 }
-
