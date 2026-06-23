@@ -139,14 +139,14 @@ export default function PortfolioPage() {
                         </td>
                         <td className="px-4 py-5 md:px-5">
                           <div className="flex items-center justify-center gap-3">
-                            <button type="button" onClick={() => window.open(buildShareUrl(quote.quoteNumber), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={() => window.open(buildShareUrl(quote.shareToken || quote.quoteNumber), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Eye className="h-4.5 w-4.5 text-[#2457F0]" />
                             </button>
                             <button type="button" onClick={() => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Download className="h-4.5 w-4.5 text-[#EF4444]" />
                             </button>
                             <button type="button" onClick={async () => {
-                              const shareUrl = buildShareUrl(quote.quoteNumber);
+                              const shareUrl = buildShareUrl(quote.shareToken || quote.quoteNumber);
                               try {
                                 await navigator.clipboard.writeText(shareUrl);
                               } catch {

@@ -141,6 +141,10 @@ function normalizeEmail(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+function normalizePhone(value) {
+  return String(value || '').trim().replace(/[^\d+]/g, '');
+}
+
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
@@ -475,11 +479,17 @@ async function persistUsers() {
 }
 
 function makePublicUser(user) {
+  const username = user.username || user.phone || user.email || user.name || '';
   return {
     id: user.id,
     email: user.email,
     name: user.name,
+    phone: user.phone || '',
+    username,
+    authMethod: user.authMethod || (user.phone ? 'phone' : 'email'),
     createdAt: user.createdAt,
+    updatedAt: user.updatedAt,
+    loginActivity: Array.isArray(user.loginActivity) ? user.loginActivity.slice(0, 10) : [],
   };
 }
 
@@ -503,6 +513,33 @@ function getAuthenticatedUser(req) {
   }
 
   return users.find((user) => user.id === session.userId) || null;
+}
+
+function recordUserActivity(userId, type, req, details = {}) {
+  const user = users.find((entry) => entry.id === userId);
+  if (!user) return;
+
+  const ip = String(req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '');
+  const userAgent = String(req.headers['user-agent'] || '');
+  const nextActivity = Array.isArray(user.loginActivity) ? user.loginActivity.slice() : [];
+  nextActivity.unshift({
+    id: randomUUID(),
+    type,
+    at: new Date().toISOString(),
+    ip,
+    userAgent,
+    details,
+  });
+  user.loginActivity = nextActivity.slice(0, 10);
+  user.updatedAt = new Date().toISOString();
+}
+
+function revokeAuthTokensForUser(userId) {
+  for (const [token, session] of authTokens.entries()) {
+    if (session.userId === userId) {
+      authTokens.delete(token);
+    }
+  }
 }
 
 function publicShareUrl(req, quote) {
@@ -929,6 +966,9 @@ function buildPdfBuffer(quote) {
 function renderSharePage(quote, req) {
   const shareUrl = publicShareUrl(req, quote);
   const pdfUrl = `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(quote.id)}/pdf`;
+  const pdfDownloadUrl = `${pdfUrl}?download=1`;
+  const whatsappText = encodeURIComponent(`Hello! Here is your quotation from ${quote.businessDetails.companyName || 'our team'}. Quote Number: ${quote.quoteNumber}. Open it here: ${shareUrl}`);
+  const whatsappUrl = `https://api.whatsapp.com/send?text=${whatsappText}`;
   const businessLogoHtml = quote.businessDetails?.logo
     ? `<img src="${escapeHtml(quote.businessDetails.logo)}" alt="${escapeHtml(quote.businessDetails.companyName)} logo" class="logo" />`
     : `<div class="logo-fallback">${escapeHtml((quote.businessDetails?.companyName || 'B').slice(0, 1).toUpperCase())}</div>`;
@@ -1204,7 +1244,9 @@ function renderSharePage(quote, req) {
         <p>This backend generates a unique URL for each quote and a matching PDF download endpoint.</p>
         <div class="url" id="share-url">${escapeHtml(shareUrl)}</div>
         <div class="actions">
-          <a class="btn primary" href="${escapeHtml(pdfUrl)}">Download PDF</a>
+          <a class="btn primary" href="${escapeHtml(pdfUrl)}">Open PDF</a>
+          <a class="btn ghost" href="${escapeHtml(pdfDownloadUrl)}">Download PDF</a>
+          <a class="btn ghost" href="${escapeHtml(whatsappUrl)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
           <button class="btn ghost" type="button" id="copy-btn">Copy Link</button>
         </div>
         <p style="margin:0;color:var(--good);font-weight:700;">Client: ${escapeHtml(quote.clientDetails.name)}</p>
@@ -1372,6 +1414,7 @@ app.post('/api/auth/register', async (req, res) => {
   try {
     await refreshUsers();
     const email = normalizeEmail(req.body?.email);
+    const phone = normalizePhone(req.body?.phone);
     const password = String(req.body?.password || '');
     const name = String(req.body?.name || '').trim();
     const verificationToken = String(req.body?.verificationToken || '');
@@ -1399,6 +1442,9 @@ app.post('/api/auth/register', async (req, res) => {
       ? {
           ...existing,
           name: name || existing.name || email.split('@')[0],
+          phone: phone || existing.phone || '',
+          username: existing.username || (existing.phone || phone || email),
+          authMethod: existing.authMethod || (existing.phone || phone ? 'phone' : 'email'),
           passwordHash: passwordState.hash,
           passwordSalt: passwordState.salt,
           updatedAt: new Date().toISOString(),
@@ -1408,14 +1454,19 @@ app.post('/api/auth/register', async (req, res) => {
           id: randomUUID(),
           email,
           name: name || email.split('@')[0],
+          phone: phone || '',
+          username: phone || email,
+          authMethod: phone ? 'phone' : 'email',
           passwordHash: passwordState.hash,
           passwordSalt: passwordState.salt,
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
           emailVerifiedAt: new Date().toISOString(),
+          loginActivity: [],
         };
 
     users = existing ? users.map((entry) => (entry.email === email ? user : entry)) : [user, ...users];
+    recordUserActivity(user.id, 'register', req, { via: user.authMethod });
     await persistUsers();
     verificationTokens.delete(verificationToken);
 
@@ -1437,12 +1488,13 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     await refreshUsers();
-    const email = normalizeEmail(req.body?.email);
+    const identifier = normalizeEmail(req.body?.identifier || req.body?.email);
     const password = String(req.body?.password || '');
-    const user = users.find((entry) => entry.email === email);
+    const phoneCandidate = normalizePhone(req.body?.phone || req.body?.identifier);
+    const user = users.find((entry) => entry.email === identifier || normalizePhone(entry.phone || '') === phoneCandidate);
 
     if (!user) {
-      res.status(404).json({ error: 'No account found for that email address.' });
+      res.status(404).json({ error: 'No account found for that email address or phone number.' });
       return;
     }
 
@@ -1451,6 +1503,8 @@ app.post('/api/auth/login', async (req, res) => {
       return;
     }
 
+    recordUserActivity(user.id, 'login', req, { via: user.authMethod || (user.phone ? 'phone' : 'email') });
+    await persistUsers();
     const authToken = createAuthToken(user.id);
     res.json({
       ok: true,
@@ -1475,6 +1529,137 @@ app.get('/api/auth/me', async (req, res) => {
   }
 
   res.json({ ok: true, user: makePublicUser(user) });
+});
+
+app.get('/api/account/activity', async (req, res) => {
+  await refreshUsers();
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Not signed in.' });
+    return;
+  }
+
+  res.json({
+    ok: true,
+    items: Array.isArray(user.loginActivity) ? user.loginActivity : [],
+  });
+});
+
+app.patch('/api/account/profile', async (req, res) => {
+  try {
+    await refreshUsers();
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Not signed in.' });
+      return;
+    }
+
+    if (typeof req.body?.name === 'string' && req.body.name.trim()) {
+      user.name = req.body.name.trim();
+    }
+
+    if (typeof req.body?.phone === 'string') {
+      user.phone = normalizePhone(req.body.phone);
+    }
+
+    if (!user.username) {
+      user.username = user.phone || user.email;
+    }
+
+    user.updatedAt = new Date().toISOString();
+    recordUserActivity(user.id, 'profile_update', req, { fields: Object.keys(req.body || {}) });
+    await persistUsers();
+
+    res.json({ ok: true, user: makePublicUser(user) });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to update profile',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/account/change-password', async (req, res) => {
+  try {
+    await refreshUsers();
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Not signed in.' });
+      return;
+    }
+
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+    if (!user.passwordHash || !user.passwordSalt || !verifyPassword(currentPassword, user.passwordSalt, user.passwordHash)) {
+      res.status(400).json({ error: 'Current password is incorrect.' });
+      return;
+    }
+
+    if (newPassword.length < 8) {
+      res.status(400).json({ error: 'New password must be at least 8 characters long.' });
+      return;
+    }
+
+    const passwordState = hashPassword(newPassword);
+    user.passwordHash = passwordState.hash;
+    user.passwordSalt = passwordState.salt;
+    user.updatedAt = new Date().toISOString();
+    recordUserActivity(user.id, 'password_change', req, {});
+    await persistUsers();
+
+    res.json({ ok: true, message: 'Password changed successfully.' });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to change password',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.get('/api/account/export', async (req, res) => {
+  await refreshUsers();
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Not signed in.' });
+    return;
+  }
+
+  const ownedQuotes = quotes.filter((quote) => quote.ownerUserId === user.id);
+  recordUserActivity(user.id, 'export_data', req, { quoteCount: ownedQuotes.length });
+  await persistUsers();
+
+  const payload = {
+    user: makePublicUser(user),
+    quotes: ownedQuotes,
+    exportedAt: new Date().toISOString(),
+  };
+  const filename = `ilovequote-account-data-${slugify(user.username || user.email || user.id)}.json`;
+  res.setHeader('Content-Type', 'application/json');
+  res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+  res.send(JSON.stringify(payload, null, 2));
+});
+
+app.delete('/api/account', async (req, res) => {
+  try {
+    await refreshUsers();
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Not signed in.' });
+      return;
+    }
+
+    const userId = user.id;
+    users = users.filter((entry) => entry.id !== userId);
+    quotes = quotes.filter((quote) => quote.ownerUserId !== userId);
+    revokeAuthTokensForUser(userId);
+    await Promise.all([persistUsers(), persistQuotes()]);
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to delete account',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 
 app.get('/api/quotes', (req, res) => {
@@ -1504,6 +1689,22 @@ app.post('/api/quotes', async (req, res) => {
   } catch (error) {
     res.status(400).json({
       error: 'Unable to create quote',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/quotes/preview-pdf', (req, res) => {
+  try {
+    const quote = buildQuoteFromPayload(req.body || {}, null);
+    const pdf = buildPdfBuffer(quote);
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="${slugify(quote.quoteNumber || 'quote')}.pdf"`);
+    res.setHeader('Content-Length', String(pdf.length));
+    res.send(pdf);
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to generate preview PDF',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
@@ -1648,7 +1849,8 @@ app.get('/api/quotes/:id/pdf', (req, res) => {
 
   const pdf = buildPdfBuffer(quote);
   res.setHeader('Content-Type', 'application/pdf');
-  res.setHeader('Content-Disposition', `attachment; filename="${slugify(quote.quoteNumber)}.pdf"`);
+  const isDownload = req.query.download === '1' || req.query.download === 'true';
+  res.setHeader('Content-Disposition', `${isDownload ? 'attachment' : 'inline'}; filename="${slugify(quote.quoteNumber)}.pdf"`);
   res.setHeader('Content-Length', String(pdf.length));
   res.send(pdf);
 });

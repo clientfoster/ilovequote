@@ -27,8 +27,8 @@ export function buildAppUrl(path: string) {
   return `${typeof window !== 'undefined' ? window.location.origin : ''}/#${normalized}`;
 }
 
-export function buildShareUrl(quoteNumber: string) {
-  return `${getBackendBaseUrl()}/share/${encodeURIComponent(quoteNumber)}`;
+export function buildShareUrl(shareTokenOrQuoteNumber: string) {
+  return `${getBackendBaseUrl()}/share/${encodeURIComponent(shareTokenOrQuoteNumber)}`;
 }
 
 export function buildPdfUrl(quoteId: string) {

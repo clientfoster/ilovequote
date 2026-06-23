@@ -58,6 +58,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   const authUser = getDisplayAuthUser();
   const displayName = userName?.trim() || authUser.displayName;
   const initials = authUser.initials;
+  const username = authUser.username || authUser.email || authUser.phone || '';
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -126,7 +127,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                     </button>
                     <div className="flex flex-col items-start leading-tight">
                       <span className="text-[13px] font-semibold text-slate-800">{displayName}</span>
-                      <span className="text-[11px] text-slate-500">{userName ? 'Signed in' : 'Guest'}</span>
+                      <span className="text-[11px] text-slate-500">{username || (userName ? 'Signed in' : 'Guest')}</span>
                     </div>
                   </div>
                   <button
@@ -279,6 +280,9 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                     </div>
                     <span className="max-w-[120px] truncate text-[12px] font-semibold text-slate-800">
                       {displayName}
+                    </span>
+                    <span className="max-w-[120px] truncate text-[10px] text-slate-500">
+                      {username || (userName ? 'Signed in' : 'Guest')}
                     </span>
                   </div>
                 ) : null}

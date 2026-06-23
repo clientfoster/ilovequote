@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, ChevronDown, Copy, Download, Eye, FileText, Filter, Grid2x2, Link2, List, Search, Trash2 } from 'lucide-react';
+import { Bell, ChevronDown, Copy, Download, Eye, FileText, Filter, Grid2x2, List, MessageCircle, Search, Trash2 } from 'lucide-react';
 import { getDisplayAuthUser } from '../auth';
 import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
@@ -61,13 +61,29 @@ export default function QuotesPage() {
     }
   };
 
-  const copyShareLink = async (quoteNumber: string) => {
-    const shareUrl = buildShareUrl(quoteNumber);
+  const getShareUrl = (quote: Quote) => buildShareUrl(quote.shareToken || quote.quoteNumber);
+
+  const copyShareLink = async (quote: Quote) => {
+    const shareUrl = getShareUrl(quote);
     try {
       await navigator.clipboard.writeText(shareUrl);
     } catch {
       window.prompt('Copy this link', shareUrl);
     }
+  };
+
+  const openQuotePdf = (quoteId: string) => {
+    window.open(buildPdfUrl(quoteId), '_blank', 'noopener,noreferrer');
+  };
+
+  const downloadQuotePdf = (quoteId: string) => {
+    window.open(`${buildPdfUrl(quoteId)}?download=1`, '_blank', 'noopener,noreferrer');
+  };
+
+  const shareViaWhatsApp = (quote: Quote) => {
+    const shareUrl = getShareUrl(quote);
+    const text = encodeURIComponent(`Hello! Here is your quotation from ${quote.businessDetails?.companyName || 'our team'}. Quote Number: ${quote.quoteNumber}. Review details here: ${shareUrl}`);
+    window.open(`https://api.whatsapp.com/send?text=${text}`, '_blank', 'noopener,noreferrer');
   };
 
   return (
@@ -200,26 +216,28 @@ export default function QuotesPage() {
                         </td>
                         <td className="px-4 py-5 md:px-5">
                           <div className="flex flex-col items-start gap-1.5">
-                            <button type="button" onClick={() => copyShareLink(quote.quoteNumber)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm">
-                              <Link2 className="h-4.5 w-4.5" />
+                            <button
+                              type="button"
+                              onClick={() => openQuotePdf(quote.id)}
+                              className="max-w-[180px] break-all text-left text-[13px] leading-5 font-medium text-[#2457F0] underline decoration-[#2457F0]/30 underline-offset-4 hover:text-[#1D4ED8]"
+                              title="Open quote PDF"
+                            >
+                              {getShareUrl(quote)}
                             </button>
-                            <p className="max-w-[180px] break-all text-[13px] leading-5 text-slate-500">
-                              {buildShareUrl(quote.quoteNumber)}
-                            </p>
-                            <button type="button" onClick={() => copyShareLink(quote.quoteNumber)} className="text-[13px] font-semibold text-[#2457F0]">
+                            <button type="button" onClick={() => copyShareLink(quote)} className="text-[13px] font-semibold text-[#2457F0]">
                               Copy
                             </button>
                           </div>
                         </td>
                         <td className="px-4 py-5 md:px-5">
                           <div className="flex items-center justify-center gap-3">
-                            <button type="button" onClick={() => window.open(buildShareUrl(quote.quoteNumber), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={() => openQuotePdf(quote.id)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm" aria-label="Open PDF">
                               <Eye className="h-4.5 w-4.5 text-[#2457F0]" />
                             </button>
-                            <button type="button" onClick={() => copyShareLink(quote.quoteNumber)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
-                              <Copy className="h-4.5 w-4.5 text-[#22C55E]" />
+                            <button type="button" onClick={() => shareViaWhatsApp(quote)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm" aria-label="Share on WhatsApp">
+                              <MessageCircle className="h-4.5 w-4.5 text-[#16A34A]" />
                             </button>
-                            <button type="button" onClick={() => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={() => downloadQuotePdf(quote.id)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Download className="h-4.5 w-4.5 text-[#EF4444]" />
                             </button>
                             <button type="button" onClick={() => handleDuplicate(quote)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">

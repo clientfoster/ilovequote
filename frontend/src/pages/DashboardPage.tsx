@@ -2,7 +2,6 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowRight,
-  Bell,
   ChevronDown,
   Copy,
   Download,
@@ -71,7 +70,6 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<(typeof quoteStatusOptions)[number]>('All Status');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
-  const [bellOpen, setBellOpen] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -165,7 +163,7 @@ export default function DashboardPage() {
       icon: Link2,
       tone: 'text-[#22C55E]',
       onClick: async (quote: DashboardQuote) => {
-        const shareUrl = buildShareUrl(quote.quoteNumber);
+        const shareUrl = buildShareUrl(quote.shareToken || quote.quoteNumber);
         try {
           await navigator.clipboard.writeText(shareUrl);
         } catch {
@@ -208,61 +206,16 @@ export default function DashboardPage() {
   return (
     <div className="flex h-full flex-1 overflow-hidden bg-[#F8FAFC] p-4 md:p-6" id="dashboard-page-wrapper">
       <div className="mx-auto flex h-full w-full max-w-[1400px] flex-col gap-5 overflow-hidden">
-        <div className="flex flex-col gap-4 pb-1 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2 pb-1">
           <div>
-            <h1 className="text-[32px] font-semibold tracking-[-0.03em] text-slate-900">
+            <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-slate-900 md:text-[28px]">
               Welcome back, {displayName}
             </h1>
-            <p className="mt-2 text-[15px] font-medium text-slate-500">
+            <p className="mt-1 text-[13px] font-medium text-slate-500 md:text-[14px]">
               Create, manage and share your price quotes in one place.
             </p>
           </div>
-
-          <div className="flex items-center gap-4 self-start">
-            <button
-              type="button"
-              onClick={() => setBellOpen((prev) => !prev)}
-              className="relative flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm"
-              aria-label="Notifications"
-            >
-              <Bell className="h-[19px] w-[19px]" />
-              <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                {Math.min(9, quotes.length)}
-              </span>
-            </button>
-            <button
-              type="button"
-              className="flex h-12 w-12 items-center justify-center rounded-full bg-[#EEF3FF] text-[15px] font-semibold text-[#2457F0] shadow-sm"
-              aria-label="User profile"
-            >
-              {initials}
-            </button>
-            <button
-              type="button"
-              onClick={() => navigate('/settings')}
-              className="flex items-center gap-2 text-[15px] font-medium text-slate-800"
-            >
-              {displayName}
-              <ChevronDown className="h-4 w-4 text-slate-500" />
-            </button>
-          </div>
         </div>
-
-        {bellOpen && (
-          <div className="absolute right-6 top-28 z-20 w-72 rounded-2xl border border-slate-200 bg-white p-4 shadow-2xl">
-            <p className="text-sm font-semibold text-slate-900">Notifications</p>
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              {quotes.length > 0 ? `You have ${quotes.length} quotes in your workspace.` : 'No quotes yet. Create your first one to get started.'}
-            </p>
-            <button
-              type="button"
-              onClick={() => setBellOpen(false)}
-              className="mt-4 rounded-xl bg-slate-100 px-4 py-2 text-sm font-medium text-slate-700"
-            >
-              Close
-            </button>
-          </div>
-        )}
 
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
@@ -292,10 +245,10 @@ export default function DashboardPage() {
         <section className="grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-hidden xl:grid-cols-[minmax(0,1fr)_270px]">
           <div className="min-h-0 rounded-[14px] border border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
             <div className="flex flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between md:px-5">
-              <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">My Quotes</h2>
+              <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[20px]">My Quotes</h2>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                <div className="flex w-full items-center rounded-[12px] border border-slate-200 bg-white px-4 py-3 shadow-sm sm:w-[250px]">
+                <div className="flex w-full items-center rounded-[12px] border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:w-[250px]">
                   <input
                     type="text"
                     value={searchQuery}
@@ -304,15 +257,15 @@ export default function DashboardPage() {
                       setCurrentPage(1);
                     }}
                     placeholder="Search quotes..."
-                    className="w-full border-none bg-transparent text-[15px] font-medium text-slate-700 outline-none placeholder:text-slate-400"
+                    className="w-full border-none bg-transparent text-[14px] font-medium text-slate-700 outline-none placeholder:text-slate-400"
                   />
-                  <Search className="h-5 w-5 shrink-0 text-slate-700" />
+                  <Search className="h-4.5 w-4.5 shrink-0 text-slate-700" />
                 </div>
 
                 <button
                   type="button"
                   onClick={() => setStatusFilter((prev) => quoteStatusOptions[(quoteStatusOptions.indexOf(prev) + 1) % quoteStatusOptions.length])}
-                  className="inline-flex items-center justify-between gap-3 rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-[15px] font-medium text-slate-700 shadow-sm sm:w-[200px]"
+                  className="inline-flex items-center justify-between gap-3 rounded-[12px] border border-slate-200 bg-white px-3 py-2.5 text-[14px] font-medium text-slate-700 shadow-sm sm:w-[200px]"
                 >
                   <span className="inline-flex items-center gap-2">
                     <Users className="h-4.5 w-4.5 text-slate-700" />

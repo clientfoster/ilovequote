@@ -160,7 +160,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         {
           method: 'POST',
           body: JSON.stringify({
-            email,
+            identifier: email,
             password: loginPassword,
           }),
         },
@@ -370,17 +370,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     </label>
 
                     <label className="block">
-                      <span className="mb-2 block text-[13px] font-semibold text-slate-700">Email</span>
+                      <span className="mb-2 block text-[13px] font-semibold text-slate-700">Email or phone</span>
                       <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 focus-within:border-[#2457F0] focus-within:bg-white">
                         <Mail className="h-4.5 w-4.5 text-slate-400" />
                         <input
                           value={email}
                           onChange={(event) => setEmail(event.target.value)}
-                          type="email"
+                          type="text"
                           name="email"
-                          autoComplete="email"
+                          autoComplete="username"
                           className="w-full bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
-                          placeholder="you@business.com"
+                          placeholder="you@business.com or +91 98765 43210"
                         />
                       </div>
                     </label>

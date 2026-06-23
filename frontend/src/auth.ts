@@ -6,7 +6,19 @@ export interface AuthUser {
   id: string;
   email: string;
   name: string;
+  phone?: string;
+  username?: string;
+  authMethod?: 'email' | 'phone';
   createdAt?: string;
+  updatedAt?: string;
+  loginActivity?: Array<{
+    id: string;
+    type: string;
+    at: string;
+    ip?: string;
+    userAgent?: string;
+    details?: Record<string, unknown>;
+  }>;
 }
 
 function normalizeScope(value: string) {
@@ -25,7 +37,7 @@ export function isAuthenticated() {
 export function signIn(token: string, user?: AuthUser | string) {
   const email = typeof user === 'string' ? user : user?.email;
   const payload = typeof user === 'string'
-    ? { email: user, name: user }
+    ? { email: user, name: user, username: user, authMethod: 'email' as const }
     : user || null;
 
   localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(email || 'signed_in'));
@@ -69,7 +81,8 @@ export function setStoredAuthUser(user: AuthUser) {
 
 export function getDisplayAuthUser() {
   const user = getStoredAuthUser();
-  const displayName = user?.name?.trim() || user?.email?.trim() || 'Account';
+  const displayName = user?.name?.trim() || user?.username?.trim() || user?.email?.trim() || user?.phone?.trim() || 'Account';
+  const username = user?.username?.trim() || user?.phone?.trim() || user?.email?.trim() || '';
   const initials =
     displayName
       .split(' ')
@@ -82,8 +95,10 @@ export function getDisplayAuthUser() {
   return {
     user,
     displayName,
+    username,
     initials,
     email: user?.email || '',
+    phone: user?.phone || '',
   };
 }
 

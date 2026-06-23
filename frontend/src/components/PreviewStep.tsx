@@ -16,8 +16,7 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ItemQuoteItem } from '../types';
 import { calculateQuotationTotals, formatCurrency } from '../itemUtils';
-import html2canvas from 'html2canvas';
-import { jsPDF } from 'jspdf';
+import { API_BASE } from '../api';
 import { buildAppUrl } from '../url';
 
 interface PreviewStepProps {
@@ -301,63 +300,57 @@ export default function PreviewStep({
   };
 
   const handleDownloadPDF = async () => {
-    const element = document.getElementById('invoice-capture-area');
-    if (!element) {
-      window.alert('Could not find the quote preview to export.');
-      return;
-    }
-
     setIsDownloading(true);
     try {
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        allowTaint: false,
-        logging: true,
-        backgroundColor: '#ffffff',
-        onclone: (clonedDoc) => {
-          // Replace oklch, oklab, and color-mix in all style tags of the cloned document
-          const styleTags = clonedDoc.getElementsByTagName('style');
-          for (let i = 0; i < styleTags.length; i++) {
-            const tag = styleTags[i];
-            if (tag.innerHTML.includes('oklch') || tag.innerHTML.includes('oklab') || tag.innerHTML.includes('color-mix')) {
-              tag.innerHTML = replaceUnsupportedCSS(tag.innerHTML);
-            }
-          }
-          
-          // Replace oklch, oklab, and color-mix in inline styles of all cloned elements
-          const allElements = clonedDoc.getElementsByTagName('*');
-          for (let i = 0; i < allElements.length; i++) {
-            const el = allElements[i] as HTMLElement;
-            const styleAttr = el.getAttribute('style');
-            if (styleAttr && (styleAttr.includes('oklch') || styleAttr.includes('oklab') || styleAttr.includes('color-mix'))) {
-              el.setAttribute('style', replaceUnsupportedCSS(styleAttr));
-            }
-          }
-        }
+      const payload = {
+        businessDetails: {
+          companyName: businessName,
+          email: businessEmail,
+          phone: businessPhone || '',
+          website: businessWebsite || '',
+          logo: businessLogo || '',
+          address: businessAddress || '',
+          businessSlug: businessSlug || '',
+        },
+        clientDetails: {
+          name: clientName,
+          contactPerson: clientContactPerson || '',
+          email: clientEmail,
+          phone: clientPhone || '',
+          address: clientAddress || '',
+          logo: clientLogo || '',
+        },
+        clientLogo: clientLogo || '',
+        quoteNumber,
+        date: issueDate,
+        validUntil: expiryDate,
+        items,
+        terms,
+        remarks,
+        status: 'Draft',
+      };
+
+      const response = await fetch(`${API_BASE}/api/quotes/preview-pdf`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
       });
 
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      const imgWidth = 210;
-      const pageHeight = 297;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pageHeight;
-
-      while (heightLeft >= 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pageHeight;
+      if (!response.ok) {
+        const errorPayload = await response.json().catch(() => ({}));
+        throw new Error(errorPayload.message || errorPayload.error || 'Unable to generate PDF');
       }
 
-      const blob = pdf.output('blob');
+      const blob = await response.blob();
       const url = URL.createObjectURL(blob);
-      window.open(url, '_blank', 'noopener,noreferrer');
+      const fileName = `${quoteNumber || 'quote'}.pdf`;
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      a.rel = 'noopener noreferrer';
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
       window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
     } catch (error: any) {
       console.error('Failed to generate PDF:', error);

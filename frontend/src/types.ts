@@ -75,6 +75,7 @@ export interface AdditionalDetails {
 
 export interface Quote {
   id: string;
+  shareToken?: string;
   quoteNumber: string;
   date: string;
   expiryDate: string;
