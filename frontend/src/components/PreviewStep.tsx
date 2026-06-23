@@ -18,6 +18,7 @@ import { ItemQuoteItem } from '../types';
 import { calculateQuotationTotals, formatCurrency } from '../itemUtils';
 import html2canvas from 'html2canvas';
 import { jsPDF } from 'jspdf';
+import { buildAppUrl } from '../url';
 
 interface PreviewStepProps {
   businessName: string;
@@ -142,7 +143,7 @@ export default function PreviewStep({
   const showQuantity = items.some((it) => it.quantity !== 1) || hasDiscount || hasTax;
   const termsList = useMemo(() => parseTerms(terms), [terms]);
 
-  const portfolioUrl = `${window.location.origin}/portfolio/${businessSlug || 'your-business'}`;
+  const portfolioUrl = buildAppUrl(`/portfolio/${businessSlug || 'your-business'}`);
   const sharePayload = useMemo(() => {
     try {
       const payload = {

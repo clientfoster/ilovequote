@@ -16,6 +16,7 @@ import {
   Youtube
 } from 'lucide-react';
 import { BusinessFormValues, SocialLink } from '../../../types';
+import { buildAppUrl } from '../../../url';
 
 interface QRCodePreviewProps {
   formData: Partial<BusinessFormValues>;
@@ -29,7 +30,7 @@ export default function QRCodePreview({ formData }: QRCodePreviewProps) {
   const website = formData.website || '';
   
   // Combine portfolio domain or relative path
-  const portfolioUrl = `${window.location.origin}/portfolio/${slug}`;
+  const portfolioUrl = buildAppUrl(`/portfolio/${slug}`);
 
   // Helper to extract social URL by platform name safely
   const getSocialUrl = (platformName: string): string => {

@@ -141,6 +141,11 @@ export default function App() {
           />
 
           <Route
+            path="/portfolio/:slug"
+            element={<PortfolioPage />}
+          />
+
+          <Route
             path="/qr-codes"
             element={<QRPortfolioPage />}
           />

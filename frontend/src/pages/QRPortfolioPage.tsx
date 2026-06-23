@@ -2,14 +2,30 @@ import React from 'react';
 import { Copy, QrCode, Smartphone, Sparkles, Share2, Link2 } from 'lucide-react';
 import QRCodePreview from '../components/QRCodePreview';
 import { DEFAULT_BUSINESS_VALUES } from '../wizard/WizardState';
+import { buildAppUrl } from '../url';
 
 const quickLinks = [
-  { label: 'Copy Portfolio Link', icon: Link2 },
-  { label: 'Share QR Code', icon: Share2 },
-  { label: 'Open Portfolio Preview', icon: QrCode },
+  { label: 'Copy Portfolio Link', icon: Link2, action: 'copy' as const },
+  { label: 'Share QR Code', icon: Share2, action: 'share' as const },
+  { label: 'Open Portfolio Preview', icon: QrCode, action: 'open' as const },
 ];
 
 export default function QRPortfolioPage() {
+  const portfolioUrl = buildAppUrl('/portfolio/semixon');
+
+  const handleQuickLink = async (action: 'copy' | 'share' | 'open') => {
+    if (action === 'open') {
+      window.open(portfolioUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(portfolioUrl);
+    } catch {
+      window.prompt('Copy this link', portfolioUrl);
+    }
+  };
+
   return (
     <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-[1280px] space-y-6">
@@ -56,7 +72,7 @@ export default function QRPortfolioPage() {
               <div className="mt-5 space-y-3">
                 <div className="rounded-[14px] border border-slate-200 bg-slate-50 px-4 py-4 text-[14px] text-slate-700">
                   <span className="font-semibold text-slate-900">Portfolio URL:</span>{' '}
-                  {`${window.location.origin}/portfolio/semixon`}
+                  {portfolioUrl}
                 </div>
 
                 <div className="grid gap-3">
@@ -66,6 +82,7 @@ export default function QRPortfolioPage() {
                       <button
                         key={item.label}
                         type="button"
+                        onClick={() => handleQuickLink(item.action)}
                         className="flex items-center justify-between rounded-[14px] border border-slate-200 bg-white px-4 py-4 text-left shadow-sm transition-colors hover:bg-slate-50"
                       >
                         <span className="flex items-center gap-3 text-[14px] font-semibold text-slate-900">

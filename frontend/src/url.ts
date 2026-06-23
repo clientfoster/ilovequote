@@ -22,6 +22,11 @@ export function getBackendBaseUrl() {
   return typeof window !== 'undefined' ? window.location.origin : '';
 }
 
+export function buildAppUrl(path: string) {
+  const normalized = path.startsWith('/') ? path : `/${path}`;
+  return `${typeof window !== 'undefined' ? window.location.origin : ''}/#${normalized}`;
+}
+
 export function buildShareUrl(quoteNumber: string) {
   return `${getBackendBaseUrl()}/share/${encodeURIComponent(quoteNumber)}`;
 }

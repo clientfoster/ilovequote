@@ -2,6 +2,7 @@ import React from 'react';
 import { Globe, Mail, MapPin, Phone, Receipt } from 'lucide-react';
 import { QRCodeSVG } from 'qrcode.react';
 import { BusinessFormValues } from '../../../types';
+import { buildAppUrl } from '../../../url';
 
 interface BusinessPreviewCardProps {
   formData: Partial<BusinessFormValues>;
@@ -16,7 +17,7 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
   const address = formData.address || '';
   const taxId = formData.taxId || '';
   const portfolioSlug = formData.businessSlug || 'your-business';
-  const qrUrl = `${window.location.origin}/portfolio/${portfolioSlug}`;
+  const qrUrl = buildAppUrl(`/portfolio/${portfolioSlug}`);
   const logo = formData.logo || '';
 
   return (
