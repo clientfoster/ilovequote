@@ -20,6 +20,7 @@ import {
   BUSINESS_DRAFT_KEY as BUSINESS_DRAFT_KEY_BASE,
   CLIENT_DRAFT_KEY as CLIENT_DRAFT_KEY_BASE,
   CLIENT_LOGO_KEY as CLIENT_LOGO_KEY_BASE,
+  EDITING_QUOTE_ID_KEY as EDITING_QUOTE_ID_KEY_BASE,
   ITEMS_DRAFT_KEY as ITEMS_DRAFT_KEY_BASE,
   ITEMS_META_KEY as ITEMS_META_KEY_BASE,
   QUOTES_STORAGE_KEY as QUOTES_STORAGE_KEY_BASE,
@@ -27,7 +28,7 @@ import {
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
 import { getDisplayAuthUser, getScopedStorageKey } from '../auth';
-import { createQuote } from '../quoteApi';
+import { createQuote, updateQuote } from '../quoteApi';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
   if (!termsStr) return [];
@@ -119,6 +120,7 @@ export default function QuoteWizard() {
   const BUSINESS_DRAFT_KEY = getScopedStorageKey(BUSINESS_DRAFT_KEY_BASE);
   const CLIENT_DRAFT_KEY = getScopedStorageKey(CLIENT_DRAFT_KEY_BASE);
   const CLIENT_LOGO_KEY = getScopedStorageKey(CLIENT_LOGO_KEY_BASE);
+  const EDITING_QUOTE_ID_KEY = getScopedStorageKey(EDITING_QUOTE_ID_KEY_BASE);
   const ITEMS_DRAFT_KEY = getScopedStorageKey(ITEMS_DRAFT_KEY_BASE);
   const ITEMS_META_KEY = getScopedStorageKey(ITEMS_META_KEY_BASE);
   const QUOTES_STORAGE_KEY = getScopedStorageKey(QUOTES_STORAGE_KEY_BASE);
@@ -141,6 +143,7 @@ export default function QuoteWizard() {
   const [termsAndConditions, setTermsAndConditions] = useState(DEFAULT_SETTINGS.defaultTerms);
   const [termsList, setTermsList] = useState<TermItem[]>([]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('saved');
+  const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
 
   const {
     register: registerClient,
@@ -265,6 +268,11 @@ export default function QuoteWizard() {
         const parsed = JSON.parse(metaDraft);
         setQuotationMeta({ ...DEFAULT_ITEM_META, ...parsed });
       }
+
+      const storedEditingQuoteId = localStorage.getItem(EDITING_QUOTE_ID_KEY);
+      if (storedEditingQuoteId) {
+        setEditingQuoteId(storedEditingQuoteId);
+      }
     } catch {
       // keep defaults
     }
@@ -295,6 +303,11 @@ export default function QuoteWizard() {
         } else {
           localStorage.removeItem(CLIENT_LOGO_KEY);
         }
+        if (editingQuoteId) {
+          localStorage.setItem(EDITING_QUOTE_ID_KEY, editingQuoteId);
+        } else {
+          localStorage.removeItem(EDITING_QUOTE_ID_KEY);
+        }
         setBusinessData(watchedBusinessValues);
         setClientData(watchedClientValues);
         setSaveState('saved');
@@ -306,7 +319,7 @@ export default function QuoteWizard() {
     }, 400);
 
     return () => window.clearTimeout(timer);
-  }, [watchedBusinessValues, watchedClientValues, itemsData, quotationMeta, logoUrl, termsList, setSaveStatus]);
+  }, [watchedBusinessValues, watchedClientValues, itemsData, quotationMeta, logoUrl, termsList, editingQuoteId, setSaveStatus]);
 
   useEffect(() => {
     setQuotationMeta((current) => ({
@@ -335,6 +348,8 @@ export default function QuoteWizard() {
     localStorage.removeItem(ITEMS_DRAFT_KEY);
     localStorage.removeItem(ITEMS_META_KEY);
     localStorage.removeItem(TERMS_STORAGE_KEY);
+    localStorage.removeItem(EDITING_QUOTE_ID_KEY);
+    setEditingQuoteId(null);
     setSaveState('idle');
     onTriggerToast('Draft reset');
   };
@@ -350,18 +365,77 @@ export default function QuoteWizard() {
     handleStepBack();
   };
 
-  const handleSaveDraft = () => {
-    try {
-      localStorage.setItem(BUSINESS_DRAFT_KEY, JSON.stringify(watchedBusinessValues));
-      localStorage.setItem(CLIENT_DRAFT_KEY, JSON.stringify(watchedClientValues));
-      localStorage.setItem(ITEMS_DRAFT_KEY, JSON.stringify(itemsData));
-      localStorage.setItem(ITEMS_META_KEY, JSON.stringify(quotationMeta));
-      setSaveState('saved');
-      onTriggerToast('Draft saved successfully');
-    } catch {
-      setSaveState('idle');
-      onTriggerToast('Could not save draft because browser storage is full.');
+  const buildCurrentPayload = () =>
+    buildQuotePayload(
+      watchedBusinessValues,
+      watchedClientValues,
+      logoUrl,
+      itemsData,
+      quotationMeta,
+      taxRate,
+      termsAndConditions,
+    );
+
+  const saveQuoteToApi = async (payload: ReturnType<typeof buildQuotePayload>) => {
+    if (editingQuoteId) {
+      const response = await updateQuote(editingQuoteId, {
+        ...payload,
+        id: editingQuoteId,
+        status: 'Draft',
+      });
+      return response.quote;
     }
+
+    const response = await createQuote(payload);
+    return response.quote;
+  };
+
+  const handleSaveDraft = () => {
+    const payload = buildCurrentPayload();
+
+    const persistDraftLocally = () => {
+      try {
+        localStorage.setItem(BUSINESS_DRAFT_KEY, JSON.stringify(watchedBusinessValues));
+        localStorage.setItem(CLIENT_DRAFT_KEY, JSON.stringify(watchedClientValues));
+        localStorage.setItem(ITEMS_DRAFT_KEY, JSON.stringify(itemsData));
+        localStorage.setItem(ITEMS_META_KEY, JSON.stringify(quotationMeta));
+        if (logoUrl) {
+          localStorage.setItem(CLIENT_LOGO_KEY, logoUrl);
+        }
+        if (editingQuoteId) {
+          localStorage.setItem(EDITING_QUOTE_ID_KEY, editingQuoteId);
+        }
+      } catch {
+        // Ignore local fallback failures; API success is the real save path.
+      }
+    };
+
+    setSaveState('saving');
+    setSaveStatus('saving');
+
+    saveQuoteToApi(payload)
+      .then((savedQuote) => {
+        setEditingQuoteId(savedQuote.id);
+        localStorage.setItem(EDITING_QUOTE_ID_KEY, savedQuote.id);
+        persistDraftLocally();
+        setSaveState('saved');
+        setSaveStatus('saved');
+        onTriggerToast('Draft saved successfully');
+      })
+      .catch(() => {
+        persistDraftLocally();
+        const saved = saveQuotesSafely(QUOTES_STORAGE_KEY, { ...payload, status: 'Draft' as const, id: editingQuoteId || payload.id });
+        if (saved) {
+          setSaveState('saved');
+          setSaveStatus('saved');
+          onTriggerToast('Draft saved locally');
+          return;
+        }
+
+        setSaveState('idle');
+        setSaveStatus('idle');
+        onTriggerToast('Could not save draft.');
+      });
   };
 
   const handleStepNext = () => setCurrentStep((s) => (Math.min(4, s + 1) as 1 | 2 | 3 | 4));
@@ -391,20 +465,15 @@ export default function QuoteWizard() {
       return;
     }
 
-    const payload = buildQuotePayload(
-      watchedBusinessValues,
-      watchedClientValues,
-      logoUrl,
-      itemsData,
-      quotationMeta,
-      taxRate,
-      termsAndConditions,
-    );
     try {
-      await createQuote(payload);
+      const payload = buildCurrentPayload();
+      const savedQuote = await saveQuoteToApi(payload);
+      setEditingQuoteId(savedQuote.id);
+      localStorage.setItem(EDITING_QUOTE_ID_KEY, savedQuote.id);
       onTriggerToast('Quote saved successfully');
       navigate('/quotes');
     } catch {
+      const payload = buildCurrentPayload();
       const saved = saveQuotesSafely(QUOTES_STORAGE_KEY, payload);
       if (!saved) {
         setSaveState('idle');

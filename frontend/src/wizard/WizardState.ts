@@ -15,6 +15,7 @@ export const CLIENT_DRAFT_KEY = 'ilovequote_client_details';
 export const CLIENT_LOGO_KEY = 'ilovequote_logo_url';
 export const ITEMS_DRAFT_KEY = 'ilovequote_draft_items';
 export const ITEMS_META_KEY = 'ilovequote_draft_meta';
+export const EDITING_QUOTE_ID_KEY = 'ilovequote_editing_quote_id';
 export const QUOTES_STORAGE_KEY = 'ilovequote_saved_quotes';
 export const SETTINGS_STORAGE_KEY = 'ilovequote_app_settings';
 export interface WizardState {
