@@ -3,6 +3,7 @@ import { Bell, ChevronDown, Copy, Download, Eye, FileText, Filter, Grid2x2, Link
 import { getDisplayAuthUser } from '../auth';
 import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
+import { buildPdfUrl, buildShareUrl } from '../url';
 
 const statusTabs = ['All', 'Draft', 'Sent', 'Viewed', 'Accepted'] as const;
 
@@ -57,6 +58,15 @@ export default function QuotesPage() {
       await deleteQuote(quote.id);
     } finally {
       setQuotes((prev) => prev.filter((item) => item.id !== quote.id));
+    }
+  };
+
+  const copyShareLink = async (quoteNumber: string) => {
+    const shareUrl = buildShareUrl(quoteNumber);
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+    } catch {
+      window.prompt('Copy this link', shareUrl);
     }
   };
 
@@ -190,26 +200,26 @@ export default function QuotesPage() {
                         </td>
                         <td className="px-4 py-5 md:px-5">
                           <div className="flex flex-col items-start gap-1.5">
-                            <button type="button" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${encodeURIComponent(quote.quoteNumber)}`)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm">
+                            <button type="button" onClick={() => copyShareLink(quote.quoteNumber)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm">
                               <Link2 className="h-4.5 w-4.5" />
                             </button>
                             <p className="max-w-[180px] break-all text-[13px] leading-5 text-slate-500">
-                              {window.location.origin}/share/{quote.quoteNumber}
+                              {buildShareUrl(quote.quoteNumber)}
                             </p>
-                            <button type="button" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${encodeURIComponent(quote.quoteNumber)}`)} className="text-[13px] font-semibold text-[#2457F0]">
+                            <button type="button" onClick={() => copyShareLink(quote.quoteNumber)} className="text-[13px] font-semibold text-[#2457F0]">
                               Copy
                             </button>
                           </div>
                         </td>
                         <td className="px-4 py-5 md:px-5">
                           <div className="flex items-center justify-center gap-3">
-                            <button type="button" onClick={() => window.open(`${window.location.origin}/api/quotes/${encodeURIComponent(quote.id)}/pdf`, '_blank')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={() => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Eye className="h-4.5 w-4.5 text-[#2457F0]" />
                             </button>
-                            <button type="button" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${encodeURIComponent(quote.quoteNumber)}`)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={() => copyShareLink(quote.quoteNumber)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Copy className="h-4.5 w-4.5 text-[#22C55E]" />
                             </button>
-                            <button type="button" onClick={() => window.open(`${window.location.origin}/api/quotes/${encodeURIComponent(quote.id)}/pdf`, '_blank')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={() => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Download className="h-4.5 w-4.5 text-[#EF4444]" />
                             </button>
                             <button type="button" onClick={() => handleDuplicate(quote)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">

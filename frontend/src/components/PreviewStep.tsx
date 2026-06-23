@@ -26,6 +26,7 @@ interface PreviewStepProps {
   businessWebsite?: string;
   businessAddress?: string;
   businessLogo?: string;
+  clientLogo?: string | null;
   businessSlug?: string;
   clientName: string;
   clientContactPerson?: string;
@@ -108,6 +109,7 @@ export default function PreviewStep({
   businessWebsite,
   businessAddress,
   businessLogo,
+  clientLogo,
   businessSlug,
   clientName,
   clientContactPerson,
@@ -148,10 +150,12 @@ export default function PreviewStep({
         businessEmail,
         businessPhone,
         businessWebsite,
+        businessLogo,
         clientName,
         clientContactPerson,
         clientEmail,
         clientPhone,
+        clientLogo,
         quoteNumber,
         issueDate,
         expiryDate,
@@ -169,10 +173,12 @@ export default function PreviewStep({
     businessEmail,
     businessPhone,
     businessWebsite,
+    businessLogo,
     clientName,
     clientContactPerson,
     clientEmail,
     clientPhone,
+    clientLogo,
     quoteNumber,
     issueDate,
     expiryDate,
@@ -562,9 +568,20 @@ export default function PreviewStep({
 
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_minmax(0,1.3fr)] md:items-start">
                   <div className="flex items-center justify-center rounded-[22px] border border-slate-100 bg-slate-50 px-6 py-8 md:min-h-[180px]">
-                    <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white text-3xl font-black text-[#1D4ED8] shadow-sm">
-                      {getInitials(clientName, 'C')}
-                    </div>
+                    {clientLogo ? (
+                      <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-100">
+                        <img
+                          src={clientLogo}
+                          alt={`${clientName || 'Client'} logo`}
+                          className="h-full w-full object-contain p-2"
+                          referrerPolicy="no-referrer"
+                        />
+                      </div>
+                    ) : (
+                      <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white text-3xl font-black text-[#1D4ED8] shadow-sm">
+                        {getInitials(clientName, 'C')}
+                      </div>
+                    )}
                   </div>
 
                   <div className="min-w-0 rounded-[22px] border border-slate-100 bg-white px-5 py-4 md:border-0 md:px-0 md:py-0 md:pl-6 md:border-l md:border-slate-200">

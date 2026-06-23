@@ -81,6 +81,7 @@ export interface Quote {
   status: 'Draft' | 'Completed';
   businessDetails: BusinessFormValues;
   clientDetails: ClientDetails;
+  clientLogo?: string;
   items: QuoteItem[];
   subtotal: number;
   taxRate: number;

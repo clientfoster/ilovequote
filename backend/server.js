@@ -3,6 +3,7 @@ import { pbkdf2Sync, randomBytes, randomInt, randomUUID, timingSafeEqual } from 
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { deflateSync, inflateSync } from 'node:zlib';
 import { MongoClient } from 'mongodb';
 import { Resend } from 'resend';
 
@@ -329,6 +330,7 @@ function buildClientDetails(source = {}) {
     phone: source.phone || '',
     website: source.website || '',
     address: source.address || addressParts.join('\n') || '',
+    logo: source.logo || source.clientLogo || '',
     taxIdType: source.taxIdType || 'GSTIN',
     taxId: source.taxId || '',
     poNumber: source.poNumber || '',
@@ -375,6 +377,7 @@ function buildQuoteFromPayload(payload = {}, ownerUserId = null) {
     status,
     businessDetails,
     clientDetails,
+    clientLogo: payload.clientLogo || clientDetails.logo || '',
     items: totals.items.map((item) => ({
       id: item.id,
       description: item.name,
@@ -560,16 +563,221 @@ function pdfRect(x, y, width, height, fill = null, stroke = null, lineWidth = 1)
   return `${parts.join('\n')}\nS`;
 }
 
+function parsePdfDataUrl(dataUrl) {
+  if (typeof dataUrl !== 'string') return null;
+  const match = dataUrl.match(/^data:(image\/[a-zA-Z0-9.+-]+);base64,(.+)$/i);
+  if (!match) return null;
+  return {
+    mimeType: match[1].toLowerCase(),
+    buffer: Buffer.from(match[2], 'base64'),
+  };
+}
+
+function getJpegDimensions(buffer) {
+  if (buffer.length < 4 || buffer[0] !== 0xff || buffer[1] !== 0xd8) return null;
+  let offset = 2;
+  while (offset < buffer.length) {
+    while (offset < buffer.length && buffer[offset] !== 0xff) offset++;
+    while (offset < buffer.length && buffer[offset] === 0xff) offset++;
+    const marker = buffer[offset++];
+    if (marker === 0xd9 || marker === 0xda) break;
+    if (offset + 1 >= buffer.length) break;
+    const length = buffer.readUInt16BE(offset);
+    if (length < 2 || offset + length > buffer.length) break;
+    if (
+      (marker >= 0xc0 && marker <= 0xc3) ||
+      (marker >= 0xc5 && marker <= 0xc7) ||
+      (marker >= 0xc9 && marker <= 0xcb) ||
+      (marker >= 0xcd && marker <= 0xcf)
+    ) {
+      return {
+        height: buffer.readUInt16BE(offset + 3),
+        width: buffer.readUInt16BE(offset + 5),
+      };
+    }
+    offset += length;
+  }
+  return null;
+}
+
+function decodePngToRgb(buffer) {
+  const signature = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+  if (buffer.length < 8 || !buffer.slice(0, 8).equals(signature)) return null;
+
+  let width = 0;
+  let height = 0;
+  let bitDepth = 0;
+  let colorType = 0;
+  const idatParts = [];
+
+  let offset = 8;
+  while (offset + 8 <= buffer.length) {
+    const length = buffer.readUInt32BE(offset);
+    const type = buffer.toString('ascii', offset + 4, offset + 8);
+    const dataStart = offset + 8;
+    const dataEnd = dataStart + length;
+    if (dataEnd > buffer.length) break;
+
+    const chunk = buffer.slice(dataStart, dataEnd);
+    if (type === 'IHDR') {
+      width = chunk.readUInt32BE(0);
+      height = chunk.readUInt32BE(4);
+      bitDepth = chunk[8];
+      colorType = chunk[9];
+    } else if (type === 'IDAT') {
+      idatParts.push(chunk);
+    } else if (type === 'IEND') {
+      break;
+    }
+
+    offset = dataEnd + 4;
+  }
+
+  if (!width || !height || bitDepth !== 8) return null;
+
+  const channelsByColorType = {
+    0: 1,
+    2: 3,
+    4: 2,
+    6: 4,
+  };
+  const channels = channelsByColorType[colorType];
+  if (!channels) return null;
+
+  const inflated = inflateSync(Buffer.concat(idatParts));
+  const rowLength = width * channels;
+  const bpp = channels;
+  const raw = Buffer.alloc(width * height * channels);
+  let src = 0;
+  let dst = 0;
+  let previousRow = Buffer.alloc(rowLength);
+
+  for (let y = 0; y < height; y++) {
+    const filter = inflated[src++];
+    const row = inflated.subarray(src, src + rowLength);
+    src += rowLength;
+    const recon = Buffer.alloc(rowLength);
+
+    for (let x = 0; x < rowLength; x++) {
+      const left = x >= bpp ? recon[x - bpp] : 0;
+      const up = previousRow[x] || 0;
+      const upLeft = x >= bpp ? previousRow[x - bpp] || 0 : 0;
+      const current = row[x];
+
+      let value = current;
+      if (filter === 1) {
+        value = (current + left) & 0xff;
+      } else if (filter === 2) {
+        value = (current + up) & 0xff;
+      } else if (filter === 3) {
+        value = (current + Math.floor((left + up) / 2)) & 0xff;
+      } else if (filter === 4) {
+        const p = left + up - upLeft;
+        const pa = Math.abs(p - left);
+        const pb = Math.abs(p - up);
+        const pc = Math.abs(p - upLeft);
+        const predictor = pa <= pb && pa <= pc ? left : pb <= pc ? up : upLeft;
+        value = (current + predictor) & 0xff;
+      }
+
+      recon[x] = value;
+    }
+
+    recon.copy(raw, dst);
+    previousRow = recon;
+    dst += rowLength;
+  }
+
+  const rgb = Buffer.alloc(width * height * 3);
+  if (channels === 1) {
+    for (let i = 0, j = 0; i < raw.length; i++, j += 3) {
+      const v = raw[i];
+      rgb[j] = v;
+      rgb[j + 1] = v;
+      rgb[j + 2] = v;
+    }
+  } else if (channels === 2) {
+    for (let i = 0, j = 0; i < raw.length; i += 2, j += 3) {
+      const v = raw[i];
+      rgb[j] = v;
+      rgb[j + 1] = v;
+      rgb[j + 2] = v;
+    }
+  } else if (channels === 3) {
+    raw.copy(rgb);
+  } else if (channels === 4) {
+    for (let i = 0, j = 0; i < raw.length; i += 4, j += 3) {
+      rgb[j] = raw[i];
+      rgb[j + 1] = raw[i + 1];
+      rgb[j + 2] = raw[i + 2];
+    }
+  }
+
+  return { width, height, data: rgb };
+}
+
+function createPdfImageObject(sourceUrl, addObject, imageName) {
+  const parsed = parsePdfDataUrl(sourceUrl);
+  if (!parsed) return null;
+
+  if (parsed.mimeType.includes('jpeg') || parsed.mimeType.includes('jpg')) {
+    const dimensions = getJpegDimensions(parsed.buffer);
+    if (!dimensions) return null;
+    const header = Buffer.from(`<< /Type /XObject /Subtype /Image /Width ${dimensions.width} /Height ${dimensions.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${parsed.buffer.length} >>\nstream\n`, 'utf8');
+    const footer = Buffer.from('\nendstream', 'utf8');
+    const objectNumber = addObject(Buffer.concat([header, parsed.buffer, footer]));
+    return {
+      name: imageName,
+      objectNumber,
+      width: dimensions.width,
+      height: dimensions.height,
+    };
+  }
+
+  if (parsed.mimeType.includes('png')) {
+    const image = decodePngToRgb(parsed.buffer);
+    if (!image) return null;
+    const compressed = deflateSync(image.data);
+    const header = Buffer.from(`<< /Type /XObject /Subtype /Image /Width ${image.width} /Height ${image.height} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode /Length ${compressed.length} >>\nstream\n`, 'utf8');
+    const footer = Buffer.from('\nendstream', 'utf8');
+    const objectNumber = addObject(Buffer.concat([header, compressed, footer]));
+    return {
+      name: imageName,
+      objectNumber,
+      width: image.width,
+      height: image.height,
+    };
+  }
+
+  return null;
+}
+
 function buildPdfBuffer(quote) {
   const width = 595.28;
   const height = 841.89;
   const margin = 42;
 
+  const objects = [];
+  const addObject = (body) => {
+    objects.push(body);
+    return objects.length;
+  };
   const lines = [];
   const push = (chunk) => lines.push(chunk);
+  const imageResources = [];
+  const addImage = (sourceUrl, imageName, x, y, w, h) => {
+    const image = createPdfImageObject(sourceUrl, addObject, imageName);
+    if (!image) return;
+    imageResources.push(image);
+    push(`q\n${w} 0 0 ${h} ${x} ${y} cm\n/${imageName} Do\nQ`);
+  };
 
   // Header band.
   push(pdfRect(0, height - 115, width, 115, '0.05 0.11 0.27', '0.05 0.11 0.27', 1));
+  if (quote.businessDetails.logo) {
+    push(pdfRect(width - 108, height - 102, 66, 66, '1 1 1', '1 1 1', 0.8));
+    addImage(quote.businessDetails.logo, 'Im1', width - 102, height - 96, 54, 54);
+  }
   push(pdfText(46, height - 52, 24, quote.businessDetails.companyName, '1 1 1'));
   push(pdfText(46, height - 78, 11, quote.businessDetails.tagline || '', '0.84 0.9 1'));
   push(pdfText(width - 210, height - 52, 12, 'QUOTE PREVIEW', '0.79 0.87 1'));
@@ -586,6 +794,11 @@ function buildPdfBuffer(quote) {
   y -= 28;
   push(pdfText(margin, y, 11, 'Prepared For', '0.26 0.31 0.4'));
   y -= 22;
+  if (quote.clientLogo) {
+    push(pdfRect(margin, y - 54, 54, 54, '1 1 1', '0.84 0.87 0.92', 0.6));
+    addImage(quote.clientLogo, 'Im2', margin + 4, y - 50, 46, 46);
+    y -= 60;
+  }
   push(pdfText(margin, y, 16, quote.clientDetails.name, '0.08 0.12 0.22'));
   y -= 18;
   push(pdfText(margin, y, 10, quote.clientDetails.contactPerson || '', '0.18 0.21 0.29'));
@@ -667,15 +880,13 @@ function buildPdfBuffer(quote) {
   push(pdfText(margin, 40, 8, 'Generated by ilovequote.com backend', '0.45 0.48 0.55'));
 
   const contentStream = lines.join('\n');
-  const objects = [];
-  const addObject = (body) => {
-    objects.push(body);
-    return objects.length;
-  };
 
   const fontObj = addObject('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
   const contentObj = addObject(`<< /Length ${Buffer.byteLength(contentStream, 'utf8')} >>\nstream\n${contentStream}\nendstream`);
-  const pageObj = addObject(`<< /Type /Page /Parent 4 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 ${fontObj} 0 R >> >> /Contents ${contentObj} 0 R >>`);
+  const xObjectEntries = imageResources.length > 0
+    ? ` /XObject << ${imageResources.map((image) => `/${image.name} ${image.objectNumber} 0 R`).join(' ')} >>`
+    : '';
+  const pageObj = addObject(`<< /Type /Page /Parent 4 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /Font << /F1 ${fontObj} 0 R >>${xObjectEntries} >> /Contents ${contentObj} 0 R >>`);
   const pagesObj = addObject(`<< /Type /Pages /Kids [${pageObj} 0 R] /Count 1 >>`);
   const catalogObj = addObject(`<< /Type /Catalog /Pages ${pagesObj} 0 R >>`);
 
@@ -686,9 +897,14 @@ function buildPdfBuffer(quote) {
 
   objects.forEach((body, index) => {
     const objectNumber = index + 1;
-    const serialized = `${objectNumber} 0 obj\n${body}\nendobj\n`;
+    const bodyBuffer = Buffer.isBuffer(body) ? body : Buffer.from(body, 'utf8');
+    const serialized = Buffer.concat([
+      Buffer.from(`${objectNumber} 0 obj\n`, 'utf8'),
+      bodyBuffer,
+      Buffer.from('\nendobj\n', 'utf8'),
+    ]);
     offsets.push(offset);
-    const buf = Buffer.from(serialized, 'utf8');
+    const buf = serialized;
     chunks.push(buf);
     offset += buf.length;
   });
@@ -713,6 +929,12 @@ function buildPdfBuffer(quote) {
 function renderSharePage(quote, req) {
   const shareUrl = publicShareUrl(req, quote);
   const pdfUrl = `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(quote.id)}/pdf`;
+  const businessLogoHtml = quote.businessDetails?.logo
+    ? `<img src="${escapeHtml(quote.businessDetails.logo)}" alt="${escapeHtml(quote.businessDetails.companyName)} logo" class="logo" />`
+    : `<div class="logo-fallback">${escapeHtml((quote.businessDetails?.companyName || 'B').slice(0, 1).toUpperCase())}</div>`;
+  const clientLogoHtml = quote.clientLogo
+    ? `<img src="${escapeHtml(quote.clientLogo)}" alt="${escapeHtml(quote.clientDetails?.name || 'Client')} logo" class="client-logo" />`
+    : `<div class="client-fallback">${escapeHtml((quote.clientDetails?.name || 'C').slice(0, 1).toUpperCase())}</div>`;
   const itemsHtml = quote.items.map((item, index) => `
     <tr>
       <td>${index + 1}</td>
@@ -783,6 +1005,13 @@ function renderSharePage(quote, req) {
       position: relative;
       overflow: hidden;
     }
+    .brand-head {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      position: relative;
+      z-index: 1;
+    }
     .brand::after {
       content: '';
       position: absolute;
@@ -798,6 +1027,38 @@ function renderSharePage(quote, req) {
       font-size: 30px;
       line-height: 1.05;
       letter-spacing: -0.03em;
+    }
+    .logo,
+    .logo-fallback,
+    .client-logo,
+    .client-fallback {
+      display: block;
+      object-fit: contain;
+      background: white;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+    }
+    .logo,
+    .logo-fallback {
+      width: 72px;
+      height: 72px;
+      padding: 8px;
+      border-radius: 18px;
+    }
+    .logo-fallback,
+    .client-fallback {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--brand);
+      font-weight: 900;
+    }
+    .client-logo,
+    .client-fallback {
+      width: 88px;
+      height: 88px;
+      padding: 10px;
+      border-radius: 20px;
+      border: 1px solid rgba(148,163,184,0.18);
     }
     .brand p, .brand a {
       color: rgba(255,255,255,0.88);
@@ -926,8 +1187,13 @@ function renderSharePage(quote, req) {
     <div class="hero">
       <div class="card brand">
         <div class="chip">Share Link Ready</div>
-        <h1>${escapeHtml(quote.businessDetails.companyName)}</h1>
-        <p>${escapeHtml(quote.businessDetails.tagline || '')}</p>
+        <div class="brand-head">
+          ${businessLogoHtml}
+          <div>
+            <h1>${escapeHtml(quote.businessDetails.companyName)}</h1>
+            <p>${escapeHtml(quote.businessDetails.tagline || '')}</p>
+          </div>
+        </div>
         <div style="height: 18px"></div>
         <p>${escapeHtml(quote.businessDetails.address)}</p>
         <p>${escapeHtml(quote.businessDetails.city)}, ${escapeHtml(quote.businessDetails.state)} ${escapeHtml(quote.businessDetails.zipCode)}</p>
@@ -952,11 +1218,12 @@ function renderSharePage(quote, req) {
       <div class="card metric"><div class="label">Total</div><div class="value">${escapeHtml(moneyLabel(quote.totalAmount))}</div></div>
     </div>
 
-    <div class="card section">
+      <div class="card section">
       <h2>Quote Details</h2>
       <div class="split">
         <div class="panel">
           <p><strong>Prepared For</strong></p>
+          <div style="margin:14px 0 16px;">${clientLogoHtml}</div>
           <p>${escapeHtml(quote.clientDetails.name)}</p>
           <p>${escapeHtml(quote.clientDetails.contactPerson || '')}</p>
           <p>${escapeHtml(quote.clientDetails.email)}</p>

@@ -3,6 +3,7 @@ import { Bell, Calendar, ChevronDown, Download, Eye, FileText, MoreVertical, Pie
 import { getDisplayAuthUser } from '../auth';
 import { fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
+import { buildPdfUrl, buildShareUrl } from '../url';
 
 function money(value: number) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`;
@@ -138,13 +139,27 @@ export default function PortfolioPage() {
                         </td>
                         <td className="px-4 py-5 md:px-5">
                           <div className="flex items-center justify-center gap-3">
-                            <button type="button" onClick={() => window.open(`${window.location.origin}/api/quotes/${encodeURIComponent(quote.id)}/pdf`, '_blank')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={() => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Eye className="h-4.5 w-4.5 text-[#2457F0]" />
                             </button>
-                            <button type="button" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${encodeURIComponent(quote.quoteNumber)}`)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={async () => {
+                              const shareUrl = buildShareUrl(quote.quoteNumber);
+                              try {
+                                await navigator.clipboard.writeText(shareUrl);
+                              } catch {
+                                window.prompt('Copy this link', shareUrl);
+                              }
+                            }} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Download className="h-4.5 w-4.5 text-[#EF4444]" />
                             </button>
-                            <button type="button" onClick={() => navigator.clipboard.writeText(`${window.location.origin}/share/${encodeURIComponent(quote.quoteNumber)}`)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={async () => {
+                              const shareUrl = buildShareUrl(quote.quoteNumber);
+                              try {
+                                await navigator.clipboard.writeText(shareUrl);
+                              } catch {
+                                window.prompt('Copy this link', shareUrl);
+                              }
+                            }} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <MoreVertical className="h-4.5 w-4.5 text-slate-700" />
                             </button>
                           </div>

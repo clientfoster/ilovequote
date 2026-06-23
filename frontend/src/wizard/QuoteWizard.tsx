@@ -50,12 +50,6 @@ const toLegacyQuoteItems = (items: ItemQuoteItem[]) =>
     total: item.price,
   }));
 
-const stripHeavyBusinessFields = (business: BusinessFormValues): BusinessFormValues => ({
-  ...business,
-  logo: '',
-  socialLinks: business.socialLinks.map((link) => ({ ...link })),
-});
-
 const normalizeClientDraft = (draft: Partial<ClientFormValues> | null | undefined): ClientFormValues => {
   return { ...DEFAULT_CLIENT_VALUES, ...(draft ?? {}) };
 };
@@ -63,6 +57,7 @@ const normalizeClientDraft = (draft: Partial<ClientFormValues> | null | undefine
 const buildQuotePayload = (
   businessDetails: BusinessFormValues,
   clientDetails: ClientFormValues,
+  clientLogo: string | null,
   items: ItemQuoteItem[],
   quotationMeta: ItemQuotationMeta,
   taxRate: number,
@@ -75,13 +70,14 @@ const buildQuotePayload = (
     date: quotationMeta.date,
     expiryDate: quotationMeta.validUntil,
     status: 'Draft' as const,
-    businessDetails: stripHeavyBusinessFields(businessDetails),
+    businessDetails,
     clientDetails: {
       name: clientDetails.companyName,
       email: clientDetails.email,
       phone: clientDetails.phone,
       address: clientDetails.billingAddress,
     },
+    clientLogo: clientLogo || '',
     items: toLegacyQuoteItems(items),
     subtotal: totals.subtotal,
     taxRate,
@@ -185,6 +181,7 @@ export default function QuoteWizard() {
             email: decoded.businessEmail || '',
             phone: decoded.businessPhone || '',
             website: decoded.businessWebsite || '',
+            logo: decoded.businessLogo || '',
           };
           const sharedClient = {
             ...DEFAULT_CLIENT_VALUES,
@@ -199,6 +196,7 @@ export default function QuoteWizard() {
 
           resetClient(sharedClient);
           setClientData(sharedClient);
+          setLogoUrl(decoded.clientLogo || null);
 
           if (Array.isArray(decoded.items)) {
             setItemsData(decoded.items);
@@ -292,7 +290,11 @@ export default function QuoteWizard() {
         localStorage.setItem(ITEMS_DRAFT_KEY, JSON.stringify(itemsData));
         localStorage.setItem(ITEMS_META_KEY, JSON.stringify(quotationMeta));
         localStorage.setItem(TERMS_STORAGE_KEY, JSON.stringify(termsList));
-        if (logoUrl) localStorage.setItem(CLIENT_LOGO_KEY, logoUrl);
+        if (logoUrl) {
+          localStorage.setItem(CLIENT_LOGO_KEY, logoUrl);
+        } else {
+          localStorage.removeItem(CLIENT_LOGO_KEY);
+        }
         setBusinessData(watchedBusinessValues);
         setClientData(watchedClientValues);
         setSaveState('saved');
@@ -392,6 +394,7 @@ export default function QuoteWizard() {
     const payload = buildQuotePayload(
       watchedBusinessValues,
       watchedClientValues,
+      logoUrl,
       itemsData,
       quotationMeta,
       taxRate,
@@ -587,6 +590,7 @@ export default function QuoteWizard() {
                     .filter(Boolean)
                     .join(', ')}
                   businessLogo={watchedBusinessValues.logo}
+                  clientLogo={logoUrl}
                   businessSlug={watchedBusinessValues.businessSlug}
                   clientName={watchedClientValues.companyName}
                   clientContactPerson={watchedClientValues.contactPerson}

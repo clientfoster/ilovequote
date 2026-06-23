@@ -21,6 +21,7 @@ import {
 import { Quote } from '../types';
 import { getDisplayAuthUser } from '../auth';
 import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
+import { buildPdfUrl, buildShareUrl } from '../url';
 
 type DashboardQuote = Quote & {
   title: string;
@@ -164,8 +165,12 @@ export default function DashboardPage() {
       icon: Link2,
       tone: 'text-[#22C55E]',
       onClick: async (quote: DashboardQuote) => {
-        const shareUrl = `${window.location.origin}/share/${encodeURIComponent(quote.quoteNumber)}`;
-        await navigator.clipboard.writeText(shareUrl);
+        const shareUrl = buildShareUrl(quote.quoteNumber);
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+        } catch {
+          window.prompt('Copy this link', shareUrl);
+        }
       },
       ariaLabel: (quote: DashboardQuote) => `Share ${quote.title}`,
     },
@@ -173,7 +178,7 @@ export default function DashboardPage() {
       label: 'PDF',
       icon: Download,
       tone: 'text-[#EF4444]',
-      onClick: (quote: DashboardQuote) => window.open(`${window.location.origin}/api/quotes/${encodeURIComponent(quote.id)}/pdf`, '_blank'),
+      onClick: (quote: DashboardQuote) => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer'),
       ariaLabel: (quote: DashboardQuote) => `Download ${quote.title}`,
     },
     {
