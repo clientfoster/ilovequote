@@ -3,7 +3,7 @@ import { Bell, Calendar, ChevronDown, Download, Eye, FileText, MoreVertical, Pie
 import { getDisplayAuthUser } from '../auth';
 import { fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
-import { buildPdfUrl, buildShareUrl } from '../url';
+import { buildPdfDownloadUrl, buildShareUrl } from '../url';
 
 function money(value: number) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`;
@@ -142,7 +142,7 @@ export default function PortfolioPage() {
                             <button type="button" onClick={() => window.open(buildShareUrl(quote.shareToken || quote.quoteNumber), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Eye className="h-4.5 w-4.5 text-[#2457F0]" />
                             </button>
-                            <button type="button" onClick={() => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button type="button" onClick={() => window.open(buildPdfDownloadUrl(quote.id), '_blank', 'noopener,noreferrer')} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Download className="h-4.5 w-4.5 text-[#EF4444]" />
                             </button>
                             <button type="button" onClick={async () => {

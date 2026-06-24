@@ -84,6 +84,13 @@ export default function QuoteExportPage() {
       handleExport().catch((err) => {
         setError(err instanceof Error ? err.message : 'Unable to export PDF');
       });
+      window.setTimeout(() => {
+        try {
+          window.close();
+        } catch {
+          // ignore
+        }
+      }, 250);
     }, 300);
     return () => window.clearTimeout(timer);
   }, [shouldDownload, quote, loading, isExporting]);
@@ -93,7 +100,7 @@ export default function QuoteExportPage() {
   const itemList = useMemo(() => mapQuoteItems(quote?.items || []), [quote]);
 
   if (loading) {
-    return <div className="min-h-screen bg-[#F8FAFC] p-6 text-slate-700">Loading quote preview...</div>;
+    return <div className="min-h-screen bg-[#F8FAFC] p-6 text-slate-700">{shouldDownload ? 'Preparing download...' : 'Loading quote preview...'}</div>;
   }
 
   if (error || !quote) {

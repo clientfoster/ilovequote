@@ -3,7 +3,7 @@ import { Bell, ChevronDown, Copy, Download, Eye, FileText, Filter, Grid2x2, List
 import { getDisplayAuthUser } from '../auth';
 import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
-import { buildPdfUrl, buildShareUrl } from '../url';
+import { buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
 const statusTabs = ['All', 'Draft', 'Sent', 'Viewed', 'Accepted'] as const;
 
@@ -77,7 +77,7 @@ export default function QuotesPage() {
   };
 
   const downloadQuotePdf = (quoteId: string) => {
-    window.open(`${buildPdfUrl(quoteId)}?download=1`, '_blank', 'noopener,noreferrer');
+    window.open(buildPdfDownloadUrl(quoteId), '_blank', 'noopener,noreferrer');
   };
 
   const shareViaWhatsApp = (quote: Quote) => {

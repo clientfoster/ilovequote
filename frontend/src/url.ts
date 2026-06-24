@@ -34,3 +34,7 @@ export function buildShareUrl(shareTokenOrQuoteNumber: string) {
 export function buildPdfUrl(quoteId: string) {
   return buildAppUrl(`/quote-export/${encodeURIComponent(quoteId)}`);
 }
+
+export function buildPdfDownloadUrl(quoteId: string) {
+  return buildAppUrl(`/quote-export/${encodeURIComponent(quoteId)}?download=1`);
+}

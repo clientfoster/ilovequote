@@ -20,7 +20,7 @@ import {
 import { Quote } from '../types';
 import { getDisplayAuthUser } from '../auth';
 import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
-import { buildAppUrl, buildPdfUrl, buildShareUrl } from '../url';
+import { buildAppUrl, buildPdfDownloadUrl, buildShareUrl } from '../url';
 
 type DashboardQuote = Quote & {
   title: string;
@@ -176,7 +176,7 @@ export default function DashboardPage() {
       label: 'PDF',
       icon: Download,
       tone: 'text-[#EF4444]',
-      onClick: (quote: DashboardQuote) => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer'),
+      onClick: (quote: DashboardQuote) => window.open(buildPdfDownloadUrl(quote.id), '_blank', 'noopener,noreferrer'),
       ariaLabel: (quote: DashboardQuote) => `Download ${quote.title}`,
     },
     {
