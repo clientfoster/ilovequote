@@ -1338,7 +1338,7 @@ function renderSharePage(quote, req) {
         <div class="url" id="share-url">${escapeHtml(shareUrl)}</div>
         <div class="actions">
           <a class="btn primary" href="${escapeHtml(pdfUrl)}">Open PDF</a>
-          <a class="btn ghost" href="${escapeHtml(pdfDownloadUrl)}">Download PDF</a>
+          <a class="btn ghost" href="${escapeHtml(pdfDownloadUrl)}" download="${escapeHtml(slugify(quote.quoteNumber))}.pdf">Download PDF</a>
           <a class="btn ghost" href="${escapeHtml(whatsappUrl)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
           <button class="btn ghost" type="button" id="copy-btn">Copy Link</button>
         </div>
