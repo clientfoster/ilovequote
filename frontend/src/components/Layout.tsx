@@ -273,19 +273,6 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 >
                   <PlusCircle className="w-4 h-4" />
                 </button>
-                {isAuthed ? (
-                  <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm">
-                    <div className="h-7 w-7 rounded-full bg-[#1D4ED8] flex items-center justify-center text-white text-[10px] font-extrabold shadow-inner border border-white">
-                      {initials}
-                    </div>
-                    <span className="max-w-[120px] truncate text-[12px] font-semibold text-slate-800">
-                      {displayName}
-                    </span>
-                    <span className="max-w-[120px] truncate text-[10px] text-slate-500">
-                      {username || (userName ? 'Signed in' : 'Guest')}
-                    </span>
-                  </div>
-                ) : null}
               </div>
             </header>
 
