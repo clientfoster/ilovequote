@@ -254,7 +254,7 @@ async function ensureMongo() {
     mongoReady = true;
     return true;
   } catch (error) {
-    console.warn('Mongo unavailable, using local JSON storage fallback:', error?.message || error);
+    console.log('Mongo unavailable, using local JSON storage fallback:', error?.message || error);
     mongoReady = false;
     mongoDisabled = true;
     mongoDb = null;
