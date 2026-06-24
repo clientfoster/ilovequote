@@ -435,7 +435,7 @@ export default function PreviewStep({
           <div
             id="invoice-capture-area"
             ref={quoteContainerRef}
-            className="overflow-hidden rounded-[24px] bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)]"
+            className="quote-pdf-surface overflow-hidden rounded-[24px] bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)]"
           >
             <div className="relative overflow-hidden bg-[linear-gradient(135deg,#07162d_0%,#0d1f43_45%,#17336a_100%)] px-5 py-5 text-white md:px-7 md:py-7">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.35),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.2),transparent_34%)]" />

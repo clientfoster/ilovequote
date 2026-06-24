@@ -1,4 +1,27 @@
 @import "tailwindcss";
+
+.quote-pdf-surface {
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  background-clip: padding-box;
+}
+
+.quote-pdf-surface,
+.quote-pdf-surface * {
+  box-sizing: border-box;
+}
+
+.quote-pdf-surface img,
+.quote-pdf-surface svg {
+  max-width: 100%;
+}
+
+.quote-pdf-surface [style*="position: fixed"],
+.quote-pdf-surface [style*="position: sticky"] {
+  position: absolute !important;
+}
+
 @media (max-width: 767px) {
   .quote-wizard-shell {
     overflow-x: hidden;
