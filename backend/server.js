@@ -1815,15 +1815,42 @@ app.post('/api/quotes', async (req, res) => {
   try {
     const user = getAuthenticatedUser(req);
     const quote = buildQuoteFromPayload(req.body || {}, user?.id || null);
-    quotes = [
-      quote,
-      ...quotes.filter((entry) => entry.id !== quote.id && entry.shareToken !== quote.shareToken),
-    ];
+    const existingIndex = quotes.findIndex((entry) => {
+      if (entry.id === quote.id || entry.shareToken === quote.shareToken) {
+        return true;
+      }
+
+      if (quote.status === 'Draft' && user?.id && entry.ownerUserId === user.id && entry.quoteNumber === quote.quoteNumber) {
+        return true;
+      }
+
+      return false;
+    });
+
+    let storedQuote = quote;
+    if (existingIndex >= 0) {
+      const existing = quotes[existingIndex];
+      quote.id = existing.id;
+      quote.shareToken = existing.shareToken;
+      quote.createdAt = existing.createdAt || quote.createdAt;
+      quote.updatedAt = new Date().toISOString();
+      storedQuote = quotes[existingIndex] = {
+        ...existing,
+        ...quote,
+        ownerUserId: existing.ownerUserId || quote.ownerUserId || user?.id || null,
+      };
+    } else {
+      storedQuote = quote;
+      quotes = [
+        quote,
+        ...quotes.filter((entry) => entry.id !== quote.id && entry.shareToken !== quote.shareToken),
+      ];
+    }
     await persistQuotes();
     res.status(201).json({
-      quote,
-      shareUrl: publicShareUrl(req, quote),
-      pdfUrl: `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(quote.id)}/pdf`,
+      quote: storedQuote,
+      shareUrl: publicShareUrl(req, storedQuote),
+      pdfUrl: `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(storedQuote.id)}/pdf`,
     });
   } catch (error) {
     res.status(400).json({

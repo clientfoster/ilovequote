@@ -23,7 +23,6 @@ import {
   EDITING_QUOTE_ID_KEY as EDITING_QUOTE_ID_KEY_BASE,
   ITEMS_DRAFT_KEY as ITEMS_DRAFT_KEY_BASE,
   ITEMS_META_KEY as ITEMS_META_KEY_BASE,
-  QUOTES_STORAGE_KEY as QUOTES_STORAGE_KEY_BASE,
   SETTINGS_STORAGE_KEY as SETTINGS_STORAGE_KEY_BASE,
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
@@ -65,10 +64,11 @@ const buildQuotePayload = (
   quotationMeta: ItemQuotationMeta,
   taxRate: number,
   terms: string,
+  quoteId?: string | null,
 ) => {
   const totals = calculateQuotationTotals(items);
   return {
-    id: `quote-${Date.now()}`,
+    id: quoteId || `quote-${Date.now()}`,
     quoteNumber: quotationMeta.quotationNumber,
     date: quotationMeta.date,
     expiryDate: quotationMeta.validUntil,
@@ -90,32 +90,6 @@ const buildQuotePayload = (
   };
 };
 
-const saveQuotesSafely = (key: string, nextQuote: ReturnType<typeof buildQuotePayload>) => {
-  const fallbackSizes = [undefined, 20, 10, 5, 1] as const;
-  const existingRaw = localStorage.getItem(key);
-  let existing: ReturnType<typeof buildQuotePayload>[] = [];
-
-  try {
-    existing = existingRaw ? JSON.parse(existingRaw) : [];
-  } catch {
-    existing = [];
-  }
-
-  const nextQuotes = [nextQuote, ...existing.filter((quote) => quote.quoteNumber !== nextQuote.quoteNumber)];
-
-  for (const limit of fallbackSizes) {
-    try {
-      const candidate = typeof limit === 'number' ? nextQuotes.slice(0, limit) : nextQuotes;
-      localStorage.setItem(key, JSON.stringify(candidate));
-      return true;
-    } catch {
-      // try a smaller payload/list
-    }
-  }
-
-  return false;
-};
-
 export default function QuoteWizard() {
   const navigate = useNavigate();
   const { displayName, initials } = getDisplayAuthUser();
@@ -125,7 +99,6 @@ export default function QuoteWizard() {
   const EDITING_QUOTE_ID_KEY = getScopedStorageKey(EDITING_QUOTE_ID_KEY_BASE);
   const ITEMS_DRAFT_KEY = getScopedStorageKey(ITEMS_DRAFT_KEY_BASE);
   const ITEMS_META_KEY = getScopedStorageKey(ITEMS_META_KEY_BASE);
-  const QUOTES_STORAGE_KEY = getScopedStorageKey(QUOTES_STORAGE_KEY_BASE);
   const SETTINGS_STORAGE_KEY = getScopedStorageKey(SETTINGS_STORAGE_KEY_BASE);
   const TERMS_STORAGE_KEY = getScopedStorageKey('ilovequote_draft_terms_list');
   const outletContext = useOutletContext<{
@@ -145,6 +118,7 @@ export default function QuoteWizard() {
   const [termsAndConditions, setTermsAndConditions] = useState(DEFAULT_SETTINGS.defaultTerms);
   const [termsList, setTermsList] = useState<TermItem[]>([]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('saved');
+  const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
 
   const {
@@ -376,6 +350,7 @@ export default function QuoteWizard() {
       quotationMeta,
       taxRate,
       termsAndConditions,
+      editingQuoteId,
     );
 
   const saveQuoteToApi = async (payload: ReturnType<typeof buildQuotePayload>) => {
@@ -393,50 +368,28 @@ export default function QuoteWizard() {
   };
 
   const handleSaveDraft = () => {
+    if (isSavingDraft) return;
     const payload = buildCurrentPayload();
-
-    const persistDraftLocally = () => {
-      try {
-        localStorage.setItem(BUSINESS_DRAFT_KEY, JSON.stringify(watchedBusinessValues));
-        localStorage.setItem(CLIENT_DRAFT_KEY, JSON.stringify(watchedClientValues));
-        localStorage.setItem(ITEMS_DRAFT_KEY, JSON.stringify(itemsData));
-        localStorage.setItem(ITEMS_META_KEY, JSON.stringify(quotationMeta));
-        if (logoUrl) {
-          localStorage.setItem(CLIENT_LOGO_KEY, logoUrl);
-        }
-        if (editingQuoteId) {
-          localStorage.setItem(EDITING_QUOTE_ID_KEY, editingQuoteId);
-        }
-      } catch {
-        // Ignore local fallback failures; API success is the real save path.
-      }
-    };
 
     setSaveState('saving');
     setSaveStatus('saving');
+    setIsSavingDraft(true);
 
     saveQuoteToApi(payload)
       .then((savedQuote) => {
         setEditingQuoteId(savedQuote.id);
         localStorage.setItem(EDITING_QUOTE_ID_KEY, savedQuote.id);
-        persistDraftLocally();
         setSaveState('saved');
         setSaveStatus('saved');
         onTriggerToast('Draft saved successfully');
       })
       .catch(() => {
-        persistDraftLocally();
-        const saved = saveQuotesSafely(QUOTES_STORAGE_KEY, { ...payload, status: 'Draft' as const, id: editingQuoteId || payload.id });
-        if (saved) {
-          setSaveState('saved');
-          setSaveStatus('saved');
-          onTriggerToast('Draft saved locally');
-          return;
-        }
-
         setSaveState('idle');
         setSaveStatus('idle');
         onTriggerToast('Could not save draft.');
+      })
+      .finally(() => {
+        setIsSavingDraft(false);
       });
   };
 
@@ -475,15 +428,8 @@ export default function QuoteWizard() {
       onTriggerToast('Quote saved successfully');
       navigate('/quotes');
     } catch {
-      const payload = buildCurrentPayload();
-      const saved = saveQuotesSafely(QUOTES_STORAGE_KEY, payload);
-      if (!saved) {
-        setSaveState('idle');
-        onTriggerToast('Could not save quote.');
-        return;
-      }
-      onTriggerToast('Quote saved locally');
-      navigate('/quotes');
+      setSaveState('idle');
+      onTriggerToast('Could not save quote.');
     }
   };
 
