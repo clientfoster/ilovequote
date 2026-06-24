@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown, LoaderCircle, Menu, Moon, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, ChevronDown, LoaderCircle, Moon, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BusinessStep from '../modules/business-module/BusinessModule';
 import ClientStep from '../modules/client-module/ClientModule';
@@ -488,32 +488,18 @@ export default function QuoteWizard() {
   return (
     <div className="quote-wizard-shell min-h-dvh overflow-x-hidden bg-slate-50 text-slate-900">
       <header className="no-print sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:relative md:z-30">
-        <div className="mx-auto flex max-w-7xl items-center justify-between gap-4 px-4 py-3 md:px-8 md:py-4">
+        <div className="mx-auto hidden max-w-7xl items-center justify-between gap-4 px-4 py-3 md:flex md:px-8 md:py-4">
           <div className="flex min-w-0 items-center gap-4">
-            <button
-              type="button"
-              className="md:hidden inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100"
-              aria-label="Open menu"
-            >
-              <Menu size={22} />
-            </button>
-
-            <div className="hidden md:flex items-center gap-4">
-              <BrandMark />
-              <div className="h-10 w-px bg-slate-200" />
-              <div className="min-w-0">
-                <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-lg font-extrabold leading-none text-slate-900">Create Quote</h1>
-                  <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-amber-700">
-                    Draft Mode
-                  </span>
-                </div>
-                <p className="mt-1 text-xs text-slate-400">Build, style, and send quotation bills in less than 2 minutes.</p>
+            <BrandMark />
+            <div className="h-10 w-px bg-slate-200" />
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h1 className="text-lg font-extrabold leading-none text-slate-900">Create Quote</h1>
+                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-amber-700">
+                  Draft Mode
+                </span>
               </div>
-            </div>
-
-            <div className="md:hidden flex flex-1 items-center justify-center">
-              <BrandMark />
+              <p className="mt-1 text-xs text-slate-400">Build, style, and send quotation bills in less than 2 minutes.</p>
             </div>
           </div>
 
@@ -566,7 +552,7 @@ export default function QuoteWizard() {
         </div>
 
         <div className="md:hidden px-4 pb-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex items-start justify-between gap-3">
             <div className="min-w-0">
               <h1 className="text-[22px] font-extrabold leading-tight text-slate-900">Create Quote</h1>
               <p className="mt-1 text-[14px] leading-5 text-slate-500">
@@ -575,9 +561,13 @@ export default function QuoteWizard() {
             </div>
             <button
               type="button"
-              onClick={handlePrimaryAction}
-              className="hidden"
-            />
+              onClick={handleSaveDraft}
+              className="inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
+              aria-label="Save draft"
+              title="Save draft"
+            >
+              <Save size={16} />
+            </button>
           </div>
         </div>
       </header>
