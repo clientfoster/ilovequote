@@ -300,6 +300,16 @@ export default function PreviewStep({
   };
 
   const handleDownloadPDF = async () => {
+    if (onDownloadPDF) {
+      setIsDownloading(true);
+      try {
+        await onDownloadPDF();
+      } finally {
+        setIsDownloading(false);
+      }
+      return;
+    }
+
     setIsDownloading(true);
     try {
       const payload = {

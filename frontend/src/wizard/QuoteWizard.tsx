@@ -9,6 +9,7 @@ import ItemsWorkspace from '../modules/items-module/ItemsModule';
 import PreviewStep from '../modules/preview-module/PreviewModule';
 import StepWizard from '../components/StepWizard';
 import BrandMark from '../components/BrandMark';
+import { exportElementToPdf } from '../utils/exportQuotePdf';
 import { INITIAL_ITEMS } from '../itemData';
 import { calculateQuotationTotals } from '../itemUtils';
 import { BusinessFormValues, ClientFormValues, ItemQuoteItem, ItemQuotationMeta } from '../types';
@@ -485,6 +486,15 @@ export default function QuoteWizard() {
     }
   };
 
+  const handleDownloadPreviewPdf = async () => {
+    const element = document.getElementById('invoice-capture-area');
+    if (!element) {
+      throw new Error('Preview is not ready yet.');
+    }
+
+    await exportElementToPdf(element, `${quotationMeta.quotationNumber || 'quote'}.pdf`);
+  };
+
   return (
     <div className="quote-wizard-shell min-h-dvh overflow-x-hidden bg-slate-50 text-slate-900">
       <header className="no-print sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:relative md:z-30">
@@ -665,7 +675,7 @@ export default function QuoteWizard() {
                   onSaveDraft={handleSaveDraft}
                   onCopyLink={() => onTriggerToast('Share link copied to clipboard.')}
                   onPrint={() => onTriggerToast('Print is disabled. Use Download instead.')}
-                  onDownloadPDF={() => onTriggerToast('Use the Download button in the preview to open the PDF.')}
+                  onDownloadPDF={handleDownloadPreviewPdf}
                   onSendToClient={async () => onTriggerToast('Preview send action completed.')}
                   onPrev={() => setCurrentStep(3)}
                 />

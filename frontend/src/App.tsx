@@ -13,6 +13,7 @@ import HelpSupportPage from './pages/HelpSupportPage';
 import QuotesPage from './pages/QuotesPage';
 import PortfolioPage from './pages/PortfolioPage';
 import QRPortfolioPage from './pages/QRPortfolioPage';
+import QuoteExportPage from './pages/QuoteExportPage';
 import CreateQuotePage from './pages/CreateQuotePage';
 import SettingsPage from './pages/SettingsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
@@ -95,6 +96,8 @@ export default function App() {
             )
           }
         />
+
+        <Route path="/quote-export/:id" element={<QuoteExportPage />} />
 
         <Route
           element={

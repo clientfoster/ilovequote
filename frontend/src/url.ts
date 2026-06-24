@@ -32,5 +32,5 @@ export function buildShareUrl(shareTokenOrQuoteNumber: string) {
 }
 
 export function buildPdfUrl(quoteId: string) {
-  return `${getBackendBaseUrl()}/api/quotes/${encodeURIComponent(quoteId)}/pdf`;
+  return buildAppUrl(`/quote-export/${encodeURIComponent(quoteId)}`);
 }
