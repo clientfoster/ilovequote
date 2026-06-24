@@ -13,20 +13,20 @@ export async function exportElementToPdf(element: HTMLElement, filename: string)
   const pdf = new jsPDF('p', 'mm', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
+
   const imageWidth = pageWidth;
   const imageHeight = (canvas.height * imageWidth) / canvas.width;
-
-  let remainingHeight = imageHeight;
+  let heightLeft = imageHeight;
   let position = 0;
 
   pdf.addImage(imageData, 'PNG', 0, position, imageWidth, imageHeight, undefined, 'FAST');
-  remainingHeight -= pageHeight;
+  heightLeft -= pageHeight;
 
-  while (remainingHeight > 0) {
-    position = remainingHeight - imageHeight;
+  while (heightLeft > 0) {
+    position = heightLeft - imageHeight;
     pdf.addPage();
     pdf.addImage(imageData, 'PNG', 0, position, imageWidth, imageHeight, undefined, 'FAST');
-    remainingHeight -= pageHeight;
+    heightLeft -= pageHeight;
   }
 
   pdf.save(filename);
