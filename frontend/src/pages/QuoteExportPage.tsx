@@ -2,10 +2,9 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Quote } from '../types';
 import { apiRequest } from '../api';
-import { downloadFileFromUrl } from '../download';
+import { downloadElementAsPdf } from '../download';
 import PreviewStep from '../components/PreviewStep';
 import { ItemQuoteItem } from '../types';
-import { buildPdfDownloadUrl } from '../url';
 
 function mapQuoteItems(items: Quote['items']): ItemQuoteItem[] {
   return (items || []).map((item) => ({
@@ -100,7 +99,14 @@ export default function QuoteExportPage() {
           onSaveDraft={() => {}}
           onCopyLink={() => {}}
           onPrint={() => window.print()}
-          onDownloadPDF={() => downloadFileFromUrl(buildPdfDownloadUrl(quote.id), `${quote.quoteNumber || quote.id}.pdf`)}
+          onDownloadPDF={async () => {
+            const element = document.getElementById('invoice-capture-area') as HTMLElement | null;
+            if (!element) {
+              throw new Error('Preview area not found.');
+            }
+
+            await downloadElementAsPdf(element, `${quote.quoteNumber || quote.id}.pdf`);
+          }}
           onSendToClient={async () => {}}
           onPrev={() => window.history.back()}
         />

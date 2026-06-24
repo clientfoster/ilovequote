@@ -27,9 +27,8 @@ import {
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
 import { getDisplayAuthUser, getScopedStorageKey } from '../auth';
-import { downloadBlob } from '../download';
+import { downloadElementAsPdf } from '../download';
 import { createQuote, updateQuote } from '../quoteApi';
-import { API_BASE } from '../api';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
   if (!termsStr) return [];
@@ -371,6 +370,26 @@ export default function QuoteWizard() {
     if (isSavingDraft) return;
     const payload = buildCurrentPayload();
 
+    const persistDraftLocally = () => {
+      try {
+        localStorage.setItem(BUSINESS_DRAFT_KEY, JSON.stringify(watchedBusinessValues));
+        localStorage.setItem(CLIENT_DRAFT_KEY, JSON.stringify(watchedClientValues));
+        localStorage.setItem(ITEMS_DRAFT_KEY, JSON.stringify(itemsData));
+        localStorage.setItem(ITEMS_META_KEY, JSON.stringify(quotationMeta));
+        localStorage.setItem(TERMS_STORAGE_KEY, JSON.stringify(termsList));
+        if (logoUrl) {
+          localStorage.setItem(CLIENT_LOGO_KEY, logoUrl);
+        } else {
+          localStorage.removeItem(CLIENT_LOGO_KEY);
+        }
+        if (editingQuoteId) {
+          localStorage.setItem(EDITING_QUOTE_ID_KEY, editingQuoteId);
+        }
+      } catch {
+        // local backup only
+      }
+    };
+
     setSaveState('saving');
     setSaveStatus('saving');
     setIsSavingDraft(true);
@@ -379,14 +398,16 @@ export default function QuoteWizard() {
       .then((savedQuote) => {
         setEditingQuoteId(savedQuote.id);
         localStorage.setItem(EDITING_QUOTE_ID_KEY, savedQuote.id);
+        persistDraftLocally();
         setSaveState('saved');
         setSaveStatus('saved');
         onTriggerToast('Draft saved successfully');
       })
       .catch(() => {
+        persistDraftLocally();
         setSaveState('idle');
         setSaveStatus('idle');
-        onTriggerToast('Could not save draft.');
+        onTriggerToast('Draft saved locally');
       })
       .finally(() => {
         setIsSavingDraft(false);
@@ -434,40 +455,12 @@ export default function QuoteWizard() {
   };
 
   const handleDownloadPreviewPdf = async () => {
-    const payload = {
-      businessDetails: {
-        ...watchedBusinessValues,
-      },
-      clientDetails: {
-        name: watchedClientValues.companyName,
-        contactPerson: watchedClientValues.contactPerson || '',
-        email: watchedClientValues.email,
-        phone: watchedClientValues.phone || '',
-        address: watchedClientValues.billingAddress || '',
-      },
-      clientLogo: logoUrl || '',
-      quoteNumber: quotationMeta.quotationNumber,
-      date: quotationMeta.date,
-      validUntil: quotationMeta.validUntil,
-      items: itemsData,
-      terms: termsAndConditions,
-      remarks: `Prepared for ${watchedClientValues.companyName || 'your client'} by ${watchedBusinessValues.companyName || 'your business'}.`,
-      status: 'Draft',
-    };
-
-    const response = await fetch(`${API_BASE}/api/quotes/preview-pdf`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload),
-    });
-
-    if (!response.ok) {
-      const errorPayload = await response.json().catch(() => ({}));
-      throw new Error(errorPayload.message || errorPayload.error || 'Unable to generate PDF');
+    const element = document.getElementById('invoice-capture-area') as HTMLElement | null;
+    if (!element) {
+      throw new Error('Preview area not found.');
     }
 
-    const blob = await response.blob();
-    downloadBlob(blob, `${quotationMeta.quotationNumber || 'quote'}.pdf`);
+    await downloadElementAsPdf(element, `${quotationMeta.quotationNumber || 'quote'}.pdf`);
   };
 
   return (
