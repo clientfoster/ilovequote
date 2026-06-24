@@ -1,6 +1,6 @@
 import express from 'express';
 import { pbkdf2Sync, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
-import { readFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { deflateSync, inflateSync } from 'node:zlib';
@@ -28,6 +28,8 @@ const mongoClient = new MongoClient(MONGODB_URI);
 let mongoDb = null;
 let usersCollection = null;
 let quotesCollection = null;
+let mongoReady = false;
+let mongoDisabled = false;
 app.use(express.json({ limit: '5mb' }));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
@@ -225,23 +227,39 @@ async function sendPasswordResetEmail({ email, resetToken }) {
 }
 
 async function ensureMongo() {
-  if (mongoDb && usersCollection && quotesCollection) {
-    return;
+  if (mongoDisabled) {
+    return false;
   }
 
-  if (!mongoDb) {
-    await mongoClient.connect();
+  if (mongoReady && mongoDb && usersCollection && quotesCollection) {
+    return true;
   }
 
-  mongoDb = mongoClient.db(MONGODB_DB_NAME);
-  usersCollection = mongoDb.collection('users');
-  quotesCollection = mongoDb.collection('quotes');
-  await Promise.all([
-    usersCollection.createIndex({ email: 1 }, { unique: true }),
-    quotesCollection.createIndex({ ownerUserId: 1 }),
-    quotesCollection.createIndex({ shareToken: 1 }, { unique: true }),
-    quotesCollection.createIndex({ quoteNumber: 1 }),
-  ]);
+  try {
+    if (!mongoDb) {
+      await mongoClient.connect();
+    }
+
+    mongoDb = mongoClient.db(MONGODB_DB_NAME);
+    usersCollection = mongoDb.collection('users');
+    quotesCollection = mongoDb.collection('quotes');
+    await Promise.all([
+      usersCollection.createIndex({ email: 1 }, { unique: true }),
+      quotesCollection.createIndex({ ownerUserId: 1 }),
+      quotesCollection.createIndex({ shareToken: 1 }, { unique: true }),
+      quotesCollection.createIndex({ quoteNumber: 1 }),
+    ]);
+    mongoReady = true;
+    return true;
+  } catch (error) {
+    console.warn('Mongo unavailable, using local JSON storage fallback:', error?.message || error);
+    mongoReady = false;
+    mongoDisabled = true;
+    mongoDb = null;
+    usersCollection = null;
+    quotesCollection = null;
+    return false;
+  }
 }
 
 function stripMongoId(doc) {
@@ -259,6 +277,11 @@ async function readLegacyJsonArray(filePath, key) {
   } catch {
     return [];
   }
+}
+
+async function writeLegacyJsonArray(filePath, key, items) {
+  await mkdir(DATA_DIR, { recursive: true });
+  await writeFile(filePath, JSON.stringify({ [key]: items }, null, 2), 'utf8');
 }
 
 function getBaseUrl(req) {
@@ -447,21 +470,23 @@ function buildQuoteFromPayload(payload = {}, ownerUserId = null) {
 }
 
 async function loadQuotes() {
-  await ensureMongo();
-  const storedQuotes = await quotesCollection.find({}).sort({ createdAt: -1 }).toArray();
-  if (storedQuotes.length > 0) {
-    quotes = storedQuotes.map(stripMongoId);
-    return quotes;
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    const storedQuotes = await quotesCollection.find({}).sort({ createdAt: -1 }).toArray();
+    if (storedQuotes.length > 0) {
+      quotes = storedQuotes.map(stripMongoId);
+      return quotes;
+    }
+
+    const legacyQuotes = await readLegacyJsonArray(STORE_FILE, 'quotes');
+    if (legacyQuotes.length > 0) {
+      quotes = legacyQuotes;
+      await quotesCollection.insertMany(legacyQuotes);
+      return quotes;
+    }
   }
 
-  const legacyQuotes = await readLegacyJsonArray(STORE_FILE, 'quotes');
-  if (legacyQuotes.length > 0) {
-    quotes = legacyQuotes;
-    await quotesCollection.insertMany(legacyQuotes);
-    return quotes;
-  }
-
-  quotes = [];
+  quotes = await readLegacyJsonArray(STORE_FILE, 'quotes');
   return quotes;
 }
 
@@ -473,21 +498,23 @@ const passwordResetTokens = new Map();
 const authTokens = new Map();
 
 async function loadUsers() {
-  await ensureMongo();
-  const storedUsers = await usersCollection.find({}).sort({ createdAt: 1 }).toArray();
-  if (storedUsers.length > 0) {
-    users = storedUsers.map(stripMongoId);
-    return users;
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    const storedUsers = await usersCollection.find({}).sort({ createdAt: 1 }).toArray();
+    if (storedUsers.length > 0) {
+      users = storedUsers.map(stripMongoId);
+      return users;
+    }
+
+    const legacyUsers = await readLegacyJsonArray(USERS_FILE, 'users');
+    if (legacyUsers.length > 0) {
+      users = legacyUsers;
+      await usersCollection.insertMany(legacyUsers);
+      return users;
+    }
   }
 
-  const legacyUsers = await readLegacyJsonArray(USERS_FILE, 'users');
-  if (legacyUsers.length > 0) {
-    users = legacyUsers;
-    await usersCollection.insertMany(legacyUsers);
-    return users;
-  }
-
-  users = [];
+  users = await readLegacyJsonArray(USERS_FILE, 'users');
   return users;
 }
 
@@ -498,19 +525,29 @@ async function refreshUsers() {
 }
 
 async function persistQuotes() {
-  await ensureMongo();
-  await quotesCollection.deleteMany({});
-  if (quotes.length > 0) {
-    await quotesCollection.insertMany(quotes);
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    await quotesCollection.deleteMany({});
+    if (quotes.length > 0) {
+      await quotesCollection.insertMany(quotes);
+    }
+    return;
   }
+
+  await writeLegacyJsonArray(STORE_FILE, 'quotes', quotes);
 }
 
 async function persistUsers() {
-  await ensureMongo();
-  await usersCollection.deleteMany({});
-  if (users.length > 0) {
-    await usersCollection.insertMany(users);
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    await usersCollection.deleteMany({});
+    if (users.length > 0) {
+      await usersCollection.insertMany(users);
+    }
+    return;
   }
+
+  await writeLegacyJsonArray(USERS_FILE, 'users', users);
 }
 
 function makePublicUser(user) {
