@@ -16,8 +16,8 @@ import { QRCodeSVG } from 'qrcode.react';
 import { motion, AnimatePresence } from 'motion/react';
 import { ItemQuoteItem } from '../types';
 import { calculateQuotationTotals, formatCurrency } from '../itemUtils';
-import { API_BASE } from '../api';
 import { buildAppUrl } from '../url';
+import { downloadElementAsPdf } from '../download';
 
 interface PreviewStepProps {
   businessName: string;
@@ -42,9 +42,9 @@ interface PreviewStepProps {
   onSaveDraft: () => void;
   onCopyLink: () => void;
   onPrint: () => void;
-  onDownloadPDF: () => void;
   onSendToClient: (email: string) => Promise<void>;
   onPrev: () => void;
+  quoteContainerRef: React.RefObject<HTMLDivElement | null>;
 }
 
 const CURRENCY = '₹';
@@ -125,9 +125,9 @@ export default function PreviewStep({
   onSaveDraft,
   onCopyLink,
   onPrint,
-  onDownloadPDF,
   onSendToClient,
   onPrev,
+  quoteContainerRef,
 }: PreviewStepProps) {
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState(clientEmail || '');
@@ -300,68 +300,14 @@ export default function PreviewStep({
   };
 
   const handleDownloadPDF = async () => {
-    if (onDownloadPDF) {
-      setIsDownloading(true);
-      try {
-        await onDownloadPDF();
-      } finally {
-        setIsDownloading(false);
-      }
-      return;
-    }
-
     setIsDownloading(true);
     try {
-      const payload = {
-        businessDetails: {
-          companyName: businessName,
-          email: businessEmail,
-          phone: businessPhone || '',
-          website: businessWebsite || '',
-          logo: businessLogo || '',
-          address: businessAddress || '',
-          businessSlug: businessSlug || '',
-        },
-        clientDetails: {
-          name: clientName,
-          contactPerson: clientContactPerson || '',
-          email: clientEmail,
-          phone: clientPhone || '',
-          address: clientAddress || '',
-          logo: clientLogo || '',
-        },
-        clientLogo: clientLogo || '',
-        quoteNumber,
-        date: issueDate,
-        validUntil: expiryDate,
-        items,
-        terms,
-        remarks,
-        status: 'Draft',
-      };
-
-      const response = await fetch(`${API_BASE}/api/quotes/preview-pdf`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      });
-
-      if (!response.ok) {
-        const errorPayload = await response.json().catch(() => ({}));
-        throw new Error(errorPayload.message || errorPayload.error || 'Unable to generate PDF');
+      const element = quoteContainerRef.current;
+      if (!element) {
+        throw new Error('Preview area not found.');
       }
 
-      const blob = await response.blob();
-      const url = URL.createObjectURL(blob);
-      const fileName = `${quoteNumber || 'quote'}.pdf`;
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      a.rel = 'noopener noreferrer';
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      await downloadElementAsPdf(element, `Quote-${quoteNumber || 'quote'}.pdf`);
     } catch (error: any) {
       console.error('Failed to generate PDF:', error);
       window.alert('PDF generation failed: ' + (error?.message || error));
@@ -486,7 +432,11 @@ export default function PreviewStep({
 
       <div className="mx-auto w-full max-w-[980px]">
         <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50 p-3 shadow-sm md:p-6">
-          <div id="invoice-capture-area" className="overflow-hidden rounded-[24px] bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)]">
+          <div
+            id="invoice-capture-area"
+            ref={quoteContainerRef}
+            className="overflow-hidden rounded-[24px] bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)]"
+          >
             <div className="relative overflow-hidden bg-[linear-gradient(135deg,#07162d_0%,#0d1f43_45%,#17336a_100%)] px-5 py-5 text-white md:px-7 md:py-7">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.35),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.2),transparent_34%)]" />
               <div

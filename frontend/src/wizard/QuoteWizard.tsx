@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, ChevronDown, LoaderCircle, Moon, Save } from 'lucide-react';
@@ -27,7 +27,6 @@ import {
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
 import { getDisplayAuthUser, getScopedStorageKey } from '../auth';
-import { downloadElementAsPdf } from '../download';
 import { createQuote, updateQuote } from '../quoteApi';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
@@ -119,6 +118,7 @@ export default function QuoteWizard() {
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('saved');
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  const quoteContainerRef = useRef<HTMLDivElement | null>(null);
 
   const {
     register: registerClient,
@@ -454,15 +454,6 @@ export default function QuoteWizard() {
     }
   };
 
-  const handleDownloadPreviewPdf = async () => {
-    const element = document.getElementById('invoice-capture-area') as HTMLElement | null;
-    if (!element) {
-      throw new Error('Preview area not found.');
-    }
-
-    await downloadElementAsPdf(element, `${quotationMeta.quotationNumber || 'quote'}.pdf`);
-  };
-
   return (
     <div className="quote-wizard-shell min-h-dvh overflow-x-hidden bg-slate-50 text-slate-900">
       <header className="no-print sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:relative md:z-30">
@@ -643,9 +634,9 @@ export default function QuoteWizard() {
                   onSaveDraft={handleSaveDraft}
                   onCopyLink={() => onTriggerToast('Share link copied to clipboard.')}
                   onPrint={() => onTriggerToast('Print is disabled. Use Download instead.')}
-                  onDownloadPDF={handleDownloadPreviewPdf}
                   onSendToClient={async () => onTriggerToast('Preview send action completed.')}
                   onPrev={() => setCurrentStep(3)}
+                  quoteContainerRef={quoteContainerRef}
                 />
               )}
             </div>

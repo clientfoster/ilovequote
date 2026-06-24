@@ -1,8 +1,7 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Quote } from '../types';
 import { apiRequest } from '../api';
-import { downloadElementAsPdf } from '../download';
 import PreviewStep from '../components/PreviewStep';
 import { ItemQuoteItem } from '../types';
 
@@ -64,6 +63,7 @@ export default function QuoteExportPage() {
   const businessDetails = quote?.businessDetails || ({} as Quote['businessDetails']);
   const clientDetails = quote?.clientDetails || ({} as Quote['clientDetails']);
   const itemList = useMemo(() => mapQuoteItems(quote?.items || []), [quote]);
+  const quoteContainerRef = useRef<HTMLDivElement | null>(null);
 
   if (loading) {
     return <div className="min-h-screen bg-[#F8FAFC] p-6 text-slate-700">Loading quote preview...</div>;
@@ -99,16 +99,9 @@ export default function QuoteExportPage() {
           onSaveDraft={() => {}}
           onCopyLink={() => {}}
           onPrint={() => window.print()}
-          onDownloadPDF={async () => {
-            const element = document.getElementById('invoice-capture-area') as HTMLElement | null;
-            if (!element) {
-              throw new Error('Preview area not found.');
-            }
-
-            await downloadElementAsPdf(element, `${quote.quoteNumber || quote.id}.pdf`);
-          }}
           onSendToClient={async () => {}}
           onPrev={() => window.history.back()}
+          quoteContainerRef={quoteContainerRef}
         />
       </div>
     </div>
