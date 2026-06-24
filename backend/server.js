@@ -20,6 +20,7 @@ const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const OTP_TTL_MS = 10 * 60 * 1000;
 const VERIFICATION_TTL_MS = 15 * 60 * 1000;
+const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 
 const app = express();
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
@@ -188,6 +189,35 @@ async function sendOtpEmail({ email, otp }) {
   }
 
   return { provider: 'resend', id: data?.id || null };
+}
+
+async function sendPasswordResetEmail({ email, resetToken }) {
+  if (!resend) {
+    return { provider: 'dev', skipped: true };
+  }
+
+  const resetUrl = `${PUBLIC_BASE_URL.replace(/\/$/, '')}/#/login?mode=login&resetToken=${encodeURIComponent(resetToken)}`;
+  const { data, error } = await resend.emails.send({
+    from: RESEND_FROM_EMAIL,
+    to: [email],
+    subject: 'Reset your ilovequote password',
+    html: `
+      <div style="font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;line-height:1.6;color:#0f172a">
+        <h2 style="margin:0 0 12px;color:#1d4ed8">Reset your password</h2>
+        <p style="margin:0 0 16px">Click the button below to choose a new password for your account.</p>
+        <p style="margin:0 0 20px">
+          <a href="${resetUrl}" style="display:inline-block;padding:12px 18px;border-radius:12px;background:#2563eb;color:#fff;text-decoration:none;font-weight:700">Reset password</a>
+        </p>
+        <p style="margin:0;color:#64748b">This link expires in 30 minutes. If you did not request it, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+
+  if (error) {
+    throw new Error(error.message || 'Resend failed to send password reset email');
+  }
+
+  return { provider: 'resend', id: data?.id || null, resetUrl };
 }
 
 async function ensureMongo() {
@@ -435,6 +465,7 @@ let quotes = await loadQuotes();
 let users = [];
 const pendingOtps = new Map();
 const verificationTokens = new Map();
+const passwordResetTokens = new Map();
 const authTokens = new Map();
 
 async function loadUsers() {
@@ -1480,6 +1511,99 @@ app.post('/api/auth/register', async (req, res) => {
   } catch (error) {
     res.status(500).json({
       error: 'Unable to register account',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/auth/request-password-reset', async (req, res) => {
+  try {
+    await refreshUsers();
+    const email = normalizeEmail(req.body?.email);
+
+    if (!isValidEmail(email)) {
+      res.status(400).json({ error: 'Please provide a valid email address.' });
+      return;
+    }
+
+    const user = users.find((entry) => entry.email === email);
+    if (!user) {
+      res.json({
+        ok: true,
+        message: 'If an account exists for that email, we sent a password reset link.',
+      });
+      return;
+    }
+
+    const resetToken = randomBytes(24).toString('hex');
+    passwordResetTokens.set(resetToken, {
+      email,
+      userId: user.id,
+      expiresAt: Date.now() + PASSWORD_RESET_TTL_MS,
+    });
+
+    const delivery = await sendPasswordResetEmail({ email, resetToken });
+    console.log(`[auth] password reset link for ${email} via ${delivery.provider}`);
+
+    res.json({
+      ok: true,
+      message: 'If an account exists for that email, we sent a password reset link.',
+      devResetToken: resend ? undefined : resetToken,
+      emailProvider: delivery.provider,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Unable to create password reset request',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/auth/confirm-password-reset', async (req, res) => {
+  try {
+    await refreshUsers();
+    const resetToken = String(req.body?.resetToken || '').trim();
+    const password = String(req.body?.password || '');
+    const tokenState = passwordResetTokens.get(resetToken);
+
+    if (!tokenState || tokenState.expiresAt < Date.now()) {
+      passwordResetTokens.delete(resetToken);
+      res.status(400).json({ error: 'Reset link expired. Please request a new password reset email.' });
+      return;
+    }
+
+    if (password.length < 8) {
+      res.status(400).json({ error: 'Password must be at least 8 characters long.' });
+      return;
+    }
+
+    const user = users.find((entry) => entry.id === tokenState.userId && entry.email === tokenState.email);
+    if (!user) {
+      passwordResetTokens.delete(resetToken);
+      res.status(404).json({ error: 'Account not found for this reset link.' });
+      return;
+    }
+
+    const passwordState = hashPassword(password);
+    user.passwordHash = passwordState.hash;
+    user.passwordSalt = passwordState.salt;
+    user.updatedAt = new Date().toISOString();
+
+    passwordResetTokens.delete(resetToken);
+    revokeAuthTokensForUser(user.id);
+    recordUserActivity(user.id, 'password_reset', req, { via: 'email' });
+    await persistUsers();
+
+    const authToken = createAuthToken(user.id);
+    res.json({
+      ok: true,
+      user: makePublicUser(user),
+      authToken,
+      message: 'Password reset successfully.',
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Unable to reset password',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

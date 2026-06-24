@@ -22,6 +22,7 @@ interface LoginPageProps {
 
 type FlowMode = 'signup' | 'login';
 type SignupStep = 'email' | 'otp' | 'password';
+type LoginView = 'password' | 'forgot' | 'reset';
 
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
@@ -31,25 +32,53 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     return modeParam === 'login' ? 'login' : 'signup';
   });
   const [step, setStep] = useState<SignupStep>('email');
+  const [loginView, setLoginView] = useState<LoginView>(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('resetToken') ? 'reset' : 'password';
+  });
   const [email, setEmail] = useState('you@business.com');
   const [name, setName] = useState('');
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
+  const [resetToken, setResetToken] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showResetPassword, setShowResetPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [devOtp, setDevOtp] = useState('');
+  const [devResetToken, setDevResetToken] = useState('');
 
   useEffect(() => {
-    const modeParam = new URLSearchParams(location.search).get('mode');
+    const params = new URLSearchParams(location.search);
+    const modeParam = params.get('mode');
+    const tokenParam = params.get('resetToken') || '';
+
     if (modeParam === 'login' || modeParam === 'signup') {
       setMode(modeParam);
+    }
+
+    if (tokenParam) {
+      setMode('login');
+      setLoginView('reset');
+      setResetToken(tokenParam);
+      setError('');
+      setInfo('');
+      setDevResetToken('');
+      return;
+    }
+
+    if (modeParam === 'login') {
+      setLoginView((current) => (current === 'forgot' || current === 'reset' ? 'password' : current));
+    } else if (modeParam === 'signup') {
+      setLoginView('password');
     }
   }, [location.search]);
 
@@ -139,7 +168,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         },
       );
       signIn(result.authToken, result.user);
-      onLogin?.();
+      onLogin?.(result.user);
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create account');
@@ -166,10 +195,78 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         },
       );
       signIn(result.authToken, result.user);
-      onLogin?.();
+      onLogin?.(result.user);
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign in');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRequestPasswordReset = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setInfo('');
+    setBusy(true);
+
+    try {
+      const result = await apiRequest<{ message?: string; devResetToken?: string }>(
+        '/api/auth/request-password-reset',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email }),
+        },
+      );
+
+      setInfo(result.message || 'If an account exists for that email, we sent a reset link.');
+      setDevResetToken(result.devResetToken || '');
+      if (result.devResetToken) {
+        setResetToken(result.devResetToken);
+        setLoginView('reset');
+        setResetPassword('');
+        setResetConfirmPassword('');
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not request password reset');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleConfirmPasswordReset = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setInfo('');
+
+    if (resetPassword.length < 8) {
+      setError('Password must be at least 8 characters long.');
+      return;
+    }
+
+    if (resetPassword !== resetConfirmPassword) {
+      setError('Passwords do not match.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      const result = await apiRequest<{ authToken: string; user: AuthUser; message?: string }>(
+        '/api/auth/confirm-password-reset',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            resetToken,
+            password: resetPassword,
+          }),
+        },
+      );
+
+      signIn(result.authToken, result.user);
+      onLogin?.(result.user);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not reset password');
     } finally {
       setBusy(false);
     }
@@ -184,6 +281,17 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setError('');
     setInfo('');
     setDevOtp('');
+  };
+
+  const goBackToLogin = () => {
+    setLoginView('password');
+    setResetToken('');
+    setResetPassword('');
+    setResetConfirmPassword('');
+    setShowResetPassword(false);
+    setError('');
+    setInfo('');
+    setDevResetToken('');
   };
 
   return (
@@ -205,15 +313,33 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           <div className="mt-12 max-w-xl">
             <div className="inline-flex items-center gap-2 rounded-full border border-[#D8E4FF] bg-[#F4F7FF] px-4 py-2 text-[11px] font-bold uppercase tracking-[0.22em] text-[#2457F0]">
               <ShieldCheck className="h-3.5 w-3.5" />
-              Secure email sign in
+              {mode === 'signup'
+                ? 'Secure email sign up'
+                : loginView === 'forgot'
+                  ? 'Password recovery'
+                  : loginView === 'reset'
+                    ? 'Reset password'
+                    : 'Secure email sign in'}
             </div>
 
             <h1 className="mt-5 text-4xl font-black tracking-[-0.04em] text-slate-950 md:text-6xl">
-              One email, one code, one workspace.
+              {mode === 'signup'
+                ? 'One email, one code, one workspace.'
+                : loginView === 'forgot'
+                  ? 'We’ll help you get back in.'
+                  : loginView === 'reset'
+                    ? 'Set a new password and continue.'
+                    : 'One email, one password, one workspace.'}
             </h1>
 
             <p className="mt-5 max-w-xl text-[16px] leading-7 text-slate-600 md:text-[18px]">
-              Create your account with email verification, set a password after the OTP check, and get straight into your quote dashboard.
+              {mode === 'signup'
+                ? 'Create your account with email verification, set a password after the OTP check, and get straight into your quote dashboard.'
+                : loginView === 'forgot'
+                  ? 'Enter the email on your account and we’ll send a reset link to that inbox.'
+                  : loginView === 'reset'
+                    ? 'Use the link from your email to set a new password safely.'
+                    : 'Sign in with your email or phone and password to continue managing quotes.'}
             </p>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-3">
@@ -291,6 +417,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 type="button"
                 onClick={() => {
                   setMode('signup');
+                  setLoginView('password');
                   setError('');
                   setInfo('');
                 }}
@@ -304,6 +431,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 type="button"
                 onClick={() => {
                   setMode('login');
+                  setLoginView('password');
                   setError('');
                   setInfo('');
                 }}
@@ -499,20 +627,133 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   </form>
                 )}
               </>
-            ) : (
-              <form onSubmit={handleLogin} className="mt-6 space-y-4">
+            ) : loginView === 'forgot' ? (
+              <form onSubmit={handleRequestPasswordReset} className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
+                  Enter your email and we’ll send a password reset link.
+                </div>
+
                 <label className="block">
-                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Email</span>
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Email address</span>
                   <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 focus-within:border-[#2457F0] focus-within:bg-white">
                     <Mail className="h-4.5 w-4.5 text-slate-400" />
                     <input
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
                       type="email"
-                      name="email"
+                      name="reset-email"
                       autoComplete="email"
                       className="w-full bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
                       placeholder="you@business.com"
+                    />
+                  </div>
+                </label>
+
+                {devResetToken ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800">
+                    Dev reset token: {devResetToken}
+                  </div>
+                ) : null}
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={goBackToLogin}
+                    className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-[14px] font-semibold text-slate-700 shadow-sm"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="flex-1 rounded-2xl bg-[#2457F0] px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {busy ? 'Sending link...' : 'Send reset link'}
+                  </button>
+                </div>
+              </form>
+            ) : loginView === 'reset' ? (
+              <form onSubmit={handleConfirmPasswordReset} className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
+                  Choose a new password for your account.
+                </div>
+
+                {devResetToken ? (
+                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800">
+                    Dev reset token: {devResetToken}
+                  </div>
+                ) : null}
+
+                <label className="block">
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">New password</span>
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 focus-within:border-[#2457F0] focus-within:bg-white">
+                    <Lock className="h-4.5 w-4.5 text-slate-400" />
+                    <input
+                      value={resetPassword}
+                      onChange={(event) => setResetPassword(event.target.value)}
+                      type={showResetPassword ? 'text' : 'password'}
+                      name="new-password"
+                      autoComplete="new-password"
+                      className="w-full bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                      placeholder="Create a new password"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowResetPassword((current) => !current)}
+                      className="rounded-xl px-3 py-2 text-[12px] font-semibold text-[#2457F0] hover:bg-slate-100"
+                    >
+                      {showResetPassword ? 'Hide' : 'Show'}
+                    </button>
+                  </div>
+                </label>
+
+                <label className="block">
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Confirm password</span>
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 focus-within:border-[#2457F0] focus-within:bg-white">
+                    <Lock className="h-4.5 w-4.5 text-slate-400" />
+                    <input
+                      value={resetConfirmPassword}
+                      onChange={(event) => setResetConfirmPassword(event.target.value)}
+                      type="password"
+                      name="confirm-new-password"
+                      autoComplete="new-password"
+                      className="w-full bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                      placeholder="Re-enter new password"
+                    />
+                  </div>
+                </label>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={goBackToLogin}
+                    className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-[14px] font-semibold text-slate-700 shadow-sm"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy}
+                    className="flex-1 rounded-2xl bg-[#2457F0] px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {busy ? 'Updating...' : 'Update password'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleLogin} className="mt-6 space-y-4">
+                <label className="block">
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Email or phone</span>
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 focus-within:border-[#2457F0] focus-within:bg-white">
+                    <Mail className="h-4.5 w-4.5 text-slate-400" />
+                    <input
+                      value={email}
+                      onChange={(event) => setEmail(event.target.value)}
+                      type="text"
+                      name="email"
+                      autoComplete="username"
+                      className="w-full bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                      placeholder="you@business.com or +91 98765 43210"
                     />
                   </div>
                 </label>
@@ -539,6 +780,20 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     </button>
                   </div>
                 </label>
+
+                <div className="flex items-center justify-between gap-3">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLoginView('forgot');
+                      setError('');
+                      setInfo('');
+                    }}
+                    className="text-[13px] font-semibold text-[#2457F0] hover:underline"
+                  >
+                    Forgot password?
+                  </button>
+                </div>
 
                 <button
                   type="submit"
