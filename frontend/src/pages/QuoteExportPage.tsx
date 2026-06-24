@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useLocation, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Quote } from '../types';
 import { apiRequest } from '../api';
 import PreviewStep from '../components/PreviewStep';
-import { exportElementToPdf } from '../utils/exportQuotePdf';
 import { ItemQuoteItem } from '../types';
+import { buildPdfDownloadUrl } from '../url';
 
 function mapQuoteItems(items: Quote['items']): ItemQuoteItem[] {
   return (items || []).map((item) => ({
@@ -25,12 +25,9 @@ function mapQuoteItems(items: Quote['items']): ItemQuoteItem[] {
 
 export default function QuoteExportPage() {
   const { id = '' } = useParams();
-  const location = useLocation();
-  const shouldDownload = useMemo(() => new URLSearchParams(location.search).get('download') === '1', [location.search]);
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [isExporting, setIsExporting] = useState(false);
 
   useEffect(() => {
     let active = true;
@@ -64,43 +61,12 @@ export default function QuoteExportPage() {
     };
   }, [id]);
 
-  const handleExport = async () => {
-    const element = document.getElementById('invoice-capture-area');
-    if (!element) {
-      throw new Error('Quote preview is not ready yet.');
-    }
-
-    setIsExporting(true);
-    try {
-      await exportElementToPdf(element, `${quote?.quoteNumber || id || 'quote'}.pdf`);
-    } finally {
-      setIsExporting(false);
-    }
-  };
-
-  useEffect(() => {
-    if (!shouldDownload || !quote || loading || isExporting) return;
-    const timer = window.setTimeout(() => {
-      handleExport().catch((err) => {
-        setError(err instanceof Error ? err.message : 'Unable to export PDF');
-      });
-      window.setTimeout(() => {
-        try {
-          window.close();
-        } catch {
-          // ignore
-        }
-      }, 250);
-    }, 300);
-    return () => window.clearTimeout(timer);
-  }, [shouldDownload, quote, loading, isExporting]);
-
   const businessDetails = quote?.businessDetails || ({} as Quote['businessDetails']);
   const clientDetails = quote?.clientDetails || ({} as Quote['clientDetails']);
   const itemList = useMemo(() => mapQuoteItems(quote?.items || []), [quote]);
 
   if (loading) {
-    return <div className="min-h-screen bg-[#F8FAFC] p-6 text-slate-700">{shouldDownload ? 'Preparing download...' : 'Loading quote preview...'}</div>;
+    return <div className="min-h-screen bg-[#F8FAFC] p-6 text-slate-700">Loading quote preview...</div>;
   }
 
   if (error || !quote) {
@@ -133,7 +99,7 @@ export default function QuoteExportPage() {
           onSaveDraft={() => {}}
           onCopyLink={() => {}}
           onPrint={() => window.print()}
-          onDownloadPDF={handleExport}
+          onDownloadPDF={() => window.open(buildPdfDownloadUrl(quote.id), '_blank', 'noopener,noreferrer')}
           onSendToClient={async () => {}}
           onPrev={() => window.history.back()}
         />

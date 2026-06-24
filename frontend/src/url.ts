@@ -36,5 +36,9 @@ export function buildPdfUrl(quoteId: string) {
 }
 
 export function buildPdfDownloadUrl(quoteId: string) {
-  return buildAppUrl(`/quote-export/${encodeURIComponent(quoteId)}?download=1`);
+  return `${getBackendBaseUrl()}/api/quotes/${encodeURIComponent(quoteId)}/pdf?download=1`;
+}
+
+export function buildQuotePreviewUrl(quoteId: string) {
+  return buildAppUrl(`/quote-export/${encodeURIComponent(quoteId)}`);
 }

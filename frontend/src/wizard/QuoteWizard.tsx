@@ -9,7 +9,6 @@ import ItemsWorkspace from '../modules/items-module/ItemsModule';
 import PreviewStep from '../modules/preview-module/PreviewModule';
 import StepWizard from '../components/StepWizard';
 import BrandMark from '../components/BrandMark';
-import { exportElementToPdf } from '../utils/exportQuotePdf';
 import { INITIAL_ITEMS } from '../itemData';
 import { calculateQuotationTotals } from '../itemUtils';
 import { BusinessFormValues, ClientFormValues, ItemQuoteItem, ItemQuotationMeta } from '../types';
@@ -30,6 +29,7 @@ import {
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
 import { getDisplayAuthUser, getScopedStorageKey } from '../auth';
 import { createQuote, updateQuote } from '../quoteApi';
+import { API_BASE } from '../api';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
   if (!termsStr) return [];
@@ -487,12 +487,47 @@ export default function QuoteWizard() {
   };
 
   const handleDownloadPreviewPdf = async () => {
-    const element = document.getElementById('invoice-capture-area');
-    if (!element) {
-      throw new Error('Preview is not ready yet.');
+    const payload = {
+      businessDetails: {
+        ...watchedBusinessValues,
+      },
+      clientDetails: {
+        name: watchedClientValues.companyName,
+        contactPerson: watchedClientValues.contactPerson || '',
+        email: watchedClientValues.email,
+        phone: watchedClientValues.phone || '',
+        address: watchedClientValues.billingAddress || '',
+      },
+      clientLogo: logoUrl || '',
+      quoteNumber: quotationMeta.quotationNumber,
+      date: quotationMeta.date,
+      validUntil: quotationMeta.validUntil,
+      items: itemsData,
+      terms: termsAndConditions,
+      remarks: `Prepared for ${watchedClientValues.companyName || 'your client'} by ${watchedBusinessValues.companyName || 'your business'}.`,
+      status: 'Draft',
+    };
+
+    const response = await fetch(`${API_BASE}/api/quotes/preview-pdf`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      const errorPayload = await response.json().catch(() => ({}));
+      throw new Error(errorPayload.message || errorPayload.error || 'Unable to generate PDF');
     }
 
-    await exportElementToPdf(element, `${quotationMeta.quotationNumber || 'quote'}.pdf`);
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${quotationMeta.quotationNumber || 'quote'}.pdf`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
   };
 
   return (
