@@ -654,6 +654,29 @@ function pdfText(x, y, size, text, color = '0 0 0') {
   return `BT\n${color} rg\n/F1 ${size} Tf\n1 0 0 1 ${x} ${y} Tm\n(${escapePdfText(text)}) Tj\nET`;
 }
 
+function fitPdfText(text, maxChars) {
+  const value = String(text ?? '').trim();
+  if (!maxChars || value.length <= maxChars) {
+    return value;
+  }
+
+  return `${value.slice(0, Math.max(0, maxChars - 3)).trimEnd()}...`;
+}
+
+function pdfTextFit(x, y, size, text, color = '0 0 0', maxChars = 0) {
+  return pdfText(x, y, size, fitPdfText(text, maxChars), color);
+}
+
+function estimatePdfTextWidth(text, size) {
+  return String(text ?? '').length * size * 0.52;
+}
+
+function pdfTextRight(xRight, y, size, text, color = '0 0 0', maxChars = 0) {
+  const fitted = fitPdfText(text, maxChars);
+  const x = Math.max(0, xRight - estimatePdfTextWidth(fitted, size));
+  return pdfText(x, y, size, fitted, color);
+}
+
 function pdfLine(x1, y1, x2, y2, width = 0.6, color = '0.83 0.87 0.93') {
   return `${width} w\n${color} RG\n${x1} ${y1} m\n${x2} ${y2} l\nS`;
 }
@@ -890,8 +913,6 @@ function buildPdfBuffer(quote) {
   }
   push(pdfText(46, height - 52, 24, quote.businessDetails.companyName, '1 1 1'));
   push(pdfText(46, height - 78, 11, quote.businessDetails.tagline || '', '0.84 0.9 1'));
-  push(pdfText(width - 210, height - 52, 12, 'QUOTE PREVIEW', '0.79 0.87 1'));
-  push(pdfText(width - 210, height - 74, 10, `Share: ${quote.shareToken}`, '0.79 0.87 1'));
 
   let y = height - 145;
   push(pdfText(margin, y, 18, 'Price Quote', '0.05 0.29 0.87'));
@@ -909,37 +930,36 @@ function buildPdfBuffer(quote) {
     addImage(quote.clientLogo, 'Im2', margin + 4, y - 50, 46, 46);
     y -= 60;
   }
-  push(pdfText(margin, y, 16, quote.clientDetails.name, '0.08 0.12 0.22'));
+  push(pdfTextFit(margin, y, 16, quote.clientDetails.name, '0.08 0.12 0.22', 30));
   y -= 18;
-  push(pdfText(margin, y, 10, quote.clientDetails.contactPerson || '', '0.18 0.21 0.29'));
+  push(pdfTextFit(margin, y, 10, quote.clientDetails.contactPerson || '', '0.18 0.21 0.29', 40));
   y -= 16;
-  push(pdfText(margin, y, 10, quote.clientDetails.email || '', '0.18 0.21 0.29'));
+  push(pdfTextFit(margin, y, 10, quote.clientDetails.email || '', '0.18 0.21 0.29', 42));
   y -= 16;
-  push(pdfText(margin, y, 10, quote.clientDetails.phone || '', '0.18 0.21 0.29'));
+  push(pdfTextFit(margin, y, 10, quote.clientDetails.phone || '', '0.18 0.21 0.29', 24));
   y -= 16;
-  push(pdfText(margin, y, 10, quote.clientDetails.address || '', '0.18 0.21 0.29'));
+  push(pdfTextFit(margin, y, 10, quote.clientDetails.address || '', '0.18 0.21 0.29', 48));
 
   y -= 28;
   push(pdfLine(margin, y, width - margin, y));
   y -= 20;
-  push(pdfText(margin, y, 12, `Business: ${quote.businessDetails.companyName}`, '0.08 0.12 0.22'));
+  push(pdfTextFit(margin, y, 12, `Business: ${quote.businessDetails.companyName}`, '0.08 0.12 0.22', 46));
   y -= 16;
-  push(pdfText(margin, y, 10, `Email: ${quote.businessDetails.email}`, '0.18 0.21 0.29'));
+  push(pdfTextFit(margin, y, 10, `Email: ${quote.businessDetails.email}`, '0.18 0.21 0.29', 52));
   y -= 16;
-  push(pdfText(margin, y, 10, `Phone: ${quote.businessDetails.phone}`, '0.18 0.21 0.29'));
+  push(pdfTextFit(margin, y, 10, `Phone: ${quote.businessDetails.phone}`, '0.18 0.21 0.29', 30));
   y -= 16;
-  push(pdfText(margin, y, 10, `Website: ${quote.businessDetails.website}`, '0.18 0.21 0.29'));
+  push(pdfTextFit(margin, y, 10, `Website: ${quote.businessDetails.website}`, '0.18 0.21 0.29', 54));
   y -= 24;
-  push(pdfText(margin, y, 10, `Tax ID: ${quote.businessDetails.taxType} ${quote.businessDetails.taxId || ''}`, '0.18 0.21 0.29'));
+  push(pdfTextFit(margin, y, 10, `Tax ID: ${quote.businessDetails.taxType} ${quote.businessDetails.taxId || ''}`, '0.18 0.21 0.29', 48));
 
   y -= 34;
   const tableTop = y;
-  const col = { num: 56, desc: 208, qty: 50, rate: 88, tax: 88, amount: 83 };
+  const col = { num: 34, desc: 196, qty: 42, rate: 84, tax: 74, amount: 81 };
   const tableX = margin;
   const tableW = width - margin * 2;
   const headerH = 24;
-  const rowH = 40;
-  const totalCols = col.num + col.desc + col.qty + col.rate + col.tax + col.amount;
+  const rowH = 44;
 
   push(pdfRect(tableX, tableTop - headerH, tableW, headerH, '0.11 0.29 0.88', '0.11 0.29 0.88', 0.8));
   push(pdfText(tableX + 10, tableTop - 16, 9, '#', '1 1 1'));
@@ -954,13 +974,13 @@ function buildPdfBuffer(quote) {
     const rowBottom = rowY - rowH;
     push(pdfRect(tableX, rowBottom, tableW, rowH, '1 1 1', '0.84 0.87 0.92', 0.5));
     push(pdfText(tableX + 10, rowY - 22, 10, String(index + 1), '0.12 0.16 0.24'));
-    push(pdfText(tableX + col.num + 10, rowY - 16, 9, item.description, '0.12 0.16 0.24'));
-    push(pdfText(tableX + col.num + col.desc + 10, rowY - 22, 10, String(item.quantity), '0.12 0.16 0.24'));
-    push(pdfText(tableX + col.num + col.desc + col.qty + 10, rowY - 22, 10, moneyLabel(item.unitPrice), '0.12 0.16 0.24'));
-    push(pdfText(tableX + col.num + col.desc + col.qty + col.rate + 10, rowY - 16, 9, item.gstRate ? `${item.gstRate}% GST` : 'No Tax', '0.12 0.16 0.24'));
-    push(pdfText(tableX + col.num + col.desc + col.qty + col.rate + col.tax + 10, rowY - 22, 10, moneyLabel(item.total), '0.12 0.16 0.24'));
+    push(pdfTextFit(tableX + col.num + 10, rowY - 16, 9, item.description, '0.12 0.16 0.24', 30));
+    push(pdfTextRight(tableX + col.num + col.desc + col.qty - 10, rowY - 22, 10, String(item.quantity), '0.12 0.16 0.24', 4));
+    push(pdfTextRight(tableX + col.num + col.desc + col.qty + col.rate - 10, rowY - 22, 10, moneyLabel(item.unitPrice), '0.12 0.16 0.24', 13));
+    push(pdfTextRight(tableX + col.num + col.desc + col.qty + col.rate + col.tax - 10, rowY - 16, 9, item.gstRate ? `${item.gstRate}% GST` : 'No Tax', '0.12 0.16 0.24', 11));
+    push(pdfTextRight(tableX + tableW - 10, rowY - 22, 10, moneyLabel(item.total), '0.12 0.16 0.24', 13));
     if (item.discountAmount > 0) {
-      push(pdfText(tableX + col.num + 10, rowY - 31, 8, `Discount: ${item.discountType === 'Percentage' ? `${item.discountValue}%` : moneyLabel(item.discountValue)}`, '0.08 0.5 0.15'));
+      push(pdfTextFit(tableX + col.num + 10, rowY - 31, 8, `Discount: ${item.discountType === 'Percentage' ? `${item.discountValue}%` : moneyLabel(item.discountValue)}`, '0.08 0.5 0.15', 34));
     }
     rowY = rowBottom;
   });
