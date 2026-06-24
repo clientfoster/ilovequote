@@ -12,8 +12,6 @@ import {
   FileText,
   Users,
   ShoppingBag,
-  Smartphone,
-  CheckCircle2,
   Menu,
   X,
   LogIn,
@@ -110,15 +108,6 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
             </div>
 
             <div className="flex items-center gap-2 lg:gap-4">
-              <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full text-slate-700">
-                <Smartphone className="h-5 w-5" />
-              </button>
-              <button type="button" className="relative flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm">
-                <span className="absolute right-1 top-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                  3
-                </span>
-                <CheckCircle2 className="h-4.5 w-4.5" />
-              </button>
               {isAuthed ? (
                 <>
                   <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
