@@ -30,6 +30,8 @@ let usersCollection = null;
 let quotesCollection = null;
 let mongoReady = false;
 let mongoDisabled = false;
+let quotes = [];
+let users = [];
 app.use(express.json({ limit: '5mb' }));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
@@ -490,8 +492,7 @@ async function loadQuotes() {
   return quotes;
 }
 
-let quotes = await loadQuotes();
-let users = [];
+quotes = await loadQuotes();
 const pendingOtps = new Map();
 const verificationTokens = new Map();
 const passwordResetTokens = new Map();
