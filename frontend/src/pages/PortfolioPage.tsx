@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Bell, Calendar, ChevronDown, Download, Eye, FileText, MoreVertical, PieChart, Search, TrendingUp, Users } from 'lucide-react';
+import { Calendar, ChevronDown, Download, Eye, FileText, MoreVertical, PieChart, Search, TrendingUp, Users } from 'lucide-react';
 import { getDisplayAuthUser } from '../auth';
 import { downloadFileFromUrl } from '../download';
 import { fetchUserQuotes } from '../quoteApi';
@@ -40,12 +40,6 @@ export default function PortfolioPage() {
             <p className="mt-2 text-[15px] font-medium text-slate-500">Overview based on the saved data in your account.</p>
           </div>
           <div className="flex items-center gap-3">
-            <button type="button" className="relative flex h-11 w-11 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-700 shadow-sm">
-              <Bell className="h-[18px] w-[18px]" />
-              <span className="absolute right-0 top-0 flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1 text-[10px] font-bold text-white">
-                {Math.min(9, quotes.length)}
-              </span>
-            </button>
             <button type="button" className="flex h-11 w-11 items-center justify-center rounded-full bg-[#2457F0] text-[13px] font-semibold text-white shadow-sm">
               {initials}
             </button>
