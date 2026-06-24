@@ -146,6 +146,10 @@ function normalizePhone(value) {
   return String(value || '').trim().replace(/[^\d+]/g, '');
 }
 
+function normalizeLoginIdentifier(value) {
+  return String(value || '').trim().toLowerCase();
+}
+
 function isValidEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || '').trim());
 }
@@ -1612,10 +1616,21 @@ app.post('/api/auth/confirm-password-reset', async (req, res) => {
 app.post('/api/auth/login', async (req, res) => {
   try {
     await refreshUsers();
-    const identifier = normalizeEmail(req.body?.identifier || req.body?.email);
+    const rawIdentifier = String(req.body?.identifier || req.body?.email || req.body?.phone || '').trim();
+    const identifier = normalizeEmail(rawIdentifier);
     const password = String(req.body?.password || '');
-    const phoneCandidate = normalizePhone(req.body?.phone || req.body?.identifier);
-    const user = users.find((entry) => entry.email === identifier || normalizePhone(entry.phone || '') === phoneCandidate);
+    const phoneCandidate = normalizePhone(req.body?.phone || rawIdentifier);
+    const loginCandidate = normalizeLoginIdentifier(rawIdentifier);
+    const user = users.find((entry) => {
+      const entryEmail = normalizeEmail(entry.email);
+      const entryPhone = normalizePhone(entry.phone || '');
+      const entryUsername = normalizeLoginIdentifier(entry.username || '');
+      return (
+        (identifier && entryEmail === identifier) ||
+        (phoneCandidate && entryPhone === phoneCandidate) ||
+        (loginCandidate && (entryUsername === loginCandidate || entryEmail === loginCandidate || normalizeLoginIdentifier(entryPhone) === loginCandidate))
+      );
+    });
 
     if (!user) {
       res.status(404).json({ error: 'No account found for that email address or phone number.' });
