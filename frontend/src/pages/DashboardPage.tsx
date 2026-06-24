@@ -21,7 +21,7 @@ import { Quote } from '../types';
 import { getDisplayAuthUser } from '../auth';
 import { downloadFileFromUrl } from '../download';
 import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
-import { buildAppUrl, buildPdfDownloadUrl, buildShareUrl } from '../url';
+import { buildAppUrl, buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
 type DashboardQuote = Quote & {
   title: string;
@@ -156,7 +156,7 @@ export default function DashboardPage() {
       label: 'View',
       icon: Eye,
       tone: 'text-[#2457F0]',
-      onClick: (quote: DashboardQuote) => navigate('/quotes'),
+      onClick: (quote: DashboardQuote) => window.open(buildPdfUrl(quote.id), '_blank', 'noopener,noreferrer'),
       ariaLabel: (quote: DashboardQuote) => `View ${quote.title}`,
     },
     {
