@@ -28,6 +28,7 @@ import {
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
 import { getDisplayAuthUser, getScopedStorageKey } from '../auth';
+import { downloadBlob } from '../download';
 import { createQuote, updateQuote } from '../quoteApi';
 import { API_BASE } from '../api';
 
@@ -520,14 +521,7 @@ export default function QuoteWizard() {
     }
 
     const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `${quotationMeta.quotationNumber || 'quote'}.pdf`;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+    downloadBlob(blob, `${quotationMeta.quotationNumber || 'quote'}.pdf`);
   };
 
   return (

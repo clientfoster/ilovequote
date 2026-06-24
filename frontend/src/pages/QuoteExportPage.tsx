@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { Quote } from '../types';
 import { apiRequest } from '../api';
+import { downloadFileFromUrl } from '../download';
 import PreviewStep from '../components/PreviewStep';
 import { ItemQuoteItem } from '../types';
 import { buildPdfDownloadUrl } from '../url';
@@ -99,7 +100,7 @@ export default function QuoteExportPage() {
           onSaveDraft={() => {}}
           onCopyLink={() => {}}
           onPrint={() => window.print()}
-          onDownloadPDF={() => window.open(buildPdfDownloadUrl(quote.id), '_blank', 'noopener,noreferrer')}
+          onDownloadPDF={() => downloadFileFromUrl(buildPdfDownloadUrl(quote.id), `${quote.quoteNumber || quote.id}.pdf`)}
           onSendToClient={async () => {}}
           onPrev={() => window.history.back()}
         />

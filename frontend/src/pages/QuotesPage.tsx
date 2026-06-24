@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Bell, ChevronDown, Copy, Download, Eye, FileText, Filter, Grid2x2, List, MessageCircle, Search, Trash2 } from 'lucide-react';
 import { getDisplayAuthUser } from '../auth';
+import { downloadFileFromUrl } from '../download';
 import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
 import { buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
@@ -77,7 +78,7 @@ export default function QuotesPage() {
   };
 
   const downloadQuotePdf = (quoteId: string) => {
-    window.open(buildPdfDownloadUrl(quoteId), '_blank', 'noopener,noreferrer');
+    return downloadFileFromUrl(buildPdfDownloadUrl(quoteId), `${quoteId}.pdf`);
   };
 
   const shareViaWhatsApp = (quote: Quote) => {
