@@ -24,30 +24,26 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
 
   return (
     <div className="overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
-      <div className="bg-[#0A0C14] px-4 pb-4 pt-4 text-white">
+      <div className="bg-[#0A0C14] px-4 py-4 text-white">
         <div className="grid grid-cols-[minmax(0,1fr)_88px] items-start gap-4">
           <div className="min-w-0">
             <div className="flex items-start gap-3">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white">
+              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white">
                 {logo ? (
                   <img src={logo} alt={`${companyName} logo`} className="h-full w-full object-contain p-1.5" />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-white">
-                    <span className="text-[17px] font-black leading-none text-[#2457F0]">{companyName.slice(0, 1).toUpperCase()}</span>
+                    <span className="text-[16px] font-black leading-none text-[#2457F0]">{companyName.slice(0, 1).toUpperCase()}</span>
                   </div>
                 )}
               </div>
 
               <div className="min-w-0 pt-0.5">
-                <p className="break-words text-[19px] font-black leading-tight tracking-normal">
+                <p className="break-words text-[17px] font-black leading-snug tracking-normal">
                   {companyName}
                 </p>
-                {tagline && <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-white/78">{tagline}</p>}
+                {tagline && <p className="mt-1.5 line-clamp-2 text-[11px] leading-4 text-white/72">{tagline}</p>}
               </div>
-            </div>
-
-            <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-white/8">
-              <div className="h-full w-[128px] rounded-full bg-[#2457F0]" />
             </div>
           </div>
 
@@ -67,10 +63,10 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
       <div className="px-4 py-4">
         <div>
           <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Business Profile</p>
-          <p className="mt-1 break-words text-[17px] font-black leading-snug text-slate-900">{companyName}</p>
+          <p className="mt-1 break-words text-[15px] font-black leading-snug text-slate-900">{companyName}</p>
           {tagline && <p className="mt-1 text-[12px] leading-5 text-slate-500">{tagline}</p>}
 
-          <div className="mt-4 grid gap-2.5 text-[12px] text-slate-700 sm:grid-cols-2">
+          <div className="mt-4 grid gap-2.5 text-[11px] text-slate-700 sm:grid-cols-2">
             {email && (
               <div className="flex min-w-0 items-center gap-2">
                 <Mail className="h-4 w-4 shrink-0 text-[#2457F0]" />
@@ -104,7 +100,7 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
               <Receipt className="h-4 w-4 shrink-0 text-[#2457F0]" />
               <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{formData.taxType || 'GSTIN'}</span>
             </div>
-            <span className="min-w-0 break-all text-right text-[12px] font-black text-slate-800">{taxId}</span>
+            <span className="min-w-0 break-all text-right text-[11px] font-black text-slate-800">{taxId}</span>
           </div>
         )}
       </div>
