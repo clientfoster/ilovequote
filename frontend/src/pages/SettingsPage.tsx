@@ -10,7 +10,7 @@ import {
   Upload,
   User,
 } from 'lucide-react';
-import { API_BASE, apiRequest } from '../api';
+import { apiRequest, apiUrl } from '../api';
 import { getDisplayAuthUser, setStoredAuthUser, signOut } from '../auth';
 import { AuthUser } from '../auth';
 import { useNavigate } from 'react-router-dom';
@@ -163,7 +163,7 @@ export default function SettingsPage() {
     setError('');
     setMessage('');
     try {
-      const response = await fetch(`${API_BASE}/account/export`, {
+      const response = await fetch(apiUrl('/api/account/export'), {
         method: 'GET',
         headers: {
           Authorization: `Bearer ${localStorage.getItem('ilovequote_auth_token') || ''}`,

@@ -2,7 +2,18 @@ import { getAuthToken } from './auth';
 
 export const API_BASE =
   import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') ? '/api' : 'http://localhost:3001');
+  (typeof window !== 'undefined' && /^(localhost|127\.0\.0\.1)$/.test(window.location.hostname) ? 'http://localhost:3001' : '');
+
+export function apiUrl(path: string) {
+  const base = API_BASE.replace(/\/$/, '');
+  let normalizedPath = path.startsWith('/') ? path : `/${path}`;
+
+  if (base.endsWith('/api') && normalizedPath.startsWith('/api/')) {
+    normalizedPath = normalizedPath.slice(4);
+  }
+
+  return `${base}${normalizedPath}`;
+}
 
 export async function apiRequest<T>(path: string, init: RequestInit = {}) {
   const headers = new Headers(init.headers || {});
@@ -16,7 +27,7 @@ export async function apiRequest<T>(path: string, init: RequestInit = {}) {
     headers.set('Content-Type', 'application/json');
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(apiUrl(path), {
     ...init,
     headers,
   });

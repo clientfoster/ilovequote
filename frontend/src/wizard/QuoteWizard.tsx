@@ -464,9 +464,9 @@ export default function QuoteWizard() {
       setSaveStatus('saved');
       onTriggerToast('Quote saved successfully');
       navigate('/quotes');
-    } catch {
+    } catch (error) {
       setSaveState('idle');
-      onTriggerToast('Could not save quote.');
+      onTriggerToast(error instanceof Error ? error.message : 'Could not save quote.');
     } finally {
       setIsFinalizingQuote(false);
     }

@@ -25,10 +25,7 @@ import {
   setStoredAuthUser,
   signOut,
 } from './auth';
-
-const API_BASE =
-  import.meta.env.VITE_API_BASE_URL ||
-  (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app') ? '/api' : 'http://localhost:3001');
+import { apiUrl } from './api';
 
 export default function App() {
   const [isAuthed, setIsAuthed] = useState(() => isAuthenticated());
@@ -46,7 +43,7 @@ export default function App() {
 
     async function loadCurrentUser() {
       try {
-        const response = await fetch(`${API_BASE}/api/auth/me`, {
+        const response = await fetch(apiUrl('/api/auth/me'), {
           headers: {
             Authorization: `Bearer ${token}`,
           },
