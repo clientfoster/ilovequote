@@ -63,14 +63,16 @@ const buildQuotePayload = (
   taxRate: number,
   terms: string,
   quoteId?: string | null,
+  status: 'Draft' | 'Completed' = 'Draft',
 ) => {
   const totals = calculateQuotationTotals(items);
+  const quoteNumber = quotationMeta.quotationNumber?.trim() || `QT-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
   return {
     id: quoteId || `quote-${Date.now()}`,
-    quoteNumber: quotationMeta.quotationNumber,
+    quoteNumber,
     date: quotationMeta.date,
     expiryDate: quotationMeta.validUntil,
-    status: 'Draft' as const,
+    status,
     businessDetails,
     clientDetails: {
       name: clientDetails.companyName,
@@ -117,6 +119,7 @@ export default function QuoteWizard() {
   const [termsList, setTermsList] = useState<TermItem[]>([]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('saved');
   const [isSavingDraft, setIsSavingDraft] = useState(false);
+  const [isFinalizingQuote, setIsFinalizingQuote] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const quoteContainerRef = useRef<HTMLDivElement | null>(null);
 
@@ -340,7 +343,7 @@ export default function QuoteWizard() {
     handleStepBack();
   };
 
-  const buildCurrentPayload = () =>
+  const buildCurrentPayload = (status: 'Draft' | 'Completed' = 'Draft') =>
     buildQuotePayload(
       watchedBusinessValues,
       watchedClientValues,
@@ -350,6 +353,7 @@ export default function QuoteWizard() {
       taxRate,
       termsAndConditions,
       editingQuoteId,
+      status,
     );
 
   const saveQuoteToApi = async (payload: ReturnType<typeof buildQuotePayload>) => {
@@ -357,7 +361,6 @@ export default function QuoteWizard() {
       const response = await updateQuote(editingQuoteId, {
         ...payload,
         id: editingQuoteId,
-        status: 'Draft',
       });
       return response.quote;
     }
@@ -417,6 +420,8 @@ export default function QuoteWizard() {
   const handleStepNext = () => setCurrentStep((s) => (Math.min(4, s + 1) as 1 | 2 | 3 | 4));
 
   const handlePrimaryAction = async () => {
+    if (isFinalizingQuote) return;
+
     if (currentStep === 1) {
       const valid = await trigger('companyName');
       if (!valid) {
@@ -442,15 +447,28 @@ export default function QuoteWizard() {
     }
 
     try {
-      const payload = buildCurrentPayload();
-      const savedQuote = await saveQuoteToApi(payload);
-      setEditingQuoteId(savedQuote.id);
-      localStorage.setItem(EDITING_QUOTE_ID_KEY, savedQuote.id);
+      setIsFinalizingQuote(true);
+      setSaveState('saving');
+      setSaveStatus('saving');
+      const payload = buildCurrentPayload('Completed');
+      await saveQuoteToApi(payload);
+      setEditingQuoteId(null);
+      localStorage.removeItem(EDITING_QUOTE_ID_KEY);
+      localStorage.removeItem(BUSINESS_DRAFT_KEY);
+      localStorage.removeItem(CLIENT_DRAFT_KEY);
+      localStorage.removeItem(CLIENT_LOGO_KEY);
+      localStorage.removeItem(ITEMS_DRAFT_KEY);
+      localStorage.removeItem(ITEMS_META_KEY);
+      localStorage.removeItem(TERMS_STORAGE_KEY);
+      setSaveState('saved');
+      setSaveStatus('saved');
       onTriggerToast('Quote saved successfully');
       navigate('/quotes');
     } catch {
       setSaveState('idle');
       onTriggerToast('Could not save quote.');
+    } finally {
+      setIsFinalizingQuote(false);
     }
   };
 
@@ -492,10 +510,12 @@ export default function QuoteWizard() {
             <button
               type="button"
               onClick={handlePrimaryAction}
-              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-[#2F5BFF] px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition-colors hover:bg-[#244ad9]"
+              disabled={isFinalizingQuote}
+              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-[#2F5BFF] px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition-colors hover:bg-[#244ad9] disabled:cursor-not-allowed disabled:opacity-70"
             >
-              <span>{currentStep === 4 ? 'Finalize Quote' : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
-              <ChevronRight size={16} />
+              {isFinalizingQuote && currentStep === 4 ? <LoaderCircle size={16} className="animate-spin" /> : null}
+              <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving Quote...' : 'Finalize Quote') : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
+              {!isFinalizingQuote || currentStep !== 4 ? <ChevronRight size={16} /> : null}
             </button>
 
             <div className="flex items-center gap-3 pl-1">
@@ -668,10 +688,12 @@ export default function QuoteWizard() {
           <button
             type="button"
             onClick={handlePrimaryAction}
-            className="inline-flex min-h-[44px] flex-[1.35] items-center justify-center gap-2 rounded-2xl bg-[#2F5BFF] px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100"
+            disabled={isFinalizingQuote}
+            className="inline-flex min-h-[44px] flex-[1.35] items-center justify-center gap-2 rounded-2xl bg-[#2F5BFF] px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
           >
-            <span>{currentStep === 4 ? 'Finalize' : 'Next'}</span>
-            <ChevronRight size={16} />
+            {isFinalizingQuote && currentStep === 4 ? <LoaderCircle size={16} className="animate-spin" /> : null}
+            <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving...' : 'Finalize') : 'Next'}</span>
+            {!isFinalizingQuote || currentStep !== 4 ? <ChevronRight size={16} /> : null}
           </button>
         </div>
       </div>
