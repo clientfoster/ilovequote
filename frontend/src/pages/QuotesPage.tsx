@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Copy, Download, Eye, FileText, Filter, Grid2x2, List, MessageCircle, Search, Trash2 } from 'lucide-react';
 import { getDisplayAuthUser } from '../auth';
-import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
+import { deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
 import { buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
@@ -16,6 +16,7 @@ export default function QuotesPage() {
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<(typeof statusTabs)[number]>('All');
+  const [copiedQuoteId, setCopiedQuoteId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchUserQuotes().then(setQuotes).catch(() => setQuotes([]));
@@ -34,24 +35,6 @@ export default function QuotesPage() {
     });
   }, [quotes, query, status]);
 
-  const handleDuplicate = async (quote: Quote) => {
-    const duplicate: Partial<Quote> = {
-      ...quote,
-      id: `${quote.id}-copy-${Date.now()}`,
-      quoteNumber: `${quote.quoteNumber}-COPY`,
-      date: new Date().toISOString().slice(0, 10),
-      status: 'Draft',
-    };
-
-    try {
-      await createQuote(duplicate);
-      const refreshed = await fetchUserQuotes();
-      setQuotes(refreshed);
-    } catch {
-      setQuotes((prev) => [duplicate as Quote, ...prev]);
-    }
-  };
-
   const handleDelete = async (quote: Quote) => {
     if (!window.confirm(`Delete ${quote.quoteNumber}?`)) return;
     try {
@@ -67,6 +50,8 @@ export default function QuotesPage() {
     const shareUrl = getShareUrl(quote);
     try {
       await navigator.clipboard.writeText(shareUrl);
+      setCopiedQuoteId(quote.id);
+      window.setTimeout(() => setCopiedQuoteId((current) => (current === quote.id ? null : current)), 1800);
     } catch {
       window.prompt('Copy this link', shareUrl);
     }
@@ -77,7 +62,13 @@ export default function QuotesPage() {
   };
 
   const downloadQuotePdf = (quoteId: string) => {
-    window.open(buildPdfDownloadUrl(quoteId), '_blank', 'noopener,noreferrer');
+    const link = document.createElement('a');
+    link.href = buildPdfDownloadUrl(quoteId);
+    link.target = '_blank';
+    link.rel = 'noopener noreferrer';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
   };
 
   const shareViaWhatsApp = (quote: Quote) => {
@@ -234,7 +225,13 @@ export default function QuotesPage() {
                             <button type="button" onClick={() => downloadQuotePdf(quote.id)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
                               <Download className="h-4.5 w-4.5 text-[#EF4444]" />
                             </button>
-                            <button type="button" onClick={() => handleDuplicate(quote)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">
+                            <button
+                              type="button"
+                              onClick={() => copyShareLink(quote)}
+                              className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm"
+                              aria-label="Copy share link"
+                              title={copiedQuoteId === quote.id ? 'Link copied' : 'Copy share link'}
+                            >
                               <Copy className="h-4.5 w-4.5 text-[#7C3AED]" />
                             </button>
                             <button type="button" onClick={() => handleDelete(quote)} className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white shadow-sm">

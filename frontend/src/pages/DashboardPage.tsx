@@ -19,7 +19,7 @@ import {
 } from 'lucide-react';
 import { Quote } from '../types';
 import { getDisplayAuthUser } from '../auth';
-import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
+import { deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { buildAppUrl, buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
 type DashboardQuote = Quote & {
@@ -70,6 +70,7 @@ export default function DashboardPage() {
   const [statusFilter, setStatusFilter] = useState<(typeof quoteStatusOptions)[number]>('All Status');
   const [currentPage, setCurrentPage] = useState(1);
   const [rowsPerPage, setRowsPerPage] = useState(5);
+  const [copiedQuoteId, setCopiedQuoteId] = useState<string | null>(null);
 
   useEffect(() => {
     let active = true;
@@ -111,34 +112,6 @@ export default function DashboardPage() {
     setCurrentPage((prev) => Math.min(prev, totalPages));
   }, [totalPages]);
 
-  const handleDuplicate = async (quote: DashboardQuote) => {
-    const duplicate: Partial<Quote> = {
-      id: `${quote.id}-copy-${Date.now()}`,
-      quoteNumber: `${quote.quoteNumber}-COPY`,
-      date: new Date().toISOString().slice(0, 10),
-      expiryDate: quote.expiryDate,
-      status: 'Draft',
-      businessDetails: quote.businessDetails,
-      clientDetails: quote.clientDetails,
-      items: quote.items,
-      subtotal: quote.subtotal,
-      taxRate: quote.taxRate,
-      taxAmount: quote.taxAmount,
-      totalAmount: quote.totalAmount,
-      terms: quote.terms,
-    };
-
-    try {
-      await createQuote(duplicate);
-      const refreshed = await fetchUserQuotes();
-      setQuotes(refreshed.map((item, index) => mapQuote(item, index)));
-      setCurrentPage(1);
-    } catch {
-      setQuotes((prev) => [mapQuote(duplicate as Quote, 0), ...prev]);
-      setCurrentPage(1);
-    }
-  };
-
   const handleDelete = async (quote: DashboardQuote) => {
     if (!window.confirm(`Delete ${quote.title}?`)) return;
 
@@ -166,6 +139,8 @@ export default function DashboardPage() {
         const shareUrl = buildShareUrl(quote.shareToken || quote.quoteNumber);
         try {
           await navigator.clipboard.writeText(shareUrl);
+          setCopiedQuoteId(quote.id);
+          window.setTimeout(() => setCopiedQuoteId((current) => (current === quote.id ? null : current)), 1800);
         } catch {
           window.prompt('Copy this link', shareUrl);
         }
@@ -176,15 +151,32 @@ export default function DashboardPage() {
       label: 'PDF',
       icon: Download,
       tone: 'text-[#EF4444]',
-      onClick: async (quote: DashboardQuote) => window.open(buildPdfDownloadUrl(quote.id), '_blank', 'noopener,noreferrer'),
+      onClick: async (quote: DashboardQuote) => {
+        const link = document.createElement('a');
+        link.href = buildPdfDownloadUrl(quote.id);
+        link.target = '_blank';
+        link.rel = 'noopener noreferrer';
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+      },
       ariaLabel: (quote: DashboardQuote) => `Download ${quote.title}`,
     },
     {
-      label: 'Dup',
+      label: 'Copy',
       icon: Copy,
       tone: 'text-[#7C3AED]',
-      onClick: (quote: DashboardQuote) => handleDuplicate(quote),
-      ariaLabel: (quote: DashboardQuote) => `Duplicate ${quote.title}`,
+      onClick: async (quote: DashboardQuote) => {
+        const shareUrl = buildShareUrl(quote.shareToken || quote.quoteNumber);
+        try {
+          await navigator.clipboard.writeText(shareUrl);
+          setCopiedQuoteId(quote.id);
+          window.setTimeout(() => setCopiedQuoteId((current) => (current === quote.id ? null : current)), 1800);
+        } catch {
+          window.prompt('Copy this link', shareUrl);
+        }
+      },
+      ariaLabel: (quote: DashboardQuote) => `Copy share link for ${quote.title}`,
     },
     {
       label: 'Del',
@@ -340,7 +332,9 @@ export default function DashboardPage() {
                                 >
                                   <Icon className={`h-5 w-5 ${action.tone}`} />
                                 </button>
-                                <span className="text-[11px] font-medium text-slate-700">{action.label}</span>
+                                <span className="text-[11px] font-medium text-slate-700">
+                                  {action.label === 'Copy' && copiedQuoteId === quote.id ? 'Copied' : action.label}
+                                </span>
                               </div>
                             );
                           })}
