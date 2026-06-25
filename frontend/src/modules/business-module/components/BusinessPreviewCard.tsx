@@ -19,83 +19,94 @@ export default function BusinessPreviewCard({ formData }: BusinessPreviewCardPro
   const portfolioSlug = formData.businessSlug || 'your-business';
   const qrUrl = buildAppUrl(`/portfolio/${portfolioSlug}`);
   const logo = formData.logo || '';
+  const addressParts = [formData.address, formData.city, formData.state, formData.zipCode, formData.country].filter(Boolean);
+  const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : address;
 
   return (
     <div className="overflow-hidden rounded-[14px] border border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
-      <div className="bg-[#0A0C14] px-4 pb-3 pt-4 text-white">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white">
-              {logo ? (
-                <img src={logo} alt={`${companyName} logo`} className="h-full w-full object-cover" />
-              ) : (
-                <div className="flex h-full w-full items-center justify-center bg-white">
-                  <span className="text-[16px] font-black leading-none text-[#2457F0]">S</span>
-                </div>
-              )}
+      <div className="bg-[#0A0C14] px-4 pb-4 pt-4 text-white">
+        <div className="grid grid-cols-[minmax(0,1fr)_88px] items-start gap-4">
+          <div className="min-w-0">
+            <div className="flex items-start gap-3">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-white">
+                {logo ? (
+                  <img src={logo} alt={`${companyName} logo`} className="h-full w-full object-contain p-1.5" />
+                ) : (
+                  <div className="flex h-full w-full items-center justify-center bg-white">
+                    <span className="text-[17px] font-black leading-none text-[#2457F0]">{companyName.slice(0, 1).toUpperCase()}</span>
+                  </div>
+                )}
+              </div>
+
+              <div className="min-w-0 pt-0.5">
+                <p className="break-words text-[19px] font-black leading-tight tracking-normal">
+                  {companyName}
+                </p>
+                {tagline && <p className="mt-2 line-clamp-2 text-[12px] leading-5 text-white/78">{tagline}</p>}
+              </div>
             </div>
-            <div className="pt-0.5">
-              <p className="text-[18px] font-black leading-none tracking-[-0.03em]">
-                {companyName.toUpperCase()}
-              </p>
-              <p className="mt-4 max-w-[230px] text-[13px] leading-5 text-white/90">{tagline}</p>
+
+            <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-white/8">
+              <div className="h-full w-[128px] rounded-full bg-[#2457F0]" />
             </div>
           </div>
 
-          <div className="flex flex-col items-center">
-            <p className="mb-1 text-center text-[9px] font-semibold uppercase leading-4 tracking-[0.12em] text-white/92">
-              Scan to view
-              <br />
-              our portfolio
+          <div className="flex min-w-0 flex-col items-center justify-start">
+            <p className="mb-1 text-center text-[8px] font-bold uppercase leading-3 tracking-[0.12em] text-white/75">
+              Portfolio
             </p>
-            <div className="rounded-[20px] bg-white/8 p-2.5 shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
-              <div className="flex h-[82px] w-[82px] items-center justify-center rounded-[18px] bg-white p-2">
-                <QRCodeSVG value={qrUrl} size={58} level="M" includeMargin={false} bgColor="#FFFFFF" fgColor="#0F172A" />
+            <div className="rounded-[18px] bg-white/8 p-2 shadow-[0_8px_24px_rgba(0,0,0,0.24)]">
+              <div className="flex h-[68px] w-[68px] items-center justify-center rounded-[14px] bg-white p-1.5">
+                <QRCodeSVG value={qrUrl} size={54} level="M" includeMargin={false} bgColor="#FFFFFF" fgColor="#0F172A" />
               </div>
             </div>
           </div>
-        </div>
-
-        <div className="mt-4 h-[5px] overflow-hidden rounded-full bg-white/8">
-          <div className="h-full w-[114px] rounded-full bg-[#2457F0]" />
         </div>
       </div>
 
       <div className="px-4 py-4">
-        <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_360px]">
-          <div>
-            <p className="text-[11px] font-bold uppercase tracking-[0.18em] text-slate-500">From</p>
-            <p className="mt-1 text-[15px] font-semibold text-[#2457F0]">{companyName}</p>
-            <p className="mt-2 text-[12px] leading-5 text-slate-600">{tagline}</p>
+        <div>
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-500">Business Profile</p>
+          <p className="mt-1 break-words text-[17px] font-black leading-snug text-slate-900">{companyName}</p>
+          {tagline && <p className="mt-1 text-[12px] leading-5 text-slate-500">{tagline}</p>}
 
-            <div className="mt-3 space-y-1.5 text-[12px] text-slate-700">
-              <div className="flex items-center gap-2">
+          <div className="mt-4 grid gap-2.5 text-[12px] text-slate-700 sm:grid-cols-2">
+            {email && (
+              <div className="flex min-w-0 items-center gap-2">
                 <Mail className="h-4 w-4 shrink-0 text-[#2457F0]" />
-                <span>{email}</span>
+                <span className="min-w-0 break-all">{email}</span>
               </div>
-              <div className="flex items-center gap-2">
+            )}
+            {phone && (
+              <div className="flex min-w-0 items-center gap-2">
                 <Phone className="h-4 w-4 shrink-0 text-[#2457F0]" />
-                <span>{phone}</span>
+                <span className="min-w-0 break-words">{phone}</span>
               </div>
-              <div className="flex items-center gap-2">
+            )}
+            {website && (
+              <div className="flex min-w-0 items-center gap-2">
                 <Globe className="h-4 w-4 shrink-0 text-[#2457F0]" />
-                <span>{website.replace(/^https?:\/\//, '')}</span>
+                <span className="min-w-0 break-all">{website.replace(/^https?:\/\//, '')}</span>
               </div>
-              <div className="flex items-start gap-2">
+            )}
+            {fullAddress && (
+              <div className="flex min-w-0 items-start gap-2">
                 <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-[#2457F0]" />
-                <span>{address}</span>
+                <span className="min-w-0 break-words leading-5">{fullAddress}</span>
               </div>
-            </div>
+            )}
           </div>
         </div>
 
-        <div className="mt-4 flex items-center justify-between border-t border-slate-200 pt-4">
-          <div className="flex items-center gap-2">
-            <Receipt className="h-4 w-4 text-[#2457F0]" />
-            <span className="text-[12px] font-semibold text-slate-700">GSTIN</span>
+        {taxId && (
+          <div className="mt-4 flex items-center justify-between gap-3 rounded-[10px] border border-slate-200 bg-slate-50 px-3 py-3">
+            <div className="flex items-center gap-2">
+              <Receipt className="h-4 w-4 shrink-0 text-[#2457F0]" />
+              <span className="text-[11px] font-bold uppercase tracking-wide text-slate-500">{formData.taxType || 'GSTIN'}</span>
+            </div>
+            <span className="min-w-0 break-all text-right text-[12px] font-black text-slate-800">{taxId}</span>
           </div>
-          <span className="text-[12px] font-semibold text-slate-800">{taxId}</span>
-        </div>
+        )}
       </div>
     </div>
   );

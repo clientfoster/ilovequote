@@ -494,7 +494,7 @@ export default function QuoteWizard() {
               onClick={handlePrimaryAction}
               className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-[#2F5BFF] px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition-colors hover:bg-[#244ad9]"
             >
-              <span>{currentStep === 4 ? 'Next: Preview' : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
+              <span>{currentStep === 4 ? 'Finalize Quote' : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
               <ChevronRight size={16} />
             </button>
 
