@@ -54,6 +54,8 @@ const normalizeClientDraft = (draft: Partial<ClientFormValues> | null | undefine
   return { ...DEFAULT_CLIENT_VALUES, ...(draft ?? {}) };
 };
 
+const makeQuoteId = () => `quote-${Date.now()}`;
+
 const buildQuotePayload = (
   businessDetails: BusinessFormValues,
   clientDetails: ClientFormValues,
@@ -68,7 +70,7 @@ const buildQuotePayload = (
   const totals = calculateQuotationTotals(items);
   const quoteNumber = quotationMeta.quotationNumber?.trim() || `QT-${new Date().getFullYear()}-${Date.now().toString().slice(-6)}`;
   return {
-    id: quoteId || `quote-${Date.now()}`,
+    id: quoteId || makeQuoteId(),
     quoteNumber,
     date: quotationMeta.date,
     expiryDate: quotationMeta.validUntil,
@@ -358,11 +360,25 @@ export default function QuoteWizard() {
 
   const saveQuoteToApi = async (payload: ReturnType<typeof buildQuotePayload>) => {
     if (editingQuoteId) {
-      const response = await updateQuote(editingQuoteId, {
-        ...payload,
-        id: editingQuoteId,
-      });
-      return response.quote;
+      try {
+        const response = await updateQuote(editingQuoteId, {
+          ...payload,
+          id: editingQuoteId,
+        });
+        return response.quote;
+      } catch (error) {
+        if (!(error instanceof Error) || !/quote not found/i.test(error.message)) {
+          throw error;
+        }
+
+        localStorage.removeItem(EDITING_QUOTE_ID_KEY);
+        setEditingQuoteId(null);
+        const response = await createQuote({
+          ...payload,
+          id: makeQuoteId(),
+        });
+        return response.quote;
+      }
     }
 
     const response = await createQuote(payload);
