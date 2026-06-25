@@ -2,9 +2,14 @@
 
 .quote-pdf-surface {
   position: relative;
+  width: 100%;
+  max-width: 794px;
+  margin-left: auto;
+  margin-right: auto;
   overflow: hidden;
   isolation: isolate;
   background-clip: padding-box;
+  box-sizing: border-box;
 }
 
 .quote-pdf-surface,
@@ -13,13 +18,30 @@
 }
 
 .quote-pdf-surface img,
-.quote-pdf-surface svg {
+.quote-pdf-surface svg,
+.quote-pdf-surface canvas {
   max-width: 100%;
+}
+
+.quote-pdf-surface table {
+  width: 100%;
+  max-width: 100%;
+}
+
+.quote-pdf-surface th,
+.quote-pdf-surface td {
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .quote-pdf-surface [style*="position: fixed"],
 .quote-pdf-surface [style*="position: sticky"] {
   position: absolute !important;
+}
+
+.quote-table-shell {
+  overflow: hidden;
+  max-width: 100%;
 }
 
 @media (max-width: 767px) {

@@ -27,6 +27,15 @@ export default function QuoteExportPage() {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const routeQuery = (() => {
+    const hash = window.location.hash;
+    const queryIdx = hash.indexOf('?');
+    return queryIdx !== -1 ? hash.substring(queryIdx) : window.location.search;
+  })();
+  const autoDownload =
+    new URLSearchParams(routeQuery).get('download') === '1' ||
+    window.location.href.includes('download=1') ||
+    window.location.href.includes('download=true');
 
   useEffect(() => {
     let active = true;
@@ -102,6 +111,7 @@ export default function QuoteExportPage() {
           onSendToClient={async () => {}}
           onPrev={() => window.history.back()}
           quoteContainerRef={quoteContainerRef}
+          autoDownload={autoDownload}
         />
       </div>
     </div>

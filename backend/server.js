@@ -1,5 +1,6 @@
 import express from 'express';
 import { pbkdf2Sync, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
+import { readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -12,10 +13,37 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'quotes.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+
+function loadLocalEnv() {
+  const envPath = path.join(__dirname, '.env');
+
+  try {
+    const content = readFileSync(envPath, 'utf8');
+    for (const rawLine of content.split(/\r?\n/)) {
+      const line = rawLine.trim();
+      if (!line || line.startsWith('#')) continue;
+
+      const separatorIndex = line.indexOf('=');
+      if (separatorIndex === -1) continue;
+
+      const key = line.slice(0, separatorIndex).trim();
+      const value = line.slice(separatorIndex + 1).trim().replace(/^["']|["']$/g, '');
+      if (key && process.env[key] === undefined) {
+        process.env[key] = value;
+      }
+    }
+  } catch {
+    // Local .env is optional; deployed environments usually provide process.env directly.
+  }
+}
+
+loadLocalEnv();
+
 const PORT = Number(process.env.PORT || 3001);
 const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'ilovequote';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
+const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || PUBLIC_BASE_URL;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
 const OTP_TTL_MS = 10 * 60 * 1000;
@@ -636,7 +664,7 @@ function quoteSummary(quote, req) {
     id: quote.id,
     shareToken: quote.shareToken,
     shareUrl: publicShareUrl(req, quote),
-    pdfUrl: `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(quote.id)}/pdf`,
+    pdfUrl: `${FRONTEND_BASE_URL.replace(/\/$/, '')}/#/quote-export/${encodeURIComponent(quote.id)}?download=1`,
     quoteNumber: quote.quoteNumber,
     date: quote.date,
     expiryDate: quote.expiryDate,
@@ -888,7 +916,7 @@ function createPdfImageObject(sourceUrl, addObject, imageName) {
 function buildPdfBuffer(quote) {
   const width = 595.28;
   const height = 841.89;
-  const margin = 42;
+  const margin = 34;
 
   const objects = [];
   const addObject = (body) => {
@@ -916,11 +944,11 @@ function buildPdfBuffer(quote) {
 
   let y = height - 145;
   push(pdfText(margin, y, 18, 'Price Quote', '0.05 0.29 0.87'));
-  push(pdfText(width - 180, y, 14, quote.quoteNumber, '0.05 0.29 0.87'));
+  push(pdfTextRight(width - margin, y, 14, quote.quoteNumber, '0.05 0.29 0.87', 18));
   y -= 18;
-  push(pdfText(width - 155, y, 10, `Date: ${quote.date}`, '0.26 0.31 0.4'));
+  push(pdfTextRight(width - margin, y, 10, `Date: ${quote.date}`, '0.26 0.31 0.4', 22));
   y -= 14;
-  push(pdfText(width - 155, y, 10, `Valid Until: ${quote.expiryDate}`, '0.26 0.31 0.4'));
+  push(pdfTextRight(width - margin, y, 10, `Valid Until: ${quote.expiryDate}`, '0.26 0.31 0.4', 28));
 
   y -= 28;
   push(pdfText(margin, y, 11, 'Prepared For', '0.26 0.31 0.4'));
@@ -955,48 +983,48 @@ function buildPdfBuffer(quote) {
 
   y -= 34;
   const tableTop = y;
-  const col = { num: 34, desc: 196, qty: 42, rate: 84, tax: 74, amount: 81 };
+  const col = { num: 26, desc: 162, qty: 34, rate: 74, tax: 64, amount: 117 };
   const tableX = margin;
   const tableW = width - margin * 2;
   const headerH = 24;
-  const rowH = 44;
+  const rowH = 48;
 
   push(pdfRect(tableX, tableTop - headerH, tableW, headerH, '0.11 0.29 0.88', '0.11 0.29 0.88', 0.8));
-  push(pdfText(tableX + 10, tableTop - 16, 9, '#', '1 1 1'));
-  push(pdfText(tableX + col.num + 10, tableTop - 16, 9, 'Item / Description', '1 1 1'));
-  push(pdfText(tableX + col.num + col.desc + 10, tableTop - 16, 9, 'Qty', '1 1 1'));
-  push(pdfText(tableX + col.num + col.desc + col.qty + 10, tableTop - 16, 9, 'Rate', '1 1 1'));
-  push(pdfText(tableX + col.num + col.desc + col.qty + col.rate + 10, tableTop - 16, 9, 'Tax', '1 1 1'));
-  push(pdfText(tableX + col.num + col.desc + col.qty + col.rate + col.tax + 10, tableTop - 16, 9, 'Amount', '1 1 1'));
+  push(pdfText(tableX + 8, tableTop - 16, 8.5, '#', '1 1 1'));
+  push(pdfText(tableX + col.num + 8, tableTop - 16, 8.5, 'Item / Description', '1 1 1'));
+  push(pdfText(tableX + col.num + col.desc + 8, tableTop - 16, 8.5, 'Qty', '1 1 1'));
+  push(pdfText(tableX + col.num + col.desc + col.qty + 8, tableTop - 16, 8.5, 'Rate', '1 1 1'));
+  push(pdfText(tableX + col.num + col.desc + col.qty + col.rate + 8, tableTop - 16, 8.5, 'Tax', '1 1 1'));
+  push(pdfText(tableX + col.num + col.desc + col.qty + col.rate + col.tax + 8, tableTop - 16, 8.5, 'Amount', '1 1 1'));
 
   let rowY = tableTop - headerH;
   quote.items.forEach((item, index) => {
     const rowBottom = rowY - rowH;
     push(pdfRect(tableX, rowBottom, tableW, rowH, '1 1 1', '0.84 0.87 0.92', 0.5));
-    push(pdfText(tableX + 10, rowY - 22, 10, String(index + 1), '0.12 0.16 0.24'));
-    push(pdfTextFit(tableX + col.num + 10, rowY - 16, 9, item.description, '0.12 0.16 0.24', 30));
-    push(pdfTextRight(tableX + col.num + col.desc + col.qty - 10, rowY - 22, 10, String(item.quantity), '0.12 0.16 0.24', 4));
-    push(pdfTextRight(tableX + col.num + col.desc + col.qty + col.rate - 10, rowY - 22, 10, moneyLabel(item.unitPrice), '0.12 0.16 0.24', 13));
-    push(pdfTextRight(tableX + col.num + col.desc + col.qty + col.rate + col.tax - 10, rowY - 16, 9, item.gstRate ? `${item.gstRate}% GST` : 'No Tax', '0.12 0.16 0.24', 11));
-    push(pdfTextRight(tableX + tableW - 10, rowY - 22, 10, moneyLabel(item.total), '0.12 0.16 0.24', 13));
+    push(pdfText(tableX + 8, rowY - 24, 9.5, String(index + 1), '0.12 0.16 0.24'));
+    push(pdfTextFit(tableX + col.num + 8, rowY - 18, 8.5, item.description, '0.12 0.16 0.24', 28));
+    push(pdfTextRight(tableX + col.num + col.desc + col.qty - 8, rowY - 24, 9.5, String(item.quantity), '0.12 0.16 0.24', 4));
+    push(pdfTextRight(tableX + col.num + col.desc + col.qty + col.rate - 8, rowY - 24, 9.5, moneyLabel(item.unitPrice), '0.12 0.16 0.24', 11));
+    push(pdfTextRight(tableX + col.num + col.desc + col.qty + col.rate + col.tax - 8, rowY - 18, 8.5, item.gstRate ? `${item.gstRate}% GST` : 'No Tax', '0.12 0.16 0.24', 10));
+    push(pdfTextRight(tableX + tableW - 8, rowY - 24, 9.5, moneyLabel(item.total), '0.12 0.16 0.24', 11));
     if (item.discountAmount > 0) {
-      push(pdfTextFit(tableX + col.num + 10, rowY - 31, 8, `Discount: ${item.discountType === 'Percentage' ? `${item.discountValue}%` : moneyLabel(item.discountValue)}`, '0.08 0.5 0.15', 34));
+      push(pdfTextFit(tableX + col.num + 8, rowY - 34, 7.5, `Discount: ${item.discountType === 'Percentage' ? `${item.discountValue}%` : moneyLabel(item.discountValue)}`, '0.08 0.5 0.15', 30));
     }
     rowY = rowBottom;
   });
 
   const summaryTop = rowY - 20;
   push(pdfRect(tableX, summaryTop - 92, tableW, 92, '0.99 0.99 1', '0.84 0.87 0.92', 0.7));
-  const summaryLeft = tableX + tableW - 210;
-  push(pdfText(summaryLeft, summaryTop - 18, 10, 'Sub Total', '0.08 0.12 0.22'));
-  push(pdfText(summaryLeft + 110, summaryTop - 18, 10, moneyLabel(quote.subtotal), '0.08 0.12 0.22'));
-  push(pdfText(summaryLeft, summaryTop - 38, 10, 'Total Discount', '0.08 0.12 0.22'));
-  push(pdfText(summaryLeft + 110, summaryTop - 38, 10, `- ${moneyLabel(quote.items.reduce((sum, item) => sum + (item.discountAmount || 0), 0))}`, '0.0 0.62 0.2'));
-  push(pdfText(summaryLeft, summaryTop - 58, 10, quote.taxAmount > 0 ? 'Tax (18%)' : 'No Tax', '0.08 0.12 0.22'));
-  push(pdfText(summaryLeft + 110, summaryTop - 58, 10, quote.taxAmount > 0 ? moneyLabel(quote.taxAmount) : '-', '0.08 0.12 0.22'));
+  const summaryLeft = tableX + tableW - 190;
+  push(pdfText(summaryLeft, summaryTop - 18, 9.5, 'Sub Total', '0.08 0.12 0.22'));
+  push(pdfTextRight(tableX + tableW - 8, summaryTop - 18, 9.5, moneyLabel(quote.subtotal), '0.08 0.12 0.22', 12));
+  push(pdfText(summaryLeft, summaryTop - 38, 9.5, 'Total Discount', '0.08 0.12 0.22'));
+  push(pdfTextRight(tableX + tableW - 8, summaryTop - 38, 9.5, `- ${moneyLabel(quote.items.reduce((sum, item) => sum + (item.discountAmount || 0), 0))}`, '0.0 0.62 0.2', 12));
+  push(pdfText(summaryLeft, summaryTop - 58, 9.5, quote.taxAmount > 0 ? 'Tax (18%)' : 'No Tax', '0.08 0.12 0.22'));
+  push(pdfTextRight(tableX + tableW - 8, summaryTop - 58, 9.5, quote.taxAmount > 0 ? moneyLabel(quote.taxAmount) : '-', '0.08 0.12 0.22', 12));
   push(pdfLine(tableX, summaryTop - 66, tableX + tableW, summaryTop - 66, 0.6, '0.82 0.86 0.92'));
-  push(pdfText(tableX + 205, summaryTop - 84, 12, 'Total', '0.08 0.12 0.22'));
-  push(pdfText(tableX + tableW - 130, summaryTop - 84, 14, moneyLabel(quote.totalAmount), '0.05 0.29 0.88'));
+  push(pdfText(tableX + 190, summaryTop - 84, 11, 'Total', '0.08 0.12 0.22'));
+  push(pdfTextRight(tableX + tableW - 8, summaryTop - 84, 13, moneyLabel(quote.totalAmount), '0.05 0.29 0.88', 14));
 
   const termsTop = summaryTop - 124;
   push(pdfText(margin, termsTop, 12, 'Terms & Conditions', '0.08 0.12 0.22'));
@@ -1058,8 +1086,8 @@ function buildPdfBuffer(quote) {
 
 function renderSharePage(quote, req) {
   const shareUrl = publicShareUrl(req, quote);
-  const pdfUrl = `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(quote.id)}/pdf`;
-  const pdfDownloadUrl = `${pdfUrl}?download=1`;
+  const pdfUrl = `${FRONTEND_BASE_URL.replace(/\/$/, '')}/#/quote-export/${encodeURIComponent(quote.id)}?download=1`;
+  const pdfDownloadUrl = pdfUrl;
   const whatsappText = encodeURIComponent(`Hello! Here is your quotation from ${quote.businessDetails.companyName || 'our team'}. Quote Number: ${quote.quoteNumber}. Open it here: ${shareUrl}`);
   const whatsappUrl = `https://api.whatsapp.com/send?text=${whatsappText}`;
   const businessLogoHtml = quote.businessDetails?.logo
@@ -1338,7 +1366,7 @@ function renderSharePage(quote, req) {
         <div class="url" id="share-url">${escapeHtml(shareUrl)}</div>
         <div class="actions">
           <a class="btn primary" href="${escapeHtml(pdfUrl)}">Open PDF</a>
-          <a class="btn ghost" href="${escapeHtml(pdfDownloadUrl)}" download="${escapeHtml(slugify(quote.quoteNumber))}.pdf">Download PDF</a>
+          <a class="btn ghost" href="${escapeHtml(pdfDownloadUrl)}">Download PDF</a>
           <a class="btn ghost" href="${escapeHtml(whatsappUrl)}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
           <button class="btn ghost" type="button" id="copy-btn">Copy Link</button>
         </div>
@@ -1419,8 +1447,15 @@ function renderSharePage(quote, req) {
 </html>`;
 }
 
-app.get('/api/health', (_req, res) => {
-  res.json({ ok: true, service: 'quote-backend', quotes: quotes.length });
+app.get('/api/health', async (_req, res) => {
+  const canUseMongo = await ensureMongo();
+  res.json({
+    ok: true,
+    service: 'quote-backend',
+    storage: canUseMongo ? 'mongodb' : 'local-json',
+    mongoReady: canUseMongo,
+    quotes: quotes.length,
+  });
 });
 
 app.post('/api/auth/request-otp', async (req, res) => {
@@ -1908,7 +1943,7 @@ app.post('/api/quotes', async (req, res) => {
     res.status(201).json({
       quote: storedQuote,
       shareUrl: publicShareUrl(req, storedQuote),
-      pdfUrl: `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(storedQuote.id)}/pdf`,
+      pdfUrl: `${FRONTEND_BASE_URL.replace(/\/$/, '')}/#/quote-export/${encodeURIComponent(storedQuote.id)}?download=1`,
     });
   } catch (error) {
     res.status(400).json({
@@ -1918,17 +1953,26 @@ app.post('/api/quotes', async (req, res) => {
   }
 });
 
-app.post('/api/quotes/preview-pdf', (req, res) => {
+app.post('/api/quotes/preview-pdf', async (req, res) => {
   try {
     const quote = buildQuoteFromPayload(req.body || {}, null);
-    const pdf = buildPdfBuffer(quote);
-    res.setHeader('Content-Type', 'application/pdf');
-    res.setHeader('Content-Disposition', `attachment; filename="${slugify(quote.quoteNumber || 'quote')}.pdf"`);
-    res.setHeader('Content-Length', String(pdf.length));
-    res.send(pdf);
+    quote.status = quote.status || 'Draft';
+    quotes = [
+      quote,
+      ...quotes.filter((entry) => entry.id !== quote.id && entry.shareToken !== quote.shareToken),
+    ];
+    await persistQuotes();
+
+    const pdfUrl = `${FRONTEND_BASE_URL.replace(/\/$/, '')}/#/quote-export/${encodeURIComponent(quote.id)}?download=1`;
+    res.status(201).json({
+      ok: true,
+      quote,
+      pdfUrl,
+      downloadUrl: pdfUrl,
+    });
   } catch (error) {
     res.status(400).json({
-      error: 'Unable to generate preview PDF',
+      error: 'Unable to prepare preview PDF',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
@@ -2006,7 +2050,7 @@ app.get('/api/quotes/:id', (req, res) => {
   res.json({
     quote,
     shareUrl: publicShareUrl(req, quote),
-    pdfUrl: `${getBaseUrl(req)}/api/quotes/${encodeURIComponent(quote.id)}/pdf`,
+    pdfUrl: `${FRONTEND_BASE_URL.replace(/\/$/, '')}/#/quote-export/${encodeURIComponent(quote.id)}?download=1`,
   });
 });
 
@@ -2071,12 +2115,8 @@ app.get('/api/quotes/:id/pdf', (req, res) => {
     return;
   }
 
-  const pdf = buildPdfBuffer(quote);
-  res.setHeader('Content-Type', 'application/pdf');
-  const isDownload = req.query.download === '1' || req.query.download === 'true';
-  res.setHeader('Content-Disposition', `${isDownload ? 'attachment' : 'inline'}; filename="${slugify(quote.quoteNumber)}.pdf"`);
-  res.setHeader('Content-Length', String(pdf.length));
-  res.send(pdf);
+  const frontendPdfUrl = `${FRONTEND_BASE_URL.replace(/\/$/, '')}/#/quote-export/${encodeURIComponent(quote.id)}?download=1`;
+  res.redirect(302, frontendPdfUrl);
 });
 
 app.get('/', (req, res) => {

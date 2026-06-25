@@ -2,6 +2,9 @@ import { getAuthToken } from './auth';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 
+const CAPTURE_MAX_WIDTH_PX = 794;
+const CAPTURE_MARGIN_PT = 18;
+
 function pickErrorMessage(payload: unknown, fallback: string) {
   if (payload && typeof payload === 'object') {
     const record = payload as Record<string, unknown>;
@@ -57,16 +60,44 @@ export function downloadBlob(blob: Blob, fileName: string) {
 }
 
 function applyCaptureStyles(element: HTMLElement) {
-  const rect = element.getBoundingClientRect();
-  const width = Math.max(320, Math.ceil(rect.width || element.offsetWidth || element.scrollWidth || 0));
-
-  element.style.width = `${width}px`;
-  element.style.minWidth = `${width}px`;
-  element.style.maxWidth = `${width}px`;
+  element.style.width = `${CAPTURE_MAX_WIDTH_PX}px`;
+  element.style.minWidth = `${CAPTURE_MAX_WIDTH_PX}px`;
+  element.style.maxWidth = `${CAPTURE_MAX_WIDTH_PX}px`;
   element.style.boxSizing = 'border-box';
   element.style.position = 'relative';
   element.style.overflow = 'hidden';
   element.style.isolation = 'isolate';
+}
+
+function normalizeScrollableRegions(root: HTMLElement) {
+  const elements = [root, ...Array.from(root.querySelectorAll<HTMLElement>('*'))];
+
+  for (const node of elements) {
+    const className = node.className;
+    const isTableShell = typeof className === 'string' && className.includes('quote-table-shell');
+    const isHorizontalScroll = typeof className === 'string' && className.includes('overflow-x-auto');
+
+    if (node.tagName === 'TABLE') {
+      node.style.width = '100%';
+      node.style.minWidth = '0';
+      node.style.maxWidth = '100%';
+      node.style.tableLayout = 'fixed';
+    }
+
+    if (node.tagName === 'TH' || node.tagName === 'TD') {
+      node.style.overflowWrap = 'anywhere';
+      node.style.wordBreak = 'break-word';
+      node.style.whiteSpace = 'normal';
+      node.style.boxSizing = 'border-box';
+    }
+
+    if (isTableShell || isHorizontalScroll) {
+      node.style.overflow = 'visible';
+      node.style.overflowX = 'visible';
+      node.style.maxWidth = '100%';
+      node.style.width = '100%';
+    }
+  }
 }
 
 async function waitForCaptureAssets(element: HTMLElement) {
@@ -119,10 +150,14 @@ async function renderElementToCanvas(element: HTMLElement) {
 
   const clone = element.cloneNode(true) as HTMLElement;
   applyCaptureStyles(clone);
+  normalizeScrollableRegions(clone);
   sandbox.appendChild(clone);
   document.body.appendChild(sandbox);
 
   try {
+    const rect = clone.getBoundingClientRect();
+    const captureWidth = Math.ceil(rect.width || CAPTURE_MAX_WIDTH_PX);
+    const captureHeight = Math.ceil(rect.height || clone.scrollHeight || clone.clientHeight);
     return await html2canvas(clone, {
       backgroundColor: '#ffffff',
       scale: 3,
@@ -130,10 +165,10 @@ async function renderElementToCanvas(element: HTMLElement) {
       allowTaint: true,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: Math.max(clone.scrollWidth, clone.clientWidth),
-      windowHeight: Math.max(clone.scrollHeight, clone.clientHeight),
-      width: Math.max(clone.scrollWidth, clone.clientWidth),
-      height: Math.max(clone.scrollHeight, clone.clientHeight),
+      windowWidth: CAPTURE_MAX_WIDTH_PX,
+      windowHeight: captureHeight,
+      width: captureWidth,
+      height: captureHeight,
       removeContainer: true,
       ignoreElements: (node) =>
         node instanceof HTMLElement && node.classList.contains('no-print'),
@@ -150,12 +185,18 @@ export async function downloadElementAsPdf(element: HTMLElement, fileName: strin
   const pdf = new jsPDF('p', 'pt', 'a4');
   const pageWidth = pdf.internal.pageSize.getWidth();
   const pageHeight = pdf.internal.pageSize.getHeight();
-  const margin = 18;
-  const availableWidth = pageWidth - margin * 2;
-  const availableHeight = pageHeight - margin * 2;
-  const scale = Math.min(availableWidth / canvas.width, availableHeight / canvas.height);
-  const renderWidth = canvas.width * scale;
-  const renderHeight = canvas.height * scale;
+  const availableWidth = pageWidth - CAPTURE_MARGIN_PT * 2;
+  const availableHeight = pageHeight - CAPTURE_MARGIN_PT * 2;
+  const aspectRatio = canvas.width / canvas.height || 1;
+
+  let renderWidth = availableWidth;
+  let renderHeight = renderWidth / aspectRatio;
+
+  if (renderHeight > availableHeight) {
+    renderHeight = availableHeight;
+    renderWidth = renderHeight * aspectRatio;
+  }
+
   const left = (pageWidth - renderWidth) / 2;
   const top = (pageHeight - renderHeight) / 2;
 

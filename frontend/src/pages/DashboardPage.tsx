@@ -19,7 +19,6 @@ import {
 } from 'lucide-react';
 import { Quote } from '../types';
 import { getDisplayAuthUser } from '../auth';
-import { downloadFileFromUrl } from '../download';
 import { createQuote, deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { buildAppUrl, buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
@@ -177,7 +176,7 @@ export default function DashboardPage() {
       label: 'PDF',
       icon: Download,
       tone: 'text-[#EF4444]',
-      onClick: async (quote: DashboardQuote) => downloadFileFromUrl(buildPdfDownloadUrl(quote.id), `${quote.quoteNumber || quote.id}.pdf`),
+      onClick: async (quote: DashboardQuote) => window.open(buildPdfDownloadUrl(quote.id), '_blank', 'noopener,noreferrer'),
       ariaLabel: (quote: DashboardQuote) => `Download ${quote.title}`,
     },
     {

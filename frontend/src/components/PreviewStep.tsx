@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft,
   Building2,
@@ -45,6 +45,7 @@ interface PreviewStepProps {
   onSendToClient: (email: string) => Promise<void>;
   onPrev: () => void;
   quoteContainerRef: React.RefObject<HTMLDivElement | null>;
+  autoDownload?: boolean;
 }
 
 const CURRENCY = '₹';
@@ -128,6 +129,7 @@ export default function PreviewStep({
   onSendToClient,
   onPrev,
   quoteContainerRef,
+  autoDownload = false,
 }: PreviewStepProps) {
   const [isSendModalOpen, setIsSendModalOpen] = useState(false);
   const [sendEmail, setSendEmail] = useState(clientEmail || '');
@@ -135,6 +137,7 @@ export default function PreviewStep({
   const [saveToast, setSaveToast] = useState(false);
   const [copyToast, setCopyToast] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const autoDownloadTriggeredRef = useRef(false);
 
   const totals = useMemo(() => calculateQuotationTotals(items), [items]);
   const hasDiscount = items.some((it) => it.discountType !== 'None' && it.discountValue > 0);
@@ -316,6 +319,58 @@ export default function PreviewStep({
     }
   };
 
+  useEffect(() => {
+    if (!autoDownload || autoDownloadTriggeredRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    let frame = 0;
+    let attempts = 0;
+
+    const runWhenReady = () => {
+      if (cancelled || autoDownloadTriggeredRef.current) {
+        return;
+      }
+
+      const element = quoteContainerRef.current;
+      if (!element) {
+        attempts += 1;
+        if (attempts < 120) {
+          frame = window.requestAnimationFrame(runWhenReady);
+        }
+        return;
+      }
+
+      autoDownloadTriggeredRef.current = true;
+      window.setTimeout(() => {
+        setIsDownloading(true);
+        void downloadElementAsPdf(element, `Quote-${quoteNumber || 'quote'}.pdf`)
+          .catch((error: any) => {
+            console.error('Failed to generate PDF:', error);
+            window.alert('PDF generation failed: ' + (error?.message || error));
+          })
+          .finally(() => {
+            setIsDownloading(false);
+            window.setTimeout(() => {
+              try {
+                window.close();
+              } catch {
+                // Ignore cases where the tab cannot be closed programmatically.
+              }
+            }, 1200);
+          });
+      }, 500);
+    };
+
+    frame = window.requestAnimationFrame(runWhenReady);
+
+    return () => {
+      cancelled = true;
+      if (frame) window.cancelAnimationFrame(frame);
+    };
+  }, [autoDownload, quoteContainerRef, quoteNumber, items.length]);
+
   const triggerSendSequence = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!sendEmail.trim()) return;
@@ -430,12 +485,12 @@ export default function PreviewStep({
         </div>
       </div>
 
-      <div className="mx-auto w-full max-w-[980px]">
+      <div className="mx-auto w-full max-w-[794px]">
         <div className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-50 p-3 shadow-sm md:p-6">
           <div
             id="invoice-capture-area"
             ref={quoteContainerRef}
-            className="quote-pdf-surface overflow-hidden rounded-[24px] bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)]"
+            className="quote-pdf-surface mx-auto w-full overflow-hidden rounded-[24px] bg-white shadow-[0_12px_40px_rgba(15,23,42,0.08)]"
           >
             <div className="relative overflow-hidden bg-[linear-gradient(135deg,#07162d_0%,#0d1f43_45%,#17336a_100%)] px-5 py-5 text-white md:px-7 md:py-7">
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(37,99,235,0.35),transparent_30%),radial-gradient(circle_at_bottom_right,rgba(59,130,246,0.2),transparent_34%)]" />
@@ -548,18 +603,18 @@ export default function PreviewStep({
                 </div>
               </div>
 
-              <div className="overflow-hidden rounded-[18px] border border-slate-200">
-                <div className="overflow-x-auto">
-                  <table className="min-w-full border-collapse text-left">
+              <div className="quote-table-shell overflow-hidden rounded-[18px] border border-slate-200">
+                <div className="overflow-hidden">
+                  <table className="w-full table-fixed border-collapse text-left">
                     <thead>
                       <tr className="bg-[#1D4ED8] text-white">
-                        <th className="whitespace-nowrap px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-5">#</th>
-                        <th className="whitespace-nowrap px-4 py-3 text-[11px] font-bold uppercase tracking-wider md:px-5">Item / Description</th>
-                        {showQuantity && <th className="whitespace-nowrap px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-4">Qty</th>}
-                        <th className="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider md:px-5">Rate</th>
-                        {hasDiscount && <th className="whitespace-nowrap px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-5">Discount</th>}
-                        {hasTax && <th className="whitespace-nowrap px-4 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-5">Tax (18%)</th>}
-                        <th className="whitespace-nowrap px-4 py-3 text-right text-[11px] font-bold uppercase tracking-wider md:px-5">Amount</th>
+                        <th className="w-[7%] px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-4">#</th>
+                        <th className="w-[38%] px-3 py-3 text-[11px] font-bold uppercase tracking-wider md:px-4">Item / Description</th>
+                        {showQuantity && <th className="w-[8%] px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-3">Qty</th>}
+                        <th className="w-[15%] px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider md:px-4">Rate</th>
+                        {hasDiscount && <th className="w-[14%] px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-3">Discount</th>}
+                        {hasTax && <th className="w-[13%] px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-3">Tax (18%)</th>}
+                        <th className="w-[15%] px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider md:px-4">Amount</th>
                       </tr>
                     </thead>
 
@@ -570,28 +625,28 @@ export default function PreviewStep({
 
                           return (
                             <tr key={item.id} className="align-top">
-                              <td className="px-4 py-4 text-center text-sm font-medium text-slate-600 md:px-5 md:py-5">{index + 1}</td>
-                              <td className="px-4 py-4 md:px-5 md:py-5">
-                                <div className="text-sm font-medium text-slate-900 md:text-base">{item.name}</div>
+                              <td className="px-3 py-4 text-center text-sm font-medium text-slate-600 md:px-4 md:py-5">{index + 1}</td>
+                              <td className="px-3 py-4 md:px-4 md:py-5">
+                                <div className="break-words text-sm font-medium text-slate-900 md:text-base">{item.name}</div>
                                 {item.description && (
-                                  <div className="mt-1 whitespace-pre-line text-sm leading-relaxed text-slate-500">
+                                  <div className="mt-1 whitespace-pre-line break-words text-sm leading-relaxed text-slate-500">
                                     {item.description}
                                   </div>
                                 )}
                               </td>
 
                               {showQuantity && (
-                                <td className="px-3 py-4 text-center text-sm font-medium text-slate-600 md:px-4 md:py-5">
+                                <td className="px-2 py-4 text-center text-sm font-medium text-slate-600 md:px-3 md:py-5">
                                   {line.quantity}
                                 </td>
                               )}
 
-                              <td className="px-4 py-4 text-right text-sm font-medium text-slate-700 md:px-5 md:py-5">
+                              <td className="px-3 py-4 text-right text-sm font-medium text-slate-700 md:px-4 md:py-5">
                                 {formatCurrency(item.price, CURRENCY)}
                               </td>
 
                               {hasDiscount && (
-                                <td className="px-4 py-4 text-center md:px-5 md:py-5">
+                                <td className="px-2 py-4 text-center md:px-3 md:py-5">
                                   {line.discount > 0 ? (
                                     <div className="inline-flex flex-col items-center gap-1">
                                       <span className="rounded-lg bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-700">
@@ -608,12 +663,12 @@ export default function PreviewStep({
                               )}
 
                               {hasTax && (
-                                <td className="px-4 py-4 text-center text-sm font-medium text-slate-700 md:px-5 md:py-5">
+                                <td className="px-2 py-4 text-center text-sm font-medium text-slate-700 md:px-3 md:py-5">
                                   {line.tax > 0 ? formatCurrency(line.tax, CURRENCY) : '-'}
                                 </td>
                               )}
 
-                              <td className="px-4 py-4 text-right text-sm font-semibold text-slate-900 md:px-5 md:py-5">
+                              <td className="px-3 py-4 text-right text-sm font-semibold text-slate-900 md:px-4 md:py-5">
                                 {formatCurrency(line.amount, CURRENCY)}
                               </td>
                             </tr>
