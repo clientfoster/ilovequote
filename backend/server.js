@@ -39,8 +39,27 @@ function loadLocalEnv() {
 
 loadLocalEnv();
 
+function cleanEnvValue(value = '') {
+  return String(value).trim().replace(/^["']|["']$/g, '');
+}
+
+function getMongoUriFromEnv() {
+  const rawValue = process.env.MONGODB_URI || process.env.MONGO_URI || process.env.MONGO_URL || '';
+  let value = cleanEnvValue(rawValue);
+
+  // This recovers from accidentally pasting "MONGODB_URI=mongodb+srv://..." into the Render value box.
+  if (/^MONGODB_URI\s*=/.test(value)) {
+    value = cleanEnvValue(value.replace(/^MONGODB_URI\s*=/, ''));
+  }
+
+  return value;
+}
+
 const PORT = Number(process.env.PORT || 3001);
-const MONGODB_URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017';
+const RAW_MONGODB_URI = getMongoUriFromEnv();
+const hasValidMongoScheme = /^mongodb(?:\+srv)?:\/\//.test(RAW_MONGODB_URI);
+const MONGODB_URI = hasValidMongoScheme ? RAW_MONGODB_URI : 'mongodb://127.0.0.1:27017';
+const mongoConfigSource = hasValidMongoScheme ? 'env' : RAW_MONGODB_URI ? 'invalid-env' : 'default-localhost';
 const MONGODB_DB_NAME = process.env.MONGODB_DB_NAME || 'ilovequote';
 const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}`;
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || PUBLIC_BASE_URL;
@@ -58,6 +77,9 @@ let usersCollection = null;
 let quotesCollection = null;
 let mongoReady = false;
 let mongoDisabled = false;
+let mongoLastError = mongoConfigSource === 'invalid-env'
+  ? 'Invalid MONGODB_URI scheme. It must start with mongodb:// or mongodb+srv://.'
+  : '';
 let quotes = [];
 let users = [];
 app.use(express.json({ limit: '5mb' }));
@@ -282,7 +304,8 @@ async function ensureMongo() {
     mongoReady = true;
     return true;
   } catch (error) {
-    console.log('Mongo unavailable, using local JSON storage fallback:', error?.message || error);
+    mongoLastError = error?.message || String(error);
+    console.log('Mongo unavailable, using local JSON storage fallback:', mongoLastError);
     mongoReady = false;
     mongoDisabled = true;
     mongoDb = null;
@@ -1454,6 +1477,8 @@ app.get('/api/health', async (_req, res) => {
     service: 'quote-backend',
     storage: canUseMongo ? 'mongodb' : 'local-json',
     mongoReady: canUseMongo,
+    mongoConfigSource,
+    mongoError: canUseMongo ? null : mongoLastError || null,
     quotes: quotes.length,
   });
 });
