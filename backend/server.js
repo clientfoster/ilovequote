@@ -1,5 +1,5 @@
 import express from 'express';
-import { pbkdf2Sync, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, pbkdf2Sync, randomBytes, randomInt, randomUUID, timingSafeEqual } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -219,6 +219,10 @@ function verifyPassword(password, salt, hash) {
   return expected.length === candidate.length && timingSafeEqual(candidate, expected);
 }
 
+function hashResetToken(token) {
+  return createHash('sha256').update(String(token)).digest('hex');
+}
+
 function generateOtp() {
   return String(randomInt(0, 1_000_000)).padStart(6, '0');
 }
@@ -254,7 +258,7 @@ async function sendPasswordResetEmail({ email, resetToken }) {
     return { provider: 'dev', skipped: true };
   }
 
-  const resetUrl = `${PUBLIC_BASE_URL.replace(/\/$/, '')}/#/login?mode=login&resetToken=${encodeURIComponent(resetToken)}`;
+  const resetUrl = `${FRONTEND_BASE_URL.replace(/\/$/, '')}/#/login?mode=login&resetToken=${encodeURIComponent(resetToken)}`;
   const { data, error } = await resend.emails.send({
     from: RESEND_FROM_EMAIL,
     to: [email],
@@ -1479,6 +1483,7 @@ app.get('/api/health', async (_req, res) => {
     mongoReady: canUseMongo,
     mongoConfigSource,
     mongoError: canUseMongo ? null : mongoLastError || null,
+    emailProvider: resend ? 'resend' : 'dev',
     quotes: quotes.length,
   });
 });
@@ -1658,11 +1663,17 @@ app.post('/api/auth/request-password-reset', async (req, res) => {
     }
 
     const resetToken = randomBytes(24).toString('hex');
+    const resetTokenHash = hashResetToken(resetToken);
+    const resetExpiresAt = Date.now() + PASSWORD_RESET_TTL_MS;
     passwordResetTokens.set(resetToken, {
       email,
       userId: user.id,
-      expiresAt: Date.now() + PASSWORD_RESET_TTL_MS,
+      expiresAt: resetExpiresAt,
     });
+    user.passwordResetTokenHash = resetTokenHash;
+    user.passwordResetExpiresAt = resetExpiresAt;
+    user.updatedAt = new Date().toISOString();
+    await persistUsers();
 
     const delivery = await sendPasswordResetEmail({ email, resetToken });
     console.log(`[auth] password reset link for ${email} via ${delivery.provider}`);
@@ -1686,10 +1697,29 @@ app.post('/api/auth/confirm-password-reset', async (req, res) => {
     await refreshUsers();
     const resetToken = String(req.body?.resetToken || '').trim();
     const password = String(req.body?.password || '');
-    const tokenState = passwordResetTokens.get(resetToken);
+    let tokenState = passwordResetTokens.get(resetToken);
+    let user = null;
+
+    if (!tokenState) {
+      const resetTokenHash = hashResetToken(resetToken);
+      user = users.find((entry) => entry.passwordResetTokenHash === resetTokenHash);
+      if (user) {
+        tokenState = {
+          email: user.email,
+          userId: user.id,
+          expiresAt: Number(user.passwordResetExpiresAt || 0),
+        };
+      }
+    }
 
     if (!tokenState || tokenState.expiresAt < Date.now()) {
       passwordResetTokens.delete(resetToken);
+      if (user) {
+        delete user.passwordResetTokenHash;
+        delete user.passwordResetExpiresAt;
+        user.updatedAt = new Date().toISOString();
+        await persistUsers();
+      }
       res.status(400).json({ error: 'Reset link expired. Please request a new password reset email.' });
       return;
     }
@@ -1699,7 +1729,7 @@ app.post('/api/auth/confirm-password-reset', async (req, res) => {
       return;
     }
 
-    const user = users.find((entry) => entry.id === tokenState.userId && entry.email === tokenState.email);
+    user = user || users.find((entry) => entry.id === tokenState.userId && entry.email === tokenState.email);
     if (!user) {
       passwordResetTokens.delete(resetToken);
       res.status(404).json({ error: 'Account not found for this reset link.' });
@@ -1709,6 +1739,8 @@ app.post('/api/auth/confirm-password-reset', async (req, res) => {
     const passwordState = hashPassword(password);
     user.passwordHash = passwordState.hash;
     user.passwordSalt = passwordState.salt;
+    delete user.passwordResetTokenHash;
+    delete user.passwordResetExpiresAt;
     user.updatedAt = new Date().toISOString();
 
     passwordResetTokens.delete(resetToken);
