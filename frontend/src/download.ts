@@ -65,7 +65,7 @@ function applyCaptureStyles(element: HTMLElement) {
   element.style.maxWidth = `${CAPTURE_MAX_WIDTH_PX}px`;
   element.style.boxSizing = 'border-box';
   element.style.position = 'relative';
-  element.style.overflow = 'hidden';
+  element.style.overflow = 'visible';
   element.style.isolation = 'isolate';
 }
 
@@ -90,16 +90,37 @@ function normalizeScrollableRegions(root: HTMLElement) {
       node.style.wordBreak = 'break-word';
       node.style.whiteSpace = 'normal';
       node.style.boxSizing = 'border-box';
-      node.style.maxWidth = '0';
+      node.style.minWidth = '0';
     }
 
     if (isTableShell || isHorizontalScroll) {
-      node.style.overflow = 'hidden';
-      node.style.overflowX = 'hidden';
+      node.style.overflow = 'visible';
+      node.style.overflowX = 'visible';
       node.style.maxWidth = '100%';
       node.style.width = '100%';
     }
   }
+}
+
+function getContentBounds(root: HTMLElement) {
+  const rootRect = root.getBoundingClientRect();
+  const bounds = {
+    right: rootRect.right,
+    bottom: rootRect.bottom,
+  };
+
+  for (const node of Array.from(root.querySelectorAll<HTMLElement>('*'))) {
+    const rect = node.getBoundingClientRect();
+    if (rect.width > 0 && rect.height > 0) {
+      bounds.right = Math.max(bounds.right, rect.right);
+      bounds.bottom = Math.max(bounds.bottom, rect.bottom);
+    }
+  }
+
+  return {
+    width: Math.ceil(bounds.right - rootRect.left),
+    height: Math.ceil(bounds.bottom - rootRect.top),
+  };
 }
 
 async function waitForCaptureAssets(element: HTMLElement) {
@@ -157,9 +178,18 @@ async function renderElementToCanvas(element: HTMLElement) {
   document.body.appendChild(sandbox);
 
   try {
-    const rect = clone.getBoundingClientRect();
-    const captureWidth = Math.ceil(rect.width || CAPTURE_MAX_WIDTH_PX);
-    const captureHeight = Math.ceil(rect.height || clone.scrollHeight || clone.clientHeight);
+    const contentBounds = getContentBounds(clone);
+    const captureWidth = Math.ceil(Math.max(
+      CAPTURE_MAX_WIDTH_PX,
+      clone.scrollWidth,
+      clone.offsetWidth,
+      contentBounds.width,
+    ));
+    const captureHeight = Math.ceil(Math.max(
+      clone.scrollHeight,
+      clone.offsetHeight,
+      contentBounds.height,
+    ));
     return await html2canvas(clone, {
       backgroundColor: '#ffffff',
       scale: 3,
@@ -167,7 +197,7 @@ async function renderElementToCanvas(element: HTMLElement) {
       allowTaint: true,
       scrollX: 0,
       scrollY: 0,
-      windowWidth: CAPTURE_MAX_WIDTH_PX,
+      windowWidth: captureWidth,
       windowHeight: captureHeight,
       width: captureWidth,
       height: captureHeight,

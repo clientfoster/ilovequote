@@ -70,6 +70,20 @@ const getInitials = (value: string, fallback = 'Q') =>
     .map((part) => part[0]?.toUpperCase())
     .join('') || fallback;
 
+const sanitizeFilePart = (value: string) =>
+  value
+    .trim()
+    .replace(/[^a-zA-Z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 48);
+
+const buildPdfFileName = (quoteNumber: string, issueDate: string, businessName: string, clientName: string) => {
+  const quotePart = sanitizeFilePart(quoteNumber) || `Quote-${new Date().toISOString().slice(0, 10)}`;
+  const datePart = sanitizeFilePart(issueDate) || new Date().toISOString().slice(0, 10);
+  const ownerPart = sanitizeFilePart(businessName) || sanitizeFilePart(clientName);
+  return ['Quotation', quotePart, datePart, ownerPart].filter(Boolean).join('-') + '.pdf';
+};
+
 const parseTerms = (terms: string) =>
   terms
     .split(/\n+/)
@@ -310,7 +324,7 @@ export default function PreviewStep({
         throw new Error('Preview area not found.');
       }
 
-      await downloadElementAsPdf(element, `Quote-${quoteNumber || 'quote'}.pdf`);
+      await downloadElementAsPdf(element, buildPdfFileName(quoteNumber, issueDate, businessName, clientName));
     } catch (error: any) {
       console.error('Failed to generate PDF:', error);
       window.alert('PDF generation failed: ' + (error?.message || error));
@@ -345,7 +359,7 @@ export default function PreviewStep({
       autoDownloadTriggeredRef.current = true;
       window.setTimeout(() => {
         setIsDownloading(true);
-        void downloadElementAsPdf(element, `Quote-${quoteNumber || 'quote'}.pdf`)
+        void downloadElementAsPdf(element, buildPdfFileName(quoteNumber, issueDate, businessName, clientName))
           .catch((error: any) => {
             console.error('Failed to generate PDF:', error);
             window.alert('PDF generation failed: ' + (error?.message || error));
@@ -369,7 +383,7 @@ export default function PreviewStep({
       cancelled = true;
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [autoDownload, quoteContainerRef, quoteNumber, items.length]);
+  }, [autoDownload, quoteContainerRef, quoteNumber, issueDate, businessName, clientName, items.length]);
 
   const triggerSendSequence = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -608,13 +622,13 @@ export default function PreviewStep({
                   <table className="w-full table-fixed border-collapse text-left">
                     <thead>
                       <tr className="bg-[#1D4ED8] text-white">
-                        <th className="w-[5%] px-2 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-3">#</th>
-                        <th className="w-[32%] px-2 py-3 text-[10px] font-bold uppercase tracking-wider md:px-3">Item / Description</th>
-                        {showQuantity && <th className="w-[7%] px-1.5 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-2">Qty</th>}
+                        <th className="w-[6%] px-2 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-3">#</th>
+                        <th className="w-[34%] px-2 py-3 text-[10px] font-bold uppercase tracking-wider md:px-3">Item / Description</th>
+                        {showQuantity && <th className="w-[8%] px-1.5 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-2">Qty</th>}
                         <th className="w-[13%] px-2 py-3 text-right text-[10px] font-bold uppercase tracking-wider md:px-3">Rate</th>
                         {hasDiscount && <th className="w-[12%] px-1.5 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-2">Discount</th>}
                         {hasTax && <th className="w-[12%] px-1.5 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-2">Tax</th>}
-                        <th className="w-[14%] px-2 py-3 text-right text-[10px] font-bold uppercase tracking-wider md:px-3">Amount</th>
+                        <th className="w-[15%] px-2 py-3 text-right text-[10px] font-bold uppercase tracking-wider md:px-3">Amount</th>
                       </tr>
                     </thead>
 

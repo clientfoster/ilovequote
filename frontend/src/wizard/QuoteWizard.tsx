@@ -26,7 +26,7 @@ import {
   SETTINGS_STORAGE_KEY as SETTINGS_STORAGE_KEY_BASE,
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
-import { getDisplayAuthUser, getScopedStorageKey } from '../auth';
+import { getDisplayAuthUser, getScopedStorageKey, isAuthenticated } from '../auth';
 import { createQuote, updateQuote } from '../quoteApi';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
@@ -459,6 +459,12 @@ export default function QuoteWizard() {
         return;
       }
       handleStepNext();
+      return;
+    }
+
+    if (!isAuthenticated()) {
+      onTriggerToast('Please log in or sign up to save your quote.');
+      navigate('/login?mode=login');
       return;
     }
 

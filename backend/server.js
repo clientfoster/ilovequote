@@ -682,6 +682,14 @@ function findQuoteById(id, ownerUserId = null) {
   });
 }
 
+function findOwnedQuoteById(id, ownerUserId) {
+  if (!ownerUserId) return null;
+  return quotes.find((quote) => {
+    const matchesId = quote.id === id || quote.shareToken === id || quote.quoteNumber === id;
+    return matchesId && quote.ownerUserId === ownerUserId;
+  }) || null;
+}
+
 function findQuoteByToken(token) {
   return quotes.find((quote) => quote.shareToken === token || quote.id === token || quote.quoteNumber === token);
 }
@@ -1954,8 +1962,8 @@ app.delete('/api/account', async (req, res) => {
 app.get('/api/quotes', (req, res) => {
   const user = getAuthenticatedUser(req);
   const visibleQuotes = user
-    ? quotes.filter((quote) => !quote.ownerUserId || quote.ownerUserId === user.id)
-    : quotes.filter((quote) => !quote.ownerUserId);
+    ? quotes.filter((quote) => quote.ownerUserId === user.id)
+    : [];
   res.json({
     items: visibleQuotes,
   });
@@ -1964,9 +1972,14 @@ app.get('/api/quotes', (req, res) => {
 app.post('/api/quotes', async (req, res) => {
   try {
     const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Please log in or sign up to save quotes.' });
+      return;
+    }
+
     const quote = buildQuoteFromPayload(req.body || {}, user?.id || null);
     const existingIndex = quotes.findIndex((entry) => {
-      if (entry.id === quote.id || entry.shareToken === quote.shareToken) {
+      if (entry.ownerUserId === user.id && (entry.id === quote.id || entry.shareToken === quote.shareToken)) {
         return true;
       }
 
@@ -2038,14 +2051,14 @@ app.post('/api/quotes/preview-pdf', async (req, res) => {
 app.patch('/api/quotes/:id', async (req, res) => {
   try {
     const user = getAuthenticatedUser(req);
-    const quote = findQuoteById(req.params.id, user?.id || null);
-    if (!quote) {
-      res.status(404).json({ error: 'Quote not found' });
+    if (!user) {
+      res.status(401).json({ error: 'Please log in or sign up to save quotes.' });
       return;
     }
 
-    if (quote.ownerUserId && quote.ownerUserId !== user?.id) {
-      res.status(403).json({ error: 'You do not have permission to modify this quote.' });
+    const quote = findOwnedQuoteById(req.params.id, user.id);
+    if (!quote) {
+      res.status(404).json({ error: 'Quote not found' });
       return;
     }
 
@@ -2098,7 +2111,7 @@ app.patch('/api/quotes/:id', async (req, res) => {
 
 app.get('/api/quotes/:id', (req, res) => {
   const user = getAuthenticatedUser(req);
-  const quote = findQuoteById(req.params.id, user?.id || null);
+  const quote = findOwnedQuoteById(req.params.id, user?.id || null);
   if (!quote) {
     res.status(404).json({ error: 'Quote not found' });
     return;
@@ -2113,14 +2126,9 @@ app.get('/api/quotes/:id', (req, res) => {
 
 app.delete('/api/quotes/:id', async (req, res) => {
   const user = getAuthenticatedUser(req);
-  const quote = findQuoteById(req.params.id, user?.id || null);
+  const quote = findOwnedQuoteById(req.params.id, user?.id || null);
   if (!quote) {
     res.status(404).json({ error: 'Quote not found' });
-    return;
-  }
-
-  if (quote.ownerUserId && quote.ownerUserId !== user?.id) {
-    res.status(403).json({ error: 'You do not have permission to delete this quote.' });
     return;
   }
 
@@ -2131,14 +2139,9 @@ app.delete('/api/quotes/:id', async (req, res) => {
 
 app.post('/api/quotes/:id/share', (req, res) => {
   const user = getAuthenticatedUser(req);
-  const quote = findQuoteById(req.params.id, user?.id || null);
+  const quote = findOwnedQuoteById(req.params.id, user?.id || null);
   if (!quote) {
     res.status(404).json({ error: 'Quote not found' });
-    return;
-  }
-
-  if (quote.ownerUserId && quote.ownerUserId !== user?.id) {
-    res.status(403).json({ error: 'You do not have permission to modify this quote.' });
     return;
   }
 
@@ -2166,7 +2169,7 @@ app.get('/share/:token', (req, res) => {
 
 app.get('/api/quotes/:id/pdf', (req, res) => {
   const user = getAuthenticatedUser(req);
-  const quote = findQuoteById(req.params.id, user?.id || null);
+  const quote = findOwnedQuoteById(req.params.id, user?.id || null);
   if (!quote) {
     res.status(404).json({ error: 'Quote not found' });
     return;
