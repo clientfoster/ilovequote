@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layers3, FolderGit2, QrCode } from 'lucide-react';
 
 // Shell & Pages Imports
@@ -26,6 +26,23 @@ import {
   signOut,
 } from './auth';
 import { apiUrl } from './api';
+
+function RequireAuth({
+  isAuthed,
+  children,
+}: {
+  isAuthed: boolean;
+  children: React.ReactNode;
+}) {
+  const location = useLocation();
+
+  if (!isAuthed) {
+    const next = `${location.pathname}${location.search}`;
+    return <Navigate to={`/login?mode=login&next=${encodeURIComponent(next)}`} replace />;
+  }
+
+  return <>{children}</>;
+}
 
 export default function App() {
   const [isAuthed, setIsAuthed] = useState(() => isAuthenticated());
@@ -114,40 +131,96 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/create-quote" element={<CreateQuotePage />} />
 
-          <Route path="/clients" element={<ClientsPage />} />
-          <Route path="/items" element={<ItemsPage />} />
+          <Route
+            path="/clients"
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <ClientsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/items"
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <ItemsPage />
+              </RequireAuth>
+            }
+          />
 
-          <Route path="/quotes" element={<QuotesPage />} />
+          <Route
+            path="/quotes"
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <QuotesPage />
+              </RequireAuth>
+            }
+          />
 
-          <Route path="/business" element={<BusinessPage />} />
-          <Route path="/settings" element={<SettingsPage />} />
-          <Route path="/help-support" element={<HelpSupportPage />} />
+          <Route
+            path="/business"
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <BusinessPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/settings"
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <SettingsPage />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/help-support"
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <HelpSupportPage />
+              </RequireAuth>
+            }
+          />
 
           {/* Placeholder subviews for Coming Soon products */}
           <Route
             path="/templates"
             element={
-              <PlaceholderPage
-                title="Quotation Templates"
-                description="Our design team is building high-converting thematic invoice layouts (Minimal, Brutalist, Corporate, and Neon). You will be able to customize fonts, colors, and layout borders in real-time."
-                icon={<Layers3 className="w-8 h-8" />}
-              />
+              <RequireAuth isAuthed={isAuthed}>
+                <PlaceholderPage
+                  title="Quotation Templates"
+                  description="Our design team is building high-converting thematic invoice layouts (Minimal, Brutalist, Corporate, and Neon). You will be able to customize fonts, colors, and layout borders in real-time."
+                  icon={<Layers3 className="w-8 h-8" />}
+                />
+              </RequireAuth>
             }
           />
 
           <Route
             path="/portfolio"
-            element={<PortfolioPage />}
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <PortfolioPage />
+              </RequireAuth>
+            }
           />
 
           <Route
             path="/portfolio/:slug"
-            element={<PortfolioPage />}
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <PortfolioPage />
+              </RequireAuth>
+            }
           />
 
           <Route
             path="/qr-codes"
-            element={<QRPortfolioPage />}
+            element={
+              <RequireAuth isAuthed={isAuthed}>
+                <QRPortfolioPage />
+              </RequireAuth>
+            }
           />
 
           {/* Fallback route handles unexpected slugs */}

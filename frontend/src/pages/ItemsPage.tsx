@@ -16,6 +16,7 @@ function toItemRows(quotes: Quote[]) {
     quote.items.forEach((item) => {
       rows.push({
         ...item,
+        name: item.name || item.description || 'Item',
         sourceQuote: quote.quoteNumber,
         businessName: quote.businessDetails?.companyName || 'Business',
       });
@@ -141,7 +142,7 @@ export default function ItemsPage() {
                             <ShoppingBag className="h-5 w-5" />
                           </div>
                           <div>
-                            <p className="font-semibold text-slate-900">{row.name}</p>
+                            <p className="font-semibold text-slate-900">{row.name || row.description || 'Item'}</p>
                             <p className="mt-1 text-[12px] text-slate-500">{row.description}</p>
                           </div>
                         </div>

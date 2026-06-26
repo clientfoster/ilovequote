@@ -5,10 +5,41 @@ import { deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
 import { buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
+function formatInr(value: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+}
+
 const statusTabs = ['All', 'Draft', 'Sent', 'Viewed', 'Accepted'] as const;
 
 function formatMoney(value: number) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`;
+}
+
+async function copyTextToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    try {
+      return document.execCommand('copy');
+    } finally {
+      textarea.remove();
+    }
+  }
 }
 
 export default function QuotesPage() {
@@ -48,11 +79,11 @@ export default function QuotesPage() {
 
   const copyShareLink = async (quote: Quote) => {
     const shareUrl = getShareUrl(quote);
-    try {
-      await navigator.clipboard.writeText(shareUrl);
+    const copied = await copyTextToClipboard(shareUrl);
+    if (copied) {
       setCopiedQuoteId(quote.id);
       window.setTimeout(() => setCopiedQuoteId((current) => (current === quote.id ? null : current)), 1800);
-    } catch {
+    } else {
       window.prompt('Copy this link', shareUrl);
     }
   };
@@ -189,7 +220,7 @@ export default function QuotesPage() {
                             <p className="mt-1 text-[12px] text-slate-500">{quote.clientDetails?.email || ''}</p>
                           </div>
                         </td>
-                        <td className="px-4 py-5 md:px-5 font-semibold text-slate-900">{formatMoney(quote.totalAmount)}</td>
+                        <td className="px-4 py-5 md:px-5 font-semibold text-slate-900">{formatInr(quote.totalAmount)}</td>
                         <td className="px-4 py-5 md:px-5">
                           <span className={`inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold ${activeStatus === 'Accepted' ? 'bg-[#E9FCEB] text-[#16A34A]' : 'bg-[#F3F4F6] text-[#475569]'}`}>
                             {activeStatus}
@@ -210,7 +241,7 @@ export default function QuotesPage() {
                               {getShareUrl(quote)}
                             </button>
                             <button type="button" onClick={() => copyShareLink(quote)} className="text-[13px] font-semibold text-[#2457F0]">
-                              Copy
+                              {copiedQuoteId === quote.id ? 'Copied' : 'Copy'}
                             </button>
                           </div>
                         </td>

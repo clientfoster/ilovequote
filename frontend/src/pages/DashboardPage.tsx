@@ -22,6 +22,14 @@ import { getDisplayAuthUser } from '../auth';
 import { deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { buildAppUrl, buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
+function formatInr(value: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+}
+
 type DashboardQuote = Quote & {
   title: string;
   clientLabel: string;
@@ -41,6 +49,29 @@ function formatMoney(value: number) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`;
 }
 
+async function copyTextToClipboard(text: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return true;
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    textarea.style.top = '0';
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+
+    try {
+      return document.execCommand('copy');
+    } finally {
+      textarea.remove();
+    }
+  }
+}
+
 function initialsFor(name?: string) {
   const parts = String(name || 'Client').trim().split(/\s+/).filter(Boolean);
   return parts.slice(0, 2).map((part) => part[0]?.toUpperCase() ?? '').join('').slice(0, 2) || 'C';
@@ -52,7 +83,7 @@ function mapQuote(quote: Quote, index: number): DashboardQuote {
     ...quote,
     title: quote.businessDetails?.companyName || quote.quoteNumber || 'Untitled Quote',
     clientLabel: quote.clientDetails?.name || 'Client',
-    amountLabel: formatMoney(quote.totalAmount),
+    amountLabel: formatInr(quote.totalAmount),
     createdLabel: quote.date,
     statusLabel,
     activityLabel: statusLabel === 'Accepted' ? 'Accepted' : 'Created',
@@ -137,11 +168,11 @@ export default function DashboardPage() {
       tone: 'text-[#22C55E]',
       onClick: async (quote: DashboardQuote) => {
         const shareUrl = buildShareUrl(quote.shareToken || quote.quoteNumber);
-        try {
-          await navigator.clipboard.writeText(shareUrl);
+        const copied = await copyTextToClipboard(shareUrl);
+        if (copied) {
           setCopiedQuoteId(quote.id);
           window.setTimeout(() => setCopiedQuoteId((current) => (current === quote.id ? null : current)), 1800);
-        } catch {
+        } else {
           window.prompt('Copy this link', shareUrl);
         }
       },
@@ -168,11 +199,11 @@ export default function DashboardPage() {
       tone: 'text-[#7C3AED]',
       onClick: async (quote: DashboardQuote) => {
         const shareUrl = buildShareUrl(quote.shareToken || quote.quoteNumber);
-        try {
-          await navigator.clipboard.writeText(shareUrl);
+        const copied = await copyTextToClipboard(shareUrl);
+        if (copied) {
           setCopiedQuoteId(quote.id);
           window.setTimeout(() => setCopiedQuoteId((current) => (current === quote.id ? null : current)), 1800);
-        } catch {
+        } else {
           window.prompt('Copy this link', shareUrl);
         }
       },
@@ -212,7 +243,7 @@ export default function DashboardPage() {
         <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
           {[
             { label: 'Total Quotes', value: totalQuotesCount.toString(), helper: 'All time quotes created', icon: FileText, wrap: 'bg-[#EEF2FF] text-[#2457F0]' },
-            { label: 'Total Amount', value: formatMoney(totalVolume), helper: 'Across all quotes', icon: Star, wrap: 'bg-[#E8FAEF] text-[#22C55E]' },
+            { label: 'Total Amount', value: formatInr(totalVolume), helper: 'Across all quotes', icon: Star, wrap: 'bg-[#E8FAEF] text-[#22C55E]' },
             { label: 'Viewed Quotes', value: viewedQuotesCount.toString(), helper: 'Quotes viewed by clients', icon: Eye, wrap: 'bg-[#FFF4E6] text-[#F59E0B]' },
             { label: 'Accepted Quotes', value: acceptedQuotesCount.toString(), helper: 'Quotes accepted by clients', icon: Package, wrap: 'bg-[#F1EDFF] text-[#7C3AED]' },
           ].map((stat) => {

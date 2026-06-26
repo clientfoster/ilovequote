@@ -66,15 +66,20 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
 
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4" /> },
-    { path: '/clients', label: 'Clients', icon: <Users className="w-4 h-4" /> },
-    { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4" /> },
-    { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" /> },
-    { path: '/templates', label: 'Templates', icon: <Layers3 className="w-4 h-4" /> },
-    { path: '/portfolio', label: 'My Portfolio', icon: <QrCode className="w-4 h-4" /> },
-    { path: '/qr-codes', label: 'QR Portfolio', icon: <QrCode className="w-4 h-4" /> },
-    { path: '/settings', label: 'Settings', icon: <SettingsIcon className="w-4 h-4" /> },
-    { path: '/help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" /> },
+    { path: '/create-quote', label: 'Create Quote', icon: <PlusCircle className="w-4 h-4" /> },
+    ...(isAuthed
+      ? [
+          { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4" /> },
+          { path: '/clients', label: 'Clients', icon: <Users className="w-4 h-4" /> },
+          { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4" /> },
+          { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" /> },
+          { path: '/templates', label: 'Templates', icon: <Layers3 className="w-4 h-4" /> },
+          { path: '/portfolio', label: 'My Portfolio', icon: <QrCode className="w-4 h-4" /> },
+          { path: '/qr-codes', label: 'QR Portfolio', icon: <QrCode className="w-4 h-4" /> },
+          { path: '/settings', label: 'Settings', icon: <SettingsIcon className="w-4 h-4" /> },
+          { path: '/help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" /> },
+        ]
+      : []),
   ];
 
   return (
@@ -361,13 +366,13 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
             )}
 
             <div className="flex-1 overflow-hidden flex flex-col relative bg-[#F8FAFC]">
-              <Outlet context={{ onTriggerToast: triggerToast, setSaveStatus }} />
+              <Outlet context={{ onTriggerToast: triggerToast, setSaveStatus, isAuthed }} />
             </div>
           </div>
 
           {/* MAIN DESKTOP CONTENT AREA */}
           <div className="hidden lg:flex flex-1 flex-col h-full overflow-hidden bg-[#F8FAFC]" id="main-content-flow">
-            <Outlet context={{ onTriggerToast: triggerToast, setSaveStatus }} />
+            <Outlet context={{ onTriggerToast: triggerToast, setSaveStatus, isAuthed }} />
           </div>
         </div>
       </div>

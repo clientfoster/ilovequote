@@ -37,6 +37,13 @@ export interface QuoteItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  name?: string;
+  unit?: string;
+  discountType?: ItemDiscountType;
+  discountValue?: number;
+  gstRate?: number;
+  taxInclusive?: boolean;
+  icon?: string;
 }
 
 export interface ClientDetails {

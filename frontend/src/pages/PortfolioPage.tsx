@@ -5,6 +5,14 @@ import { fetchUserQuotes } from '../quoteApi';
 import { Quote } from '../types';
 import { buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
+function formatInr(value: number) {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    maximumFractionDigits: 0,
+  }).format(Number(value || 0));
+}
+
 function money(value: number) {
   return `₹${Number(value || 0).toLocaleString('en-IN')}`;
 }
@@ -25,7 +33,7 @@ export default function PortfolioPage() {
 
   const stats = [
     { label: 'Total Quotes', value: String(quotes.length), helper: 'All time quotes', icon: FileText, tone: 'bg-[#EEF2FF] text-[#2457F0]' },
-    { label: 'Total Revenue', value: money(quotes.reduce((sum, quote) => sum + quote.totalAmount, 0)), helper: 'Across all quotes', icon: TrendingUp, tone: 'bg-[#E9FCEB] text-[#16A34A]' },
+    { label: 'Total Revenue', value: formatInr(quotes.reduce((sum, quote) => sum + quote.totalAmount, 0)), helper: 'Across all quotes', icon: TrendingUp, tone: 'bg-[#E9FCEB] text-[#16A34A]' },
     { label: 'Total Clients', value: String(new Set(quotes.map((quote) => quote.clientDetails?.email || quote.clientDetails?.name)).size), helper: 'Unique clients', icon: Users, tone: 'bg-[#F1EDFF] text-[#7C3AED]' },
     { label: 'Conversion Rate', value: `${quotes.length ? Math.round((quotes.filter((quote) => quote.status === 'Completed').length / quotes.length) * 100) : 0}%`, helper: 'Quotes accepted', icon: PieChart, tone: 'bg-[#FFF0E1] text-[#F97316]' },
   ] as const;
@@ -121,7 +129,7 @@ export default function PortfolioPage() {
                             <p className="mt-1 text-[12px] text-slate-500">{quote.clientDetails?.email || ''}</p>
                           </div>
                         </td>
-                        <td className="px-4 py-5 md:px-5 font-semibold text-slate-900">{money(quote.totalAmount)}</td>
+                        <td className="px-4 py-5 md:px-5 font-semibold text-slate-900">{formatInr(quote.totalAmount)}</td>
                         <td className="px-4 py-5 md:px-5">
                           <span className="inline-flex items-center rounded-full px-3 py-1 text-[12px] font-semibold bg-[#F3F4F6] text-[#475569]">
                             {quote.status === 'Completed' ? 'Accepted' : 'Draft'}
@@ -172,7 +180,7 @@ export default function PortfolioPage() {
                   .map(([name, amount]) => (
                     <div key={name} className="flex items-center justify-between rounded-xl border border-slate-100 px-4 py-3">
                       <span className="text-sm font-medium text-slate-700">{name}</span>
-                      <span className="text-sm font-semibold text-slate-900">{money(amount)}</span>
+                      <span className="text-sm font-semibold text-slate-900">{formatInr(Number(amount))}</span>
                     </div>
                   ))}
               </div>

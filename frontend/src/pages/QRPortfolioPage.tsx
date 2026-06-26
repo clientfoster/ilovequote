@@ -11,12 +11,25 @@ const quickLinks = [
 ];
 
 export default function QRPortfolioPage() {
-  const portfolioUrl = buildAppUrl('/portfolio/semixon');
+  const portfolioUrl = buildAppUrl('/portfolio');
 
   const handleQuickLink = async (action: 'copy' | 'share' | 'open') => {
     if (action === 'open') {
       window.open(portfolioUrl, '_blank', 'noopener,noreferrer');
       return;
+    }
+
+    if (action === 'share' && navigator.share) {
+      try {
+        await navigator.share({
+          title: 'My Portfolio',
+          text: 'Check out my portfolio',
+          url: portfolioUrl,
+        });
+        return;
+      } catch {
+        // Fall back to copying the link if the native share sheet is dismissed.
+      }
     }
 
     try {

@@ -26,7 +26,7 @@ import {
   SETTINGS_STORAGE_KEY as SETTINGS_STORAGE_KEY_BASE,
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
-import { getDisplayAuthUser, getScopedStorageKey } from '../auth';
+import { getDisplayAuthUser, getScopedStorageKey, isAuthenticated } from '../auth';
 import { createQuote, updateQuote } from '../quoteApi';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
@@ -106,9 +106,11 @@ export default function QuoteWizard() {
   const outletContext = useOutletContext<{
     onTriggerToast: (message: string) => void;
     setSaveStatus: (status: 'idle' | 'saving' | 'saved') => void;
+    isAuthed?: boolean;
   } | null>();
   const onTriggerToast = outletContext?.onTriggerToast ?? (() => {});
   const setSaveStatus = outletContext?.setSaveStatus ?? (() => {});
+  const isAuthed = outletContext?.isAuthed ?? isAuthenticated();
 
   const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
   const [businessData, setBusinessData] = useState<BusinessFormValues>(DEFAULT_BUSINESS_VALUES);
@@ -386,6 +388,12 @@ export default function QuoteWizard() {
   };
 
   const handleSaveDraft = () => {
+    if (!isAuthed) {
+      onTriggerToast('Please log in to save drafts.');
+      navigate('/login?mode=login&next=%2Fcreate-quote');
+      return;
+    }
+
     if (isSavingDraft) return;
     const payload = buildCurrentPayload();
 
@@ -462,6 +470,12 @@ export default function QuoteWizard() {
       return;
     }
 
+    if (!isAuthed) {
+      onTriggerToast('Please log in to finalize and save this quote.');
+      navigate('/login?mode=login&next=%2Fcreate-quote');
+      return;
+    }
+
     try {
       setIsFinalizingQuote(true);
       setSaveState('saving');
@@ -518,9 +532,10 @@ export default function QuoteWizard() {
             <button
               type="button"
               onClick={handleSaveDraft}
+              disabled={!isAuthed}
               className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-extrabold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
             >
-              Save Draft
+              {isAuthed ? 'Save Draft' : 'Log in to Save'}
             </button>
 
             <button
@@ -548,9 +563,10 @@ export default function QuoteWizard() {
           <button
             type="button"
             onClick={handleSaveDraft}
+            disabled={!isAuthed}
             className="md:hidden inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
-            aria-label="Save draft"
-            title="Save draft"
+            aria-label={isAuthed ? 'Save draft' : 'Log in to save'}
+            title={isAuthed ? 'Save draft' : 'Log in to save'}
           >
             <Save size={16} />
           </button>
@@ -694,9 +710,10 @@ export default function QuoteWizard() {
           <button
             type="button"
             onClick={handleSaveDraft}
+            disabled={!isAuthed}
             className="inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-2xl border border-slate-200 bg-white text-slate-700 shadow-sm"
-            aria-label="Save draft"
-            title="Save draft"
+            aria-label={isAuthed ? 'Save draft' : 'Log in to save'}
+            title={isAuthed ? 'Save draft' : 'Log in to save'}
           >
             <Save size={16} />
           </button>
