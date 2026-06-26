@@ -82,6 +82,7 @@ function normalizeScrollableRegions(root: HTMLElement) {
       node.style.minWidth = '0';
       node.style.maxWidth = '100%';
       node.style.tableLayout = 'fixed';
+      node.style.borderCollapse = 'collapse';
     }
 
     if (node.tagName === 'TH' || node.tagName === 'TD') {
@@ -89,11 +90,12 @@ function normalizeScrollableRegions(root: HTMLElement) {
       node.style.wordBreak = 'break-word';
       node.style.whiteSpace = 'normal';
       node.style.boxSizing = 'border-box';
+      node.style.maxWidth = '0';
     }
 
     if (isTableShell || isHorizontalScroll) {
-      node.style.overflow = 'visible';
-      node.style.overflowX = 'visible';
+      node.style.overflow = 'hidden';
+      node.style.overflowX = 'hidden';
       node.style.maxWidth = '100%';
       node.style.width = '100%';
     }

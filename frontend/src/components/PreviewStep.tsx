@@ -608,13 +608,13 @@ export default function PreviewStep({
                   <table className="w-full table-fixed border-collapse text-left">
                     <thead>
                       <tr className="bg-[#1D4ED8] text-white">
-                        <th className="w-[7%] px-3 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-4">#</th>
-                        <th className="w-[38%] px-3 py-3 text-[11px] font-bold uppercase tracking-wider md:px-4">Item / Description</th>
-                        {showQuantity && <th className="w-[8%] px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-3">Qty</th>}
-                        <th className="w-[15%] px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider md:px-4">Rate</th>
-                        {hasDiscount && <th className="w-[14%] px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-3">Discount</th>}
-                        {hasTax && <th className="w-[13%] px-2 py-3 text-center text-[11px] font-bold uppercase tracking-wider md:px-3">Tax (18%)</th>}
-                        <th className="w-[15%] px-3 py-3 text-right text-[11px] font-bold uppercase tracking-wider md:px-4">Amount</th>
+                        <th className="w-[5%] px-2 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-3">#</th>
+                        <th className="w-[32%] px-2 py-3 text-[10px] font-bold uppercase tracking-wider md:px-3">Item / Description</th>
+                        {showQuantity && <th className="w-[7%] px-1.5 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-2">Qty</th>}
+                        <th className="w-[13%] px-2 py-3 text-right text-[10px] font-bold uppercase tracking-wider md:px-3">Rate</th>
+                        {hasDiscount && <th className="w-[12%] px-1.5 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-2">Discount</th>}
+                        {hasTax && <th className="w-[12%] px-1.5 py-3 text-center text-[10px] font-bold uppercase tracking-wider md:px-2">Tax</th>}
+                        <th className="w-[14%] px-2 py-3 text-right text-[10px] font-bold uppercase tracking-wider md:px-3">Amount</th>
                       </tr>
                     </thead>
 
@@ -625,8 +625,8 @@ export default function PreviewStep({
 
                           return (
                             <tr key={item.id} className="align-top">
-                              <td className="px-3 py-4 text-center text-sm font-medium text-slate-600 md:px-4 md:py-5">{index + 1}</td>
-                              <td className="px-3 py-4 md:px-4 md:py-5">
+                              <td className="px-2 py-4 text-center text-sm font-medium text-slate-600 md:px-3 md:py-5">{index + 1}</td>
+                              <td className="px-2 py-4 md:px-3 md:py-5">
                                 <div className="break-words text-sm font-medium text-slate-900 md:text-base">{item.name}</div>
                                 {item.description && (
                                   <div className="mt-1 whitespace-pre-line break-words text-sm leading-relaxed text-slate-500">
@@ -636,17 +636,17 @@ export default function PreviewStep({
                               </td>
 
                               {showQuantity && (
-                                <td className="px-2 py-4 text-center text-sm font-medium text-slate-600 md:px-3 md:py-5">
+                                <td className="px-1.5 py-4 text-center text-sm font-medium text-slate-600 md:px-2 md:py-5">
                                   {line.quantity}
                                 </td>
                               )}
 
-                              <td className="px-3 py-4 text-right text-sm font-medium text-slate-700 md:px-4 md:py-5">
+                              <td className="px-2 py-4 text-right text-sm font-medium text-slate-700 md:px-3 md:py-5">
                                 {formatCurrency(item.price, CURRENCY)}
                               </td>
 
                               {hasDiscount && (
-                                <td className="px-2 py-4 text-center md:px-3 md:py-5">
+                                <td className="px-1.5 py-4 text-center md:px-2 md:py-5">
                                   {line.discount > 0 ? (
                                     <div className="inline-flex flex-col items-center gap-1">
                                       <span className="rounded-lg bg-emerald-100 px-3 py-1 text-[11px] font-bold text-emerald-700">
@@ -663,12 +663,12 @@ export default function PreviewStep({
                               )}
 
                               {hasTax && (
-                                <td className="px-2 py-4 text-center text-sm font-medium text-slate-700 md:px-3 md:py-5">
+                                <td className="px-1.5 py-4 text-center text-sm font-medium text-slate-700 md:px-2 md:py-5">
                                   {line.tax > 0 ? formatCurrency(line.tax, CURRENCY) : '-'}
                                 </td>
                               )}
 
-                              <td className="px-3 py-4 text-right text-sm font-semibold text-slate-900 md:px-4 md:py-5">
+                              <td className="px-2 py-4 text-right text-sm font-semibold text-slate-900 md:px-3 md:py-5">
                                 {formatCurrency(line.amount, CURRENCY)}
                               </td>
                             </tr>
