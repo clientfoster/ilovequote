@@ -72,6 +72,9 @@ function friendlyFirebasePhoneError(error: unknown) {
   if (code.includes('missing-app-credential') || code.includes('app-not-authorized')) {
     return 'Firebase app is not authorized. Check your Firebase web config and authorized domains.';
   }
+  if (code.includes('argument-error')) {
+    return 'Could not start phone OTP. Please refresh and try again.';
+  }
 
   return message || 'Could not complete phone OTP request.';
 }
@@ -717,6 +720,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                       </div>
                     </label>
 
+                    <div id="firebase-phone-recaptcha" />
+
                     <button
                       type="submit"
                       disabled={busy}
@@ -766,7 +771,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                         {busy || phoneBusy ? 'Verifying...' : 'Verify OTP'}
                       </button>
                     </div>
-                    <div id="firebase-phone-recaptcha" />
                   </form>
                 ) : (
                   <form onSubmit={handleCreatePassword} className="mt-6 space-y-4">
