@@ -31,8 +31,8 @@ function isEmailIdentifier(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
 }
 
-function normalizePhoneForFirebase(value: string) {
-  const trimmed = value.trim();
+function normalizePhoneForFirebase(value: unknown) {
+  const trimmed = String(value || '').trim();
   if (trimmed.startsWith('+')) {
     return `+${trimmed.slice(1).replace(/\D/g, '')}`;
   }
@@ -968,7 +968,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
                 <button
                   type="button"
-                  onClick={handleSendPhoneOtp}
+                  onClick={() => handleSendPhoneOtp()}
                   disabled={phoneBusy || !phoneNumber.trim()}
                   className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#D8E4FF] bg-white px-5 py-3 text-[14px] font-bold text-[#2457F0] shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
                 >
