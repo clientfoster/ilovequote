@@ -24,7 +24,7 @@ interface LoginPageProps {
 
 type FlowMode = 'signup' | 'login';
 type SignupStep = 'email' | 'otp' | 'password';
-type LoginView = 'password' | 'forgot' | 'resetOtp' | 'reset';
+type LoginView = 'password' | 'otp' | 'forgot' | 'resetOtp' | 'reset';
 
 function isEmailIdentifier(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -97,6 +97,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
+  const [loginOtp, setLoginOtp] = useState('');
+  const [loginOtpSessionId, setLoginOtpSessionId] = useState('');
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
   const [resetSessionId, setResetSessionId] = useState('');
@@ -113,6 +115,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [devOtp, setDevOtp] = useState('');
   const [devResetOtp, setDevResetOtp] = useState('');
   const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
+  const [loginPhoneConfirmation, setLoginPhoneConfirmation] = useState<ConfirmationResult | null>(null);
   const [resetPhoneConfirmation, setResetPhoneConfirmation] = useState<ConfirmationResult | null>(null);
   const [phoneBusy, setPhoneBusy] = useState(false);
 
@@ -136,7 +139,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     if (modeParam === 'login') {
-    setLoginView((current) => (current === 'forgot' || current === 'resetOtp' || current === 'reset' ? 'password' : current));
+    setLoginView((current) => (current === 'otp' || current === 'forgot' || current === 'resetOtp' || current === 'reset' ? 'password' : current));
     } else if (modeParam === 'signup') {
       setLoginView('password');
     }
@@ -277,6 +280,89 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       navigate('/dashboard');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign in');
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleRequestLoginOtp = async () => {
+    setError('');
+    setInfo('');
+    setLoginOtp('');
+    setLoginOtpSessionId('');
+    setLoginPhoneConfirmation(null);
+    setBusy(true);
+
+    try {
+      const identifier = email.trim();
+      if (emailFieldIsPhone) {
+        const phone = normalizePhoneForFirebase(identifier);
+        const confirmation = await requestPhoneOtp(phone, 'firebase-login-recaptcha');
+        setLoginPhoneConfirmation(confirmation);
+        setEmail(phone);
+        setLoginView('otp');
+        setInfo(`Login OTP sent to ${phone}.`);
+        return;
+      }
+
+      const result = await apiRequest<{ sessionId: string; message?: string; devOtp?: string }>(
+        '/api/auth/request-login-otp',
+        {
+          method: 'POST',
+          body: JSON.stringify({ identifier }),
+        },
+      );
+      setLoginOtpSessionId(result.sessionId);
+      setDevOtp(result.devOtp || '');
+      setLoginView('otp');
+      setInfo(result.message || 'Login OTP sent to your email.');
+    } catch (err) {
+      setError(friendlyFirebasePhoneError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleVerifyLoginOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setInfo('');
+
+    if (loginOtp.length !== 6) {
+      setError('Enter the 6-digit login OTP.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      if (loginPhoneConfirmation) {
+        const credential = await loginPhoneConfirmation.confirm(loginOtp);
+        const idToken = await credential.user.getIdToken();
+        const result = await apiRequest<{ authToken: string; user: AuthUser; message?: string }>(
+          '/api/auth/firebase-phone',
+          {
+            method: 'POST',
+            body: JSON.stringify({ idToken }),
+          },
+        );
+        signIn(result.authToken, result.user);
+        onLogin?.(result.user);
+        navigate('/dashboard');
+        return;
+      }
+
+      const result = await apiRequest<{ authToken: string; user: AuthUser; message?: string }>(
+        '/api/auth/verify-login-otp',
+        {
+          method: 'POST',
+          body: JSON.stringify({ email, sessionId: loginOtpSessionId, otp: loginOtp }),
+        },
+      );
+      signIn(result.authToken, result.user);
+      onLogin?.(result.user);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(friendlyFirebasePhoneError(err));
     } finally {
       setBusy(false);
     }
@@ -516,6 +602,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               <ShieldCheck className="h-3.5 w-3.5" />
               {mode === 'signup'
                 ? 'Secure email sign up'
+                : loginView === 'otp'
+                  ? 'OTP sign in'
                 : loginView === 'forgot'
                   ? 'Password recovery'
                   : loginView === 'resetOtp'
@@ -528,6 +616,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <h1 className="mt-5 text-4xl font-black tracking-[-0.04em] text-slate-950 md:text-6xl">
               {mode === 'signup'
                 ? 'One email, one code, one workspace.'
+                : loginView === 'otp'
+                  ? 'Enter your login OTP.'
                 : loginView === 'forgot'
                   ? 'We’ll help you get back in.'
                   : loginView === 'resetOtp'
@@ -540,6 +630,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             <p className="mt-5 max-w-xl text-[16px] leading-7 text-slate-600 md:text-[18px]">
               {mode === 'signup'
                 ? 'Create your account with email verification, set a password after the OTP check, and get straight into your quote dashboard.'
+                : loginView === 'otp'
+                  ? 'Use the OTP sent to your email or phone to sign in without a password.'
                 : loginView === 'forgot'
                   ? 'Enter your connected email or phone and we will send a recovery OTP.'
                   : loginView === 'resetOtp'
@@ -985,6 +1077,46 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   </button>
                 </div>
               </form>
+            ) : loginView === 'otp' ? (
+              <form onSubmit={handleVerifyLoginOtp} className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
+                  Enter the 6-digit login OTP sent to <span className="font-semibold text-slate-900">{email}</span>.
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Login OTP</span>
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 focus-within:border-[#2457F0] focus-within:bg-white">
+                    <KeyRound className="h-4.5 w-4.5 text-slate-400" />
+                    <input
+                      value={loginOtp}
+                      onChange={(event) => setLoginOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      type="text"
+                      className="w-full bg-transparent text-[15px] font-medium tracking-[0.3em] text-slate-900 outline-none placeholder:tracking-normal placeholder:text-slate-400"
+                      placeholder="000000"
+                    />
+                  </div>
+                </label>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setLoginView('password')}
+                    className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-[14px] font-semibold text-slate-700 shadow-sm"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy || loginOtp.length !== 6}
+                    className="flex-1 rounded-2xl bg-[#2457F0] px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {busy ? 'Verifying...' : 'Verify & Sign in'}
+                  </button>
+                </div>
+              </form>
             ) : (
               <form onSubmit={handleLogin} className="mt-6 space-y-4">
                 <label className="block">
@@ -1038,7 +1170,16 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   >
                     Forgot password?
                   </button>
+                  <button
+                    type="button"
+                    onClick={handleRequestLoginOtp}
+                    className="text-[13px] font-semibold text-[#2457F0] hover:underline"
+                  >
+                    Sign in with OTP
+                  </button>
                 </div>
+
+                <div id="firebase-login-recaptcha" />
 
                 <button
                   type="submit"

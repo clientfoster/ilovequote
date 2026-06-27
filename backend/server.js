@@ -1748,6 +1748,109 @@ app.post('/api/auth/request-otp', async (req, res) => {
   }
 });
 
+app.post('/api/auth/request-login-otp', async (req, res) => {
+  try {
+    await refreshUsers();
+    const rawIdentifier = String(req.body?.identifier || req.body?.email || '').trim();
+    const email = normalizeEmail(rawIdentifier);
+    if (!isValidEmail(email)) {
+      res.status(400).json({ error: 'Please provide a valid email address.' });
+      return;
+    }
+
+    const user = users.find((entry) => normalizeEmail(entry.email) === email);
+    if (!user) {
+      res.status(404).json({ error: 'No account found for that email address.' });
+      return;
+    }
+
+    const otp = generateOtp();
+    const sessionId = randomUUID();
+    pendingOtps.set(sessionId, {
+      email,
+      userId: user.id,
+      purpose: 'login',
+      otp,
+      attempts: 0,
+      expiresAt: Date.now() + OTP_TTL_MS,
+    });
+
+    const delivery = await sendOtpEmail({ email, otp });
+    console.log(`[auth] login OTP for ${email}: ${otp} via ${delivery.provider}`);
+
+    res.json({
+      ok: true,
+      sessionId,
+      expiresInSeconds: Math.floor(OTP_TTL_MS / 1000),
+      message: 'Login OTP sent to your email.',
+      devOtp: resend ? undefined : otp,
+      emailProvider: delivery.provider,
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Unable to create login OTP session',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/auth/verify-login-otp', async (req, res) => {
+  try {
+    await refreshUsers();
+    const sessionId = String(req.body?.sessionId || '');
+    const email = normalizeEmail(req.body?.email);
+    const otp = String(req.body?.otp || '').trim();
+    const session = pendingOtps.get(sessionId);
+
+    if (!session || session.expiresAt < Date.now() || session.purpose !== 'login') {
+      pendingOtps.delete(sessionId);
+      res.status(400).json({ error: 'Login OTP expired. Please request a new OTP.' });
+      return;
+    }
+
+    if (session.email !== email) {
+      res.status(400).json({ error: 'This login OTP does not match the email address.' });
+      return;
+    }
+
+    session.attempts += 1;
+    if (session.attempts > 5) {
+      pendingOtps.delete(sessionId);
+      res.status(429).json({ error: 'Too many attempts. Please request a fresh login OTP.' });
+      return;
+    }
+
+    if (session.otp !== otp) {
+      res.status(400).json({ error: 'Incorrect login OTP. Please try again.' });
+      return;
+    }
+
+    const user = users.find((entry) => entry.id === session.userId && normalizeEmail(entry.email) === email);
+    if (!user) {
+      pendingOtps.delete(sessionId);
+      res.status(404).json({ error: 'Account not found for this login OTP.' });
+      return;
+    }
+
+    pendingOtps.delete(sessionId);
+    recordUserActivity(user.id, 'login', req, { via: 'email_otp' });
+    await persistUsers();
+
+    const authToken = createAuthToken(user.id);
+    res.json({
+      ok: true,
+      authToken,
+      user: makePublicUser(user),
+      message: 'Signed in with OTP successfully.',
+    });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Unable to verify login OTP',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 app.post('/api/auth/verify-otp', async (req, res) => {
   const sessionId = String(req.body?.sessionId || '');
   const email = normalizeEmail(req.body?.email);
