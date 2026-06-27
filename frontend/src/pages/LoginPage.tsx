@@ -27,6 +27,24 @@ type FlowMode = 'signup' | 'login';
 type SignupStep = 'email' | 'otp' | 'password';
 type LoginView = 'password' | 'forgot' | 'reset';
 
+function isEmailIdentifier(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
+}
+
+function normalizePhoneForFirebase(value: string) {
+  const trimmed = value.trim();
+  if (trimmed.startsWith('+')) {
+    return `+${trimmed.slice(1).replace(/\D/g, '')}`;
+  }
+
+  const digits = trimmed.replace(/\D/g, '');
+  if (digits.length === 10) {
+    return `+91${digits}`;
+  }
+
+  return digits ? `+${digits}` : '';
+}
+
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -95,10 +113,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     return 3;
   }, [step]);
 
+  const emailFieldIsPhone = useMemo(() => {
+    const value = email.trim();
+    return Boolean(value && !isEmailIdentifier(value) && /\d/.test(value));
+  }, [email]);
+
   const handleCreateRequestOtp = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setError('');
     setInfo('');
+
+    if (emailFieldIsPhone) {
+      await handleSendPhoneOtp(email);
+      return;
+    }
+
     setBusy(true);
 
     try {
@@ -211,7 +240,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
   };
 
-  const handleSendPhoneOtp = async () => {
+  const handleSendPhoneOtp = async (phoneOverride?: string) => {
     setError('');
     setInfo('');
     setPhoneBusy(true);
@@ -221,14 +250,16 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         throw new Error('Firebase phone login is not configured yet. Add the VITE_FIREBASE_* values.');
       }
 
-      if (!phoneNumber.trim().startsWith('+')) {
-        throw new Error('Enter phone number with country code, for example +919876543210.');
+      const phone = normalizePhoneForFirebase(phoneOverride || phoneNumber);
+      if (!phone || phone.length < 8) {
+        throw new Error('Enter a valid phone number, for example +919876543210.');
       }
 
-      const confirmation = await requestPhoneOtp(phoneNumber.trim(), 'firebase-phone-recaptcha');
+      setPhoneNumber(phone);
+      const confirmation = await requestPhoneOtp(phone, 'firebase-phone-recaptcha');
       setPhoneConfirmation(confirmation);
       setPhoneOtp('');
-      setInfo(`OTP sent to ${phoneNumber.trim()}.`);
+      setInfo(`OTP sent to ${phone}. Enter it in the phone OTP box below.`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not send phone OTP.');
     } finally {
@@ -530,7 +561,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             {mode === 'signup' ? (
               <>
                 <div className="mt-6 grid grid-cols-3 gap-2 text-[11px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  {['Email', 'OTP', 'Password'].map((label, index) => {
+                  {['Email / Phone', 'OTP', 'Password'].map((label, index) => {
                     const active = index + 1 <= stepIndex;
                     return (
                       <div
@@ -584,7 +615,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                       disabled={busy}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-[#2457F0] px-5 py-3.5 text-[15px] font-semibold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-70"
                     >
-                      {busy ? 'Sending OTP...' : 'Send OTP to my email'}
+                      {busy || phoneBusy ? 'Sending OTP...' : emailFieldIsPhone ? 'Send phone OTP' : 'Send OTP to my email'}
                       <ArrowRight className="h-4.5 w-4.5" />
                     </button>
                   </form>
