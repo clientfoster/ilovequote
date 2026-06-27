@@ -65,17 +65,18 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   }, [location.pathname]);
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" /> },
-    { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4" /> },
-    { path: '/clients', label: 'Clients', icon: <Users className="w-4 h-4" /> },
-    { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4" /> },
-    { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" /> },
-    { path: '/templates', label: 'Templates', icon: <Layers3 className="w-4 h-4" /> },
-    { path: '/portfolio', label: 'My Portfolio', icon: <QrCode className="w-4 h-4" /> },
-    { path: '/qr-codes', label: 'QR Portfolio', icon: <QrCode className="w-4 h-4" /> },
-    { path: '/settings', label: 'Settings', icon: <SettingsIcon className="w-4 h-4" /> },
-    { path: '/help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" /> },
+    { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiresAuth: false },
+    { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4" />, requiresAuth: true },
+    { path: '/clients', label: 'Clients', icon: <Users className="w-4 h-4" />, requiresAuth: true },
+    { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4" />, requiresAuth: true },
+    { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" />, requiresAuth: true },
+    { path: '/templates', label: 'Templates', icon: <Layers3 className="w-4 h-4" />, requiresAuth: true },
+    { path: '/portfolio', label: 'My Portfolio', icon: <QrCode className="w-4 h-4" />, requiresAuth: true },
+    { path: '/qr-codes', label: 'QR Portfolio', icon: <QrCode className="w-4 h-4" />, requiresAuth: true },
+    { path: '/settings', label: 'Settings', icon: <SettingsIcon className="w-4 h-4" />, requiresAuth: true },
+    { path: '/help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" />, requiresAuth: false },
   ];
+  const visibleNavItems = navItems.filter((item) => isAuthed || !item.requiresAuth);
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] font-sans antialiased text-slate-800" id="app-viewport">
@@ -192,7 +193,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 </div>
 
                 <nav className="flex-1 px-3 space-y-1 overflow-y-auto">
-                  {navItems.map((item) => {
+                  {visibleNavItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
                       <NavLink
@@ -302,7 +303,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                     </div>
 
                     <nav className="p-2 space-y-1">
-                      {navItems.map((item) => {
+                      {visibleNavItems.map((item) => {
                         const isActive = location.pathname === item.path;
                         return (
                           <NavLink

@@ -20,7 +20,7 @@ import {
 import { Quote } from '../types';
 import { getDisplayAuthUser } from '../auth';
 import { deleteQuote, fetchUserQuotes } from '../quoteApi';
-import { buildAppUrl, buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
+import { buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
 
 type DashboardQuote = Quote & {
   title: string;
@@ -428,14 +428,7 @@ export default function DashboardPage() {
 
         <button
           type="button"
-          onClick={async () => {
-            const helpUrl = buildAppUrl('/help-support');
-            try {
-              await navigator.clipboard.writeText(helpUrl);
-            } catch {
-              window.prompt('Copy this link', helpUrl);
-            }
-          }}
+          onClick={() => navigate('/help-support')}
           className="fixed bottom-5 right-5 z-30 inline-flex items-center gap-2 rounded-full bg-white px-4 py-3 text-sm font-semibold text-[#2457F0] shadow-lg shadow-slate-200"
         >
           <Share2 className="h-4 w-4" />

@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, ChevronDown, LoaderCircle, Moon, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LoaderCircle, Moon, Save } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BusinessStep from '../modules/business-module/BusinessModule';
 import ClientStep from '../modules/client-module/ClientModule';
@@ -26,7 +26,7 @@ import {
   SETTINGS_STORAGE_KEY as SETTINGS_STORAGE_KEY_BASE,
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
-import { getDisplayAuthUser, getScopedStorageKey, isAuthenticated } from '../auth';
+import { getScopedStorageKey, isAuthenticated } from '../auth';
 import { createQuote, updateQuote } from '../quoteApi';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
@@ -94,7 +94,6 @@ const buildQuotePayload = (
 
 export default function QuoteWizard() {
   const navigate = useNavigate();
-  const { displayName, initials } = getDisplayAuthUser();
   const BUSINESS_DRAFT_KEY = getScopedStorageKey(BUSINESS_DRAFT_KEY_BASE);
   const CLIENT_DRAFT_KEY = getScopedStorageKey(CLIENT_DRAFT_KEY_BASE);
   const CLIENT_LOGO_KEY = getScopedStorageKey(CLIENT_LOGO_KEY_BASE);
@@ -539,16 +538,6 @@ export default function QuoteWizard() {
               <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving Quote...' : 'Save Quote') : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
               {!isFinalizingQuote || currentStep !== 4 ? <ChevronRight size={16} /> : null}
             </button>
-
-            <div className="flex items-center gap-3 pl-1">
-              <div className="h-10 w-10 rounded-full bg-blue-100 text-[#1D4ED8] flex items-center justify-center font-extrabold text-xs">{initials}</div>
-              <div className="hidden xl:block">
-                <div className="flex items-center gap-1">
-                  <span className="text-sm font-semibold text-slate-700">{displayName}</span>
-                  <ChevronDown size={14} className="text-slate-400" />
-                </div>
-              </div>
-            </div>
           </div>
 
           <button
