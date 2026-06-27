@@ -77,11 +77,10 @@ const sanitizeFilePart = (value: string) =>
     .replace(/^-+|-+$/g, '')
     .slice(0, 48);
 
-const buildPdfFileName = (quoteNumber: string, issueDate: string, businessName: string, clientName: string) => {
+const buildPdfFileName = (quoteNumber: string, businessName: string, clientName: string) => {
   const quotePart = sanitizeFilePart(quoteNumber) || `Quote-${new Date().toISOString().slice(0, 10)}`;
-  const datePart = sanitizeFilePart(issueDate) || new Date().toISOString().slice(0, 10);
   const ownerPart = sanitizeFilePart(businessName) || sanitizeFilePart(clientName);
-  return ['Quotation', quotePart, datePart, ownerPart].filter(Boolean).join('-') + '.pdf';
+  return ['Quotation', quotePart, ownerPart].filter(Boolean).join('-') + '.pdf';
 };
 
 const parseTerms = (terms: string) =>
@@ -324,7 +323,7 @@ export default function PreviewStep({
         throw new Error('Preview area not found.');
       }
 
-      await downloadElementAsPdf(element, buildPdfFileName(quoteNumber, issueDate, businessName, clientName));
+      await downloadElementAsPdf(element, buildPdfFileName(quoteNumber, businessName, clientName));
     } catch (error: any) {
       console.error('Failed to generate PDF:', error);
       window.alert('PDF generation failed: ' + (error?.message || error));
@@ -359,7 +358,7 @@ export default function PreviewStep({
       autoDownloadTriggeredRef.current = true;
       window.setTimeout(() => {
         setIsDownloading(true);
-        void downloadElementAsPdf(element, buildPdfFileName(quoteNumber, issueDate, businessName, clientName))
+        void downloadElementAsPdf(element, buildPdfFileName(quoteNumber, businessName, clientName))
           .catch((error: any) => {
             console.error('Failed to generate PDF:', error);
             window.alert('PDF generation failed: ' + (error?.message || error));
@@ -383,7 +382,7 @@ export default function PreviewStep({
       cancelled = true;
       if (frame) window.cancelAnimationFrame(frame);
     };
-  }, [autoDownload, quoteContainerRef, quoteNumber, issueDate, businessName, clientName, items.length]);
+  }, [autoDownload, quoteContainerRef, quoteNumber, businessName, clientName, items.length]);
 
   const triggerSendSequence = async (e: React.FormEvent) => {
     e.preventDefault();

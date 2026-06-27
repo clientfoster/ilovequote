@@ -536,7 +536,7 @@ export default function QuoteWizard() {
               className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-[#2F5BFF] px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition-colors hover:bg-[#244ad9] disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isFinalizingQuote && currentStep === 4 ? <LoaderCircle size={16} className="animate-spin" /> : null}
-              <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving Quote...' : 'Finalize Quote') : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
+              <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving Quote...' : 'Save Quote') : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
               {!isFinalizingQuote || currentStep !== 4 ? <ChevronRight size={16} /> : null}
             </button>
 
@@ -714,7 +714,7 @@ export default function QuoteWizard() {
             className="inline-flex min-h-[44px] flex-[1.35] items-center justify-center gap-2 rounded-2xl bg-[#2F5BFF] px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100 disabled:cursor-not-allowed disabled:opacity-70"
           >
             {isFinalizingQuote && currentStep === 4 ? <LoaderCircle size={16} className="animate-spin" /> : null}
-            <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving...' : 'Finalize') : 'Next'}</span>
+            <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving...' : 'Save') : 'Next'}</span>
             {!isFinalizingQuote || currentStep !== 4 ? <ChevronRight size={16} /> : null}
           </button>
         </div>
