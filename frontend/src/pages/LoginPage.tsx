@@ -45,6 +45,38 @@ function normalizePhoneForFirebase(value: string) {
   return digits ? `+${digits}` : '';
 }
 
+function friendlyFirebasePhoneError(error: unknown) {
+  const message = error instanceof Error ? error.message : String(error || '');
+  const code = (error as { code?: string } | null)?.code || '';
+
+  if (code.includes('invalid-phone-number')) {
+    return 'Invalid phone number. Use country code format, for example +919876543210.';
+  }
+  if (code.includes('too-many-requests') || code.includes('quota-exceeded')) {
+    return 'Too many OTP requests. Please wait a while and try again.';
+  }
+  if (code.includes('invalid-verification-code')) {
+    return 'Invalid OTP. Please check the code and try again.';
+  }
+  if (code.includes('code-expired')) {
+    return 'OTP expired. Please send a new OTP.';
+  }
+  if (code.includes('captcha-check-failed')) {
+    return 'reCAPTCHA failed. Refresh the page and try again.';
+  }
+  if (code.includes('unauthorized-domain')) {
+    return 'This domain is not authorized in Firebase. Add your live domain in Firebase Authentication authorized domains.';
+  }
+  if (code.includes('operation-not-allowed')) {
+    return 'Phone sign-in is not enabled in Firebase Authentication.';
+  }
+  if (code.includes('missing-app-credential') || code.includes('app-not-authorized')) {
+    return 'Firebase app is not authorized. Check your Firebase web config and authorized domains.';
+  }
+
+  return message || 'Could not complete phone OTP request.';
+}
+
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -261,7 +293,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       setPhoneOtp('');
       setInfo(`OTP sent to ${phone}. Enter it in the phone OTP box below.`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not send phone OTP.');
+      setError(friendlyFirebasePhoneError(err));
     } finally {
       setPhoneBusy(false);
     }
@@ -295,7 +327,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       onLogin?.(result.user);
       navigate('/dashboard');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not verify phone OTP.');
+      setError(friendlyFirebasePhoneError(err));
     } finally {
       setPhoneBusy(false);
     }
@@ -932,7 +964,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   />
                 </div>
 
-                <div id="firebase-phone-recaptcha" className="min-h-[78px]" />
+                <div id="firebase-phone-recaptcha" />
 
                 <button
                   type="button"

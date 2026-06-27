@@ -36,7 +36,7 @@ export async function requestPhoneOtp(phone: string, containerId: string): Promi
   }
 
   const verifier = new RecaptchaVerifier(auth, containerId, {
-    size: 'normal',
+    size: 'invisible',
   });
   (window as typeof window & { recaptchaVerifier?: RecaptchaVerifier }).recaptchaVerifier = verifier;
 
