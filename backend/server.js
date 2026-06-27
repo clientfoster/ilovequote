@@ -7,6 +7,8 @@ import { fileURLToPath } from 'node:url';
 import { deflateSync, inflateSync } from 'node:zlib';
 import { MongoClient } from 'mongodb';
 import { Resend } from 'resend';
+import { cert, getApps, initializeApp } from 'firebase-admin/app';
+import { getAuth as getFirebaseAdminAuth } from 'firebase-admin/auth';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -66,12 +68,40 @@ const PUBLIC_BASE_URL = process.env.PUBLIC_BASE_URL || `http://localhost:${PORT}
 const FRONTEND_BASE_URL = process.env.FRONTEND_BASE_URL || PUBLIC_BASE_URL;
 const RESEND_API_KEY = process.env.RESEND_API_KEY || '';
 const RESEND_FROM_EMAIL = process.env.RESEND_FROM_EMAIL || 'onboarding@resend.dev';
+const FIREBASE_PROJECT_ID = cleanEnvValue(process.env.FIREBASE_PROJECT_ID || '');
+const FIREBASE_CLIENT_EMAIL = cleanEnvValue(process.env.FIREBASE_CLIENT_EMAIL || '');
+const FIREBASE_PRIVATE_KEY = cleanEnvValue(process.env.FIREBASE_PRIVATE_KEY || '').replace(/\\n/g, '\n');
+const FIREBASE_SERVICE_ACCOUNT_JSON = cleanEnvValue(process.env.FIREBASE_SERVICE_ACCOUNT_JSON || '');
 const OTP_TTL_MS = 10 * 60 * 1000;
 const VERIFICATION_TTL_MS = 15 * 60 * 1000;
 const PASSWORD_RESET_TTL_MS = 30 * 60 * 1000;
 
 const app = express();
 const resend = RESEND_API_KEY ? new Resend(RESEND_API_KEY) : null;
+let firebaseAdminReady = false;
+let firebaseAdminError = '';
+
+try {
+  let firebaseCredential = null;
+  if (FIREBASE_SERVICE_ACCOUNT_JSON) {
+    firebaseCredential = cert(JSON.parse(FIREBASE_SERVICE_ACCOUNT_JSON));
+  } else if (FIREBASE_PROJECT_ID && FIREBASE_CLIENT_EMAIL && FIREBASE_PRIVATE_KEY) {
+    firebaseCredential = cert({
+      projectId: FIREBASE_PROJECT_ID,
+      clientEmail: FIREBASE_CLIENT_EMAIL,
+      privateKey: FIREBASE_PRIVATE_KEY,
+    });
+  }
+
+  if (firebaseCredential && getApps().length === 0) {
+    initializeApp({ credential: firebaseCredential });
+  }
+  firebaseAdminReady = getApps().length > 0;
+} catch (error) {
+  firebaseAdminError = error instanceof Error ? error.message : String(error);
+  firebaseAdminReady = false;
+}
+
 const mongoClient = new MongoClient(MONGODB_URI);
 let mongoDb = null;
 let usersCollection = null;
@@ -201,6 +231,11 @@ function normalizeEmail(value) {
 
 function normalizePhone(value) {
   return String(value || '').trim().replace(/[^\d+]/g, '');
+}
+
+function fallbackPhoneEmail(phone) {
+  const normalized = normalizePhone(phone).replace(/^\+/, '') || randomUUID();
+  return `phone-${normalized}@phone.ilovequote.local`;
 }
 
 function normalizeLoginIdentifier(value) {
@@ -729,6 +764,23 @@ function revokeAuthTokensForUser(userId) {
       authTokens.delete(token);
     }
   }
+}
+
+async function verifyFirebasePhoneToken(idToken) {
+  if (!firebaseAdminReady) {
+    throw new Error(firebaseAdminError || 'Firebase Admin is not configured on the backend.');
+  }
+
+  const decoded = await getFirebaseAdminAuth().verifyIdToken(idToken);
+  const phone = normalizePhone(decoded.phone_number || '');
+  if (!phone) {
+    throw new Error('Firebase token does not include a verified phone number.');
+  }
+
+  return {
+    uid: decoded.uid,
+    phone,
+  };
 }
 
 function publicShareUrl(req, quote) {
@@ -1553,8 +1605,80 @@ app.get('/api/health', async (_req, res) => {
     mongoConfigSource,
     mongoError: canUseMongo ? null : mongoLastError || null,
     emailProvider: resend ? 'resend' : 'dev',
+    firebasePhoneReady: firebaseAdminReady,
+    firebaseError: firebaseAdminReady ? null : firebaseAdminError || null,
     quotes: quotes.length,
   });
+});
+
+app.post('/api/auth/firebase-phone', async (req, res) => {
+  try {
+    await refreshUsers();
+    const idToken = String(req.body?.idToken || '').trim();
+    const name = String(req.body?.name || '').trim();
+    const emailCandidate = normalizeEmail(req.body?.email);
+
+    if (!idToken) {
+      res.status(400).json({ error: 'Firebase ID token is required.' });
+      return;
+    }
+
+    const firebaseUser = await verifyFirebasePhoneToken(idToken);
+    const existing = users.find((entry) => {
+      const entryPhone = normalizePhone(entry.phone || '');
+      return entry.firebaseUid === firebaseUser.uid || (entryPhone && entryPhone === firebaseUser.phone);
+    });
+    const now = new Date().toISOString();
+    const email = isValidEmail(emailCandidate)
+      ? emailCandidate
+      : existing?.email || fallbackPhoneEmail(firebaseUser.phone);
+
+    const user = existing
+      ? {
+          ...existing,
+          firebaseUid: firebaseUser.uid,
+          phone: firebaseUser.phone,
+          email,
+          name: name || existing.name || firebaseUser.phone,
+          username: firebaseUser.phone,
+          authMethod: 'phone',
+          phoneVerifiedAt: existing.phoneVerifiedAt || now,
+          updatedAt: now,
+        }
+      : {
+          id: randomUUID(),
+          firebaseUid: firebaseUser.uid,
+          email,
+          name: name || firebaseUser.phone,
+          phone: firebaseUser.phone,
+          username: firebaseUser.phone,
+          authMethod: 'phone',
+          createdAt: now,
+          updatedAt: now,
+          phoneVerifiedAt: now,
+          loginActivity: [],
+        };
+
+    users = existing
+      ? users.map((entry) => (entry.id === existing.id ? user : entry))
+      : [user, ...users];
+
+    recordUserActivity(user.id, existing ? 'login' : 'register', req, { via: 'firebase_phone' });
+    await persistUsers();
+
+    const authToken = createAuthToken(user.id);
+    res.status(existing ? 200 : 201).json({
+      ok: true,
+      authToken,
+      user: makePublicUser(user),
+      message: existing ? 'Signed in with phone successfully.' : 'Phone account created successfully.',
+    });
+  } catch (error) {
+    res.status(401).json({
+      error: 'Unable to verify phone OTP.',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 
 app.post('/api/auth/request-otp', async (req, res) => {

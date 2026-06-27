@@ -35,12 +35,12 @@ export function isAuthenticated() {
 }
 
 export function signIn(token: string, user?: AuthUser | string) {
-  const email = typeof user === 'string' ? user : user?.email;
+  const scope = typeof user === 'string' ? user : user?.email || user?.phone || user?.username || user?.id;
   const payload = typeof user === 'string'
     ? { email: user, name: user, username: user, authMethod: 'email' as const }
     : user || null;
 
-  localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(email || 'signed_in'));
+  localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(scope || 'signed_in'));
   localStorage.setItem(AUTH_TOKEN_KEY, token);
   if (payload) {
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
@@ -76,7 +76,7 @@ export function getStoredAuthUser() {
 
 export function setStoredAuthUser(user: AuthUser) {
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
-  localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(user.email || user.name || 'signed_in'));
+  localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(user.email || user.phone || user.username || user.id || user.name || 'signed_in'));
 }
 
 export function getDisplayAuthUser() {

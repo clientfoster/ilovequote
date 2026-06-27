@@ -8,6 +8,7 @@ import {
   KeyRound,
   Lock,
   Mail,
+  Phone,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
@@ -15,6 +16,8 @@ import BrandMark from '../components/BrandMark';
 import { AuthUser } from '../auth';
 import { signIn } from '../auth';
 import { apiRequest } from '../api';
+import { isFirebasePhoneConfigured, requestPhoneOtp } from '../firebasePhoneAuth';
+import { ConfirmationResult } from 'firebase/auth';
 
 interface LoginPageProps {
   onLogin?: (user: AuthUser) => void;
@@ -55,6 +58,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [info, setInfo] = useState('');
   const [devOtp, setDevOtp] = useState('');
   const [devResetToken, setDevResetToken] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
+  const [phoneOtp, setPhoneOtp] = useState('');
+  const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
+  const [phoneBusy, setPhoneBusy] = useState(false);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -201,6 +208,65 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       setError(err instanceof Error ? err.message : 'Could not sign in');
     } finally {
       setBusy(false);
+    }
+  };
+
+  const handleSendPhoneOtp = async () => {
+    setError('');
+    setInfo('');
+    setPhoneBusy(true);
+
+    try {
+      if (!isFirebasePhoneConfigured()) {
+        throw new Error('Firebase phone login is not configured yet. Add the VITE_FIREBASE_* values.');
+      }
+
+      if (!phoneNumber.trim().startsWith('+')) {
+        throw new Error('Enter phone number with country code, for example +919876543210.');
+      }
+
+      const confirmation = await requestPhoneOtp(phoneNumber.trim(), 'firebase-phone-recaptcha');
+      setPhoneConfirmation(confirmation);
+      setPhoneOtp('');
+      setInfo(`OTP sent to ${phoneNumber.trim()}.`);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not send phone OTP.');
+    } finally {
+      setPhoneBusy(false);
+    }
+  };
+
+  const handleVerifyPhoneOtp = async () => {
+    setError('');
+    setInfo('');
+
+    if (!phoneConfirmation) {
+      setError('Please send the phone OTP first.');
+      return;
+    }
+
+    setPhoneBusy(true);
+    try {
+      const credential = await phoneConfirmation.confirm(phoneOtp);
+      const idToken = await credential.user.getIdToken();
+      const result = await apiRequest<{ authToken: string; user: AuthUser; message?: string }>(
+        '/api/auth/firebase-phone',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            idToken,
+            name: mode === 'signup' ? name : '',
+          }),
+        },
+      );
+
+      signIn(result.authToken, result.user);
+      onLogin?.(result.user);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Could not verify phone OTP.');
+    } finally {
+      setPhoneBusy(false);
     }
   };
 
@@ -805,6 +871,74 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 </button>
               </form>
             )}
+
+            <div className="mt-6 rounded-3xl border border-[#D8E4FF] bg-[#F8FBFF] p-4">
+              <div className="flex items-start gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#EEF4FF] text-[#2457F0]">
+                  <Phone className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-[15px] font-black text-slate-950">
+                    {mode === 'signup' ? 'Create account with phone OTP' : 'Sign in with phone OTP'}
+                  </h3>
+                  <p className="mt-1 text-[12px] font-medium leading-5 text-slate-500">
+                    Firebase sends the SMS code. Use country code format like +919876543210.
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-4 space-y-3">
+                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 focus-within:border-[#2457F0]">
+                  <Phone className="h-4.5 w-4.5 text-slate-400" />
+                  <input
+                    value={phoneNumber}
+                    onChange={(event) => setPhoneNumber(event.target.value)}
+                    type="tel"
+                    name="phone-auth"
+                    autoComplete="tel"
+                    className="w-full bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
+                    placeholder="+91 98765 43210"
+                  />
+                </div>
+
+                <div id="firebase-phone-recaptcha" className="min-h-[78px]" />
+
+                <button
+                  type="button"
+                  onClick={handleSendPhoneOtp}
+                  disabled={phoneBusy || !phoneNumber.trim()}
+                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#D8E4FF] bg-white px-5 py-3 text-[14px] font-bold text-[#2457F0] shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+                >
+                  {phoneBusy && !phoneConfirmation ? 'Sending OTP...' : 'Send phone OTP'}
+                </button>
+
+                {phoneConfirmation ? (
+                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
+                    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 focus-within:border-[#2457F0]">
+                      <KeyRound className="h-4.5 w-4.5 text-slate-400" />
+                      <input
+                        value={phoneOtp}
+                        onChange={(event) => setPhoneOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={6}
+                        type="text"
+                        className="w-full bg-transparent text-[15px] font-medium tracking-[0.3em] text-slate-900 outline-none placeholder:tracking-normal placeholder:text-slate-400"
+                        placeholder="000000"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleVerifyPhoneOtp}
+                      disabled={phoneBusy || phoneOtp.length !== 6}
+                      className="rounded-2xl bg-[#2457F0] px-5 py-3 text-[14px] font-bold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                      {phoneBusy ? 'Verifying...' : 'Verify'}
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            </div>
 
             <div className="mt-6 flex items-center gap-4">
               <div className="h-px flex-1 bg-slate-200" />
