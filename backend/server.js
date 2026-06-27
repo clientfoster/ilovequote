@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
 const DATA_DIR = path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'quotes.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
+const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
 
 function loadLocalEnv() {
   const envPath = path.join(__dirname, '.env');
@@ -75,6 +76,7 @@ const mongoClient = new MongoClient(MONGODB_URI);
 let mongoDb = null;
 let usersCollection = null;
 let quotesCollection = null;
+let productsCollection = null;
 let mongoReady = false;
 let mongoDisabled = false;
 let mongoLastError = mongoConfigSource === 'invalid-env'
@@ -82,6 +84,7 @@ let mongoLastError = mongoConfigSource === 'invalid-env'
   : '';
 let quotes = [];
 let users = [];
+let products = [];
 app.use(express.json({ limit: '5mb' }));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
@@ -287,7 +290,7 @@ async function ensureMongo() {
     return false;
   }
 
-  if (mongoReady && mongoDb && usersCollection && quotesCollection) {
+  if (mongoReady && mongoDb && usersCollection && quotesCollection && productsCollection) {
     return true;
   }
 
@@ -299,11 +302,14 @@ async function ensureMongo() {
     mongoDb = mongoClient.db(MONGODB_DB_NAME);
     usersCollection = mongoDb.collection('users');
     quotesCollection = mongoDb.collection('quotes');
+    productsCollection = mongoDb.collection('products');
     await Promise.all([
       usersCollection.createIndex({ email: 1 }, { unique: true }),
       quotesCollection.createIndex({ ownerUserId: 1 }),
       quotesCollection.createIndex({ shareToken: 1 }, { unique: true }),
       quotesCollection.createIndex({ quoteNumber: 1 }),
+      productsCollection.createIndex({ ownerUserId: 1 }),
+      productsCollection.createIndex({ ownerUserId: 1, name: 1 }),
     ]);
     mongoReady = true;
     return true;
@@ -315,6 +321,7 @@ async function ensureMongo() {
     mongoDb = null;
     usersCollection = null;
     quotesCollection = null;
+    productsCollection = null;
     return false;
   }
 }
@@ -580,6 +587,47 @@ async function refreshUsers() {
   return loadUsers();
 }
 
+function normalizeProductPayload(payload = {}, ownerUserId) {
+  const name = String(payload.name || payload.description || '').trim();
+  const now = new Date().toISOString();
+  return {
+    id: payload.id || `product_${randomUUID()}`,
+    ownerUserId,
+    name,
+    description: String(payload.description || '').trim(),
+    itemType: payload.itemType === 'Service' ? 'Service' : 'Product',
+    unit: String(payload.unit || (payload.itemType === 'Service' ? 'Hour' : 'Nos')).trim() || 'Nos',
+    price: Math.max(0, Number(payload.price ?? payload.unitPrice ?? 0) || 0),
+    gstRate: Math.max(0, Number(payload.gstRate ?? 0) || 0),
+    complimentary: Boolean(payload.complimentary),
+    createdAt: payload.createdAt || now,
+    updatedAt: now,
+  };
+}
+
+async function loadProducts() {
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    const storedProducts = await productsCollection.find({}).sort({ createdAt: -1 }).toArray();
+    if (storedProducts.length > 0) {
+      products = storedProducts.map(stripMongoId);
+      return products;
+    }
+
+    const legacyProducts = await readLegacyJsonArray(PRODUCTS_FILE, 'products');
+    if (legacyProducts.length > 0) {
+      products = legacyProducts;
+      await productsCollection.insertMany(legacyProducts);
+      return products;
+    }
+  }
+
+  products = await readLegacyJsonArray(PRODUCTS_FILE, 'products');
+  return products;
+}
+
+await loadProducts();
+
 async function persistQuotes() {
   const canUseMongo = await ensureMongo();
   if (canUseMongo) {
@@ -591,6 +639,19 @@ async function persistQuotes() {
   }
 
   await writeLegacyJsonArray(STORE_FILE, 'quotes', quotes);
+}
+
+async function persistProducts() {
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    await productsCollection.deleteMany({});
+    if (products.length > 0) {
+      await productsCollection.insertMany(products);
+    }
+    return;
+  }
+
+  await writeLegacyJsonArray(PRODUCTS_FILE, 'products', products);
 }
 
 async function persistUsers() {
@@ -1948,8 +2009,9 @@ app.delete('/api/account', async (req, res) => {
     const userId = user.id;
     users = users.filter((entry) => entry.id !== userId);
     quotes = quotes.filter((quote) => quote.ownerUserId !== userId);
+    products = products.filter((product) => product.ownerUserId !== userId);
     revokeAuthTokensForUser(userId);
-    await Promise.all([persistUsers(), persistQuotes()]);
+    await Promise.all([persistUsers(), persistQuotes(), persistProducts()]);
     res.json({ ok: true });
   } catch (error) {
     res.status(400).json({
@@ -1957,6 +2019,95 @@ app.delete('/api/account', async (req, res) => {
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
+});
+
+app.get('/api/products', (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Please log in or sign up to view items.' });
+    return;
+  }
+
+  res.json({
+    items: products.filter((product) => product.ownerUserId === user.id),
+  });
+});
+
+app.post('/api/products', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Please log in or sign up to save items.' });
+      return;
+    }
+
+    const product = normalizeProductPayload(req.body || {}, user.id);
+    if (!product.name) {
+      res.status(400).json({ error: 'Item name is required.' });
+      return;
+    }
+
+    products = [
+      product,
+      ...products.filter((entry) => !(entry.ownerUserId === user.id && entry.id === product.id)),
+    ];
+    await persistProducts();
+    res.status(201).json({ ok: true, item: product });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to save item',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.patch('/api/products/:id', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Please log in or sign up to update items.' });
+      return;
+    }
+
+    const index = products.findIndex((entry) => entry.id === req.params.id && entry.ownerUserId === user.id);
+    if (index === -1) {
+      res.status(404).json({ error: 'Item not found.' });
+      return;
+    }
+
+    const product = normalizeProductPayload({ ...products[index], ...(req.body || {}), id: products[index].id, createdAt: products[index].createdAt }, user.id);
+    if (!product.name) {
+      res.status(400).json({ error: 'Item name is required.' });
+      return;
+    }
+
+    products[index] = product;
+    await persistProducts();
+    res.json({ ok: true, item: product });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to update item',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.delete('/api/products/:id', async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Please log in or sign up to delete items.' });
+    return;
+  }
+
+  const item = products.find((entry) => entry.id === req.params.id && entry.ownerUserId === user.id);
+  if (!item) {
+    res.status(404).json({ error: 'Item not found.' });
+    return;
+  }
+
+  products = products.filter((entry) => entry.id !== item.id);
+  await persistProducts();
+  res.json({ ok: true });
 });
 
 app.get('/api/quotes', (req, res) => {
