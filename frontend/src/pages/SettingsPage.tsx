@@ -205,6 +205,8 @@ export default function SettingsPage() {
   };
 
   const authTypeLabel = user?.authMethod === 'phone' ? 'Phone' : 'Email';
+  const emailLabel = user?.authMethod === 'phone' ? 'Connected Email' : 'Email Address';
+  const emailValue = email || (user?.authMethod === 'phone' ? 'Not connected' : 'your-email@example.com');
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
@@ -322,9 +324,9 @@ export default function SettingsPage() {
 
                     <div className="grid gap-5 md:grid-cols-2">
                       <div>
-                        <label className="mb-3 block text-[14px] font-semibold text-slate-900">Email Address</label>
+                        <label className="mb-3 block text-[14px] font-semibold text-slate-900">{emailLabel}</label>
                         <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-4 text-[15px] text-slate-700 shadow-sm">
-                          {email || 'your-email@example.com'}
+                          {emailValue}
                         </div>
                       </div>
 

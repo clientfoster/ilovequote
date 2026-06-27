@@ -29,13 +29,21 @@ function normalizeScope(value: string) {
     .replace(/^_+|_+$/g, '') || 'guest';
 }
 
+export function isInternalPhoneEmail(value?: string) {
+  return /@phone\.ilovequote\.local$/i.test(String(value || '').trim());
+}
+
 export function isAuthenticated() {
   if (typeof window === 'undefined') return false;
   return Boolean(localStorage.getItem(AUTH_STORAGE_KEY)) && Boolean(localStorage.getItem(AUTH_TOKEN_KEY));
 }
 
 export function signIn(token: string, user?: AuthUser | string) {
-  const scope = typeof user === 'string' ? user : user?.email || user?.phone || user?.username || user?.id;
+  const scope = typeof user === 'string'
+    ? user
+    : isInternalPhoneEmail(user?.email)
+      ? user?.phone || user?.username || user?.id
+      : user?.email || user?.phone || user?.username || user?.id;
   const payload = typeof user === 'string'
     ? { email: user, name: user, username: user, authMethod: 'email' as const }
     : user || null;
@@ -76,13 +84,15 @@ export function getStoredAuthUser() {
 
 export function setStoredAuthUser(user: AuthUser) {
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
-  localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(user.email || user.phone || user.username || user.id || user.name || 'signed_in'));
+  const scope = isInternalPhoneEmail(user.email) ? user.phone || user.username || user.id : user.email || user.phone || user.username || user.id;
+  localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(scope || user.name || 'signed_in'));
 }
 
 export function getDisplayAuthUser() {
   const user = getStoredAuthUser();
-  const displayName = user?.name?.trim() || user?.username?.trim() || user?.email?.trim() || user?.phone?.trim() || 'Account';
-  const username = user?.username?.trim() || user?.phone?.trim() || user?.email?.trim() || '';
+  const publicEmail = isInternalPhoneEmail(user?.email) ? '' : user?.email?.trim() || '';
+  const displayName = user?.name?.trim() || user?.username?.trim() || publicEmail || user?.phone?.trim() || 'Account';
+  const username = user?.username?.trim() || user?.phone?.trim() || publicEmail || '';
   const initials =
     displayName
       .split(' ')
@@ -97,7 +107,7 @@ export function getDisplayAuthUser() {
     displayName,
     username,
     initials,
-    email: user?.email || '',
+    email: publicEmail,
     phone: user?.phone || '',
   };
 }
