@@ -8,7 +8,6 @@ import {
   KeyRound,
   Lock,
   Mail,
-  Phone,
   ShieldCheck,
   Sparkles,
 } from 'lucide-react';
@@ -25,7 +24,7 @@ interface LoginPageProps {
 
 type FlowMode = 'signup' | 'login';
 type SignupStep = 'email' | 'otp' | 'password';
-type LoginView = 'password' | 'forgot' | 'reset';
+type LoginView = 'password' | 'forgot' | 'resetOtp' | 'reset';
 
 function isEmailIdentifier(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim());
@@ -97,6 +96,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [loginPassword, setLoginPassword] = useState('');
   const [resetPassword, setResetPassword] = useState('');
   const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [resetSessionId, setResetSessionId] = useState('');
+  const [resetOtp, setResetOtp] = useState('');
   const [sessionId, setSessionId] = useState('');
   const [verificationToken, setVerificationToken] = useState('');
   const [resetToken, setResetToken] = useState('');
@@ -107,10 +108,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [devOtp, setDevOtp] = useState('');
-  const [devResetToken, setDevResetToken] = useState('');
-  const [phoneNumber, setPhoneNumber] = useState('');
-  const [phoneOtp, setPhoneOtp] = useState('');
+  const [devResetOtp, setDevResetOtp] = useState('');
   const [phoneConfirmation, setPhoneConfirmation] = useState<ConfirmationResult | null>(null);
+  const [resetPhoneConfirmation, setResetPhoneConfirmation] = useState<ConfirmationResult | null>(null);
   const [phoneBusy, setPhoneBusy] = useState(false);
 
   useEffect(() => {
@@ -133,7 +133,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     if (modeParam === 'login') {
-      setLoginView((current) => (current === 'forgot' || current === 'reset' ? 'password' : current));
+    setLoginView((current) => (current === 'forgot' || current === 'resetOtp' || current === 'reset' ? 'password' : current));
     } else if (modeParam === 'signup') {
       setLoginView('password');
     }
@@ -186,6 +186,12 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     event.preventDefault();
     setError('');
     setInfo('');
+
+    if (phoneConfirmation) {
+      await handleVerifyPhoneOtp();
+      return;
+    }
+
     setBusy(true);
 
     try {
@@ -228,7 +234,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         {
           method: 'POST',
           body: JSON.stringify({
-            email,
+            email: phoneConfirmation ? '' : email,
+            phone: phoneConfirmation ? email : '',
             name,
             password,
             verificationToken,
@@ -282,15 +289,16 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         throw new Error('Firebase phone login is not configured yet. Add the VITE_FIREBASE_* values.');
       }
 
-      const phone = normalizePhoneForFirebase(phoneOverride || phoneNumber);
+      const phone = normalizePhoneForFirebase(phoneOverride || email);
       if (!phone || phone.length < 8) {
         throw new Error('Enter a valid phone number, for example +919876543210.');
       }
 
-      setPhoneNumber(phone);
       const confirmation = await requestPhoneOtp(phone, 'firebase-phone-recaptcha');
       setPhoneConfirmation(confirmation);
-      setPhoneOtp('');
+      setOtp('');
+      setEmail(phone);
+      setStep('otp');
       setInfo(`OTP sent to ${phone}. Enter it in the phone OTP box below.`);
     } catch (err) {
       setError(friendlyFirebasePhoneError(err));
@@ -310,22 +318,20 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
 
     setPhoneBusy(true);
     try {
-      const credential = await phoneConfirmation.confirm(phoneOtp);
+      const credential = await phoneConfirmation.confirm(otp);
       const idToken = await credential.user.getIdToken();
-      const result = await apiRequest<{ authToken: string; user: AuthUser; message?: string }>(
-        '/api/auth/firebase-phone',
+      const result = await apiRequest<{ verificationToken: string; phone: string; message?: string }>(
+        '/api/auth/verify-phone-otp',
         {
           method: 'POST',
-          body: JSON.stringify({
-            idToken,
-            name: mode === 'signup' ? name : '',
-          }),
+          body: JSON.stringify({ idToken }),
         },
       );
 
-      signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      setVerificationToken(result.verificationToken);
+      setEmail(result.phone);
+      setStep('password');
+      setInfo(result.message || 'Phone verified. Create your password next.');
     } catch (err) {
       setError(friendlyFirebasePhoneError(err));
     } finally {
@@ -337,27 +343,86 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     event.preventDefault();
     setError('');
     setInfo('');
+    setResetSessionId('');
+    setResetOtp('');
+    setResetToken('');
+    setResetPhoneConfirmation(null);
+    setDevResetOtp('');
     setBusy(true);
 
     try {
-      const result = await apiRequest<{ message?: string; devResetToken?: string }>(
+      const identifier = email.trim();
+      const result = await apiRequest<{ delivery?: 'email' | 'firebase-phone'; phone?: string; sessionId?: string; message?: string; devOtp?: string }>(
         '/api/auth/request-password-reset',
         {
           method: 'POST',
-          body: JSON.stringify({ email }),
+          body: JSON.stringify({ identifier }),
         },
       );
 
-      setInfo(result.message || 'If an account exists for that email, we sent a reset link.');
-      setDevResetToken(result.devResetToken || '');
-      if (result.devResetToken) {
-        setResetToken(result.devResetToken);
-        setLoginView('reset');
-        setResetPassword('');
-        setResetConfirmPassword('');
+      if (result.delivery === 'firebase-phone') {
+        const phone = normalizePhoneForFirebase(result.phone || identifier);
+        const confirmation = await requestPhoneOtp(phone, 'firebase-reset-recaptcha');
+        setResetPhoneConfirmation(confirmation);
+        setEmail(phone);
+        setLoginView('resetOtp');
+        setInfo(result.message || `Recovery OTP sent to ${phone}.`);
+        return;
+      }
+
+      setInfo(result.message || 'If an account exists for that email, we sent a recovery OTP.');
+      setDevResetOtp(result.devOtp || '');
+      if (result.sessionId) {
+        setResetSessionId(result.sessionId);
+        setLoginView('resetOtp');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Could not request password reset');
+      setError(friendlyFirebasePhoneError(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const handleVerifyPasswordResetOtp = async (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setError('');
+    setInfo('');
+
+    if (resetOtp.length !== 6) {
+      setError('Enter the 6-digit recovery OTP.');
+      return;
+    }
+
+    setBusy(true);
+    try {
+      if (resetPhoneConfirmation) {
+        const credential = await resetPhoneConfirmation.confirm(resetOtp);
+        const idToken = await credential.user.getIdToken();
+        const result = await apiRequest<{ resetToken: string; message?: string }>(
+          '/api/auth/verify-phone-password-reset',
+          {
+            method: 'POST',
+            body: JSON.stringify({ idToken }),
+          },
+        );
+        setResetToken(result.resetToken);
+      } else {
+        const result = await apiRequest<{ resetToken: string; message?: string }>(
+          '/api/auth/verify-password-reset-otp',
+          {
+            method: 'POST',
+            body: JSON.stringify({ email, sessionId: resetSessionId, otp: resetOtp }),
+          },
+        );
+        setResetToken(result.resetToken);
+      }
+
+      setLoginView('reset');
+      setResetPassword('');
+      setResetConfirmPassword('');
+      setInfo('Recovery OTP verified. Create your new password.');
+    } catch (err) {
+      setError(friendlyFirebasePhoneError(err));
     } finally {
       setBusy(false);
     }
@@ -410,17 +475,21 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setError('');
     setInfo('');
     setDevOtp('');
+    setPhoneConfirmation(null);
   };
 
   const goBackToLogin = () => {
     setLoginView('password');
     setResetToken('');
+    setResetSessionId('');
+    setResetOtp('');
     setResetPassword('');
     setResetConfirmPassword('');
     setShowResetPassword(false);
     setError('');
     setInfo('');
-    setDevResetToken('');
+    setDevResetOtp('');
+    setResetPhoneConfirmation(null);
   };
 
   return (
@@ -446,8 +515,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 ? 'Secure email sign up'
                 : loginView === 'forgot'
                   ? 'Password recovery'
-                  : loginView === 'reset'
-                    ? 'Reset password'
+                  : loginView === 'resetOtp'
+                    ? 'Recovery OTP'
+                    : loginView === 'reset'
+                      ? 'Reset password'
                     : 'Secure email sign in'}
             </div>
 
@@ -456,8 +527,10 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 ? 'One email, one code, one workspace.'
                 : loginView === 'forgot'
                   ? 'We’ll help you get back in.'
-                  : loginView === 'reset'
-                    ? 'Set a new password and continue.'
+                  : loginView === 'resetOtp'
+                    ? 'Enter the recovery OTP.'
+                    : loginView === 'reset'
+                      ? 'Set a new password and continue.'
                     : 'One email, one password, one workspace.'}
             </h1>
 
@@ -465,9 +538,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
               {mode === 'signup'
                 ? 'Create your account with email verification, set a password after the OTP check, and get straight into your quote dashboard.'
                 : loginView === 'forgot'
-                  ? 'Enter the email on your account and we’ll send a reset link to that inbox.'
-                  : loginView === 'reset'
-                    ? 'Use the link from your email to set a new password safely.'
+                  ? 'Enter your connected email or phone and we will send a recovery OTP.'
+                  : loginView === 'resetOtp'
+                    ? 'Enter the OTP sent to your connected email or phone number.'
+                    : loginView === 'reset'
+                    ? 'Create a new password for this account.'
                     : 'Sign in with your email or phone and password to continue managing quotes.'}
             </p>
 
@@ -685,17 +760,18 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                       </button>
                       <button
                         type="submit"
-                        disabled={busy || otp.length !== 6}
-                        className="flex-1 rounded-2xl bg-[#2457F0] px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
-                      >
-                        {busy ? 'Verifying...' : 'Verify OTP'}
+                      disabled={busy || phoneBusy || otp.length !== 6}
+                      className="flex-1 rounded-2xl bg-[#2457F0] px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
+                    >
+                        {busy || phoneBusy ? 'Verifying...' : 'Verify OTP'}
                       </button>
                     </div>
+                    <div id="firebase-phone-recaptcha" />
                   </form>
                 ) : (
                   <form onSubmit={handleCreatePassword} className="mt-6 space-y-4">
                     <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
-                      Email verified for <span className="font-semibold text-slate-900">{email}</span>. Create the password you will use to sign in later.
+                      {phoneConfirmation ? 'Phone' : 'Email'} verified for <span className="font-semibold text-slate-900">{email}</span>. Create the password you will use to sign in later.
                     </div>
 
                     <label className="block">
@@ -759,28 +835,30 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             ) : loginView === 'forgot' ? (
               <form onSubmit={handleRequestPasswordReset} className="mt-6 space-y-4">
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
-                  Enter your email and we’ll send a password reset link.
+                  Enter your connected email or phone number and we will send a recovery OTP.
                 </div>
 
                 <label className="block">
-                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Email address</span>
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Email or phone</span>
                   <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 focus-within:border-[#2457F0] focus-within:bg-white">
                     <Mail className="h-4.5 w-4.5 text-slate-400" />
                     <input
                       value={email}
                       onChange={(event) => setEmail(event.target.value)}
-                      type="email"
+                      type="text"
                       name="reset-email"
-                      autoComplete="email"
+                      autoComplete="username"
                       className="w-full bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
-                      placeholder="you@business.com"
+                      placeholder="you@business.com or +91 98765 43210"
                     />
                   </div>
                 </label>
 
-                {devResetToken ? (
+                <div id="firebase-reset-recaptcha" />
+
+                {devResetOtp ? (
                   <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800">
-                    Dev reset token: {devResetToken}
+                    Dev recovery OTP: {devResetOtp}
                   </div>
                 ) : null}
 
@@ -797,7 +875,47 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                     disabled={busy}
                     className="flex-1 rounded-2xl bg-[#2457F0] px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
                   >
-                    {busy ? 'Sending link...' : 'Send reset link'}
+                    {busy ? 'Sending OTP...' : 'Send recovery OTP'}
+                  </button>
+                </div>
+              </form>
+            ) : loginView === 'resetOtp' ? (
+              <form onSubmit={handleVerifyPasswordResetOtp} className="mt-6 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
+                  Enter the 6-digit recovery OTP sent to <span className="font-semibold text-slate-900">{email}</span>.
+                </div>
+
+                <label className="block">
+                  <span className="mb-2 block text-[13px] font-semibold text-slate-700">Recovery OTP</span>
+                  <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3.5 focus-within:border-[#2457F0] focus-within:bg-white">
+                    <KeyRound className="h-4.5 w-4.5 text-slate-400" />
+                    <input
+                      value={resetOtp}
+                      onChange={(event) => setResetOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={6}
+                      type="text"
+                      className="w-full bg-transparent text-[15px] font-medium tracking-[0.3em] text-slate-900 outline-none placeholder:tracking-normal placeholder:text-slate-400"
+                      placeholder="000000"
+                    />
+                  </div>
+                </label>
+
+                <div className="flex gap-3">
+                  <button
+                    type="button"
+                    onClick={() => setLoginView('forgot')}
+                    className="flex-1 rounded-2xl border border-slate-200 bg-white px-5 py-3.5 text-[14px] font-semibold text-slate-700 shadow-sm"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={busy || resetOtp.length !== 6}
+                    className="flex-1 rounded-2xl bg-[#2457F0] px-5 py-3.5 text-[14px] font-semibold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
+                  >
+                    {busy ? 'Verifying...' : 'Verify OTP'}
                   </button>
                 </div>
               </form>
@@ -806,12 +924,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-[13px] text-slate-600">
                   Choose a new password for your account.
                 </div>
-
-                {devResetToken ? (
-                  <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-[13px] font-semibold text-amber-800">
-                    Dev reset token: {devResetToken}
-                  </div>
-                ) : null}
 
                 <label className="block">
                   <span className="mb-2 block text-[13px] font-semibold text-slate-700">New password</span>
@@ -934,74 +1046,6 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                 </button>
               </form>
             )}
-
-            <div className="mt-6 rounded-3xl border border-[#D8E4FF] bg-[#F8FBFF] p-4">
-              <div className="flex items-start gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-[#EEF4FF] text-[#2457F0]">
-                  <Phone className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-[15px] font-black text-slate-950">
-                    {mode === 'signup' ? 'Create account with phone OTP' : 'Sign in with phone OTP'}
-                  </h3>
-                  <p className="mt-1 text-[12px] font-medium leading-5 text-slate-500">
-                    Firebase sends the SMS code. Use country code format like +919876543210.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 focus-within:border-[#2457F0]">
-                  <Phone className="h-4.5 w-4.5 text-slate-400" />
-                  <input
-                    value={phoneNumber}
-                    onChange={(event) => setPhoneNumber(event.target.value)}
-                    type="tel"
-                    name="phone-auth"
-                    autoComplete="tel"
-                    className="w-full bg-transparent text-[15px] font-medium text-slate-900 outline-none placeholder:text-slate-400"
-                    placeholder="+91 98765 43210"
-                  />
-                </div>
-
-                <div id="firebase-phone-recaptcha" />
-
-                <button
-                  type="button"
-                  onClick={() => handleSendPhoneOtp()}
-                  disabled={phoneBusy || !phoneNumber.trim()}
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-[#D8E4FF] bg-white px-5 py-3 text-[14px] font-bold text-[#2457F0] shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
-                >
-                  {phoneBusy && !phoneConfirmation ? 'Sending OTP...' : 'Send phone OTP'}
-                </button>
-
-                {phoneConfirmation ? (
-                  <div className="grid gap-3 sm:grid-cols-[1fr_auto]">
-                    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-3 focus-within:border-[#2457F0]">
-                      <KeyRound className="h-4.5 w-4.5 text-slate-400" />
-                      <input
-                        value={phoneOtp}
-                        onChange={(event) => setPhoneOtp(event.target.value.replace(/\D/g, '').slice(0, 6))}
-                        inputMode="numeric"
-                        pattern="[0-9]*"
-                        maxLength={6}
-                        type="text"
-                        className="w-full bg-transparent text-[15px] font-medium tracking-[0.3em] text-slate-900 outline-none placeholder:tracking-normal placeholder:text-slate-400"
-                        placeholder="000000"
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleVerifyPhoneOtp}
-                      disabled={phoneBusy || phoneOtp.length !== 6}
-                      className="rounded-2xl bg-[#2457F0] px-5 py-3 text-[14px] font-bold text-white shadow-[0_16px_28px_rgba(36,87,240,0.2)] disabled:cursor-not-allowed disabled:opacity-70"
-                    >
-                      {phoneBusy ? 'Verifying...' : 'Verify'}
-                    </button>
-                  </div>
-                ) : null}
-              </div>
-            </div>
 
             <div className="mt-6 flex items-center gap-4">
               <div className="h-px flex-1 bg-slate-200" />

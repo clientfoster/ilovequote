@@ -593,6 +593,7 @@ quotes = await loadQuotes();
 const pendingOtps = new Map();
 const verificationTokens = new Map();
 const passwordResetTokens = new Map();
+const passwordResetOtpSessions = new Map();
 const authTokens = new Map();
 
 async function loadUsers() {
@@ -1681,6 +1682,36 @@ app.post('/api/auth/firebase-phone', async (req, res) => {
   }
 });
 
+app.post('/api/auth/verify-phone-otp', async (req, res) => {
+  try {
+    const idToken = String(req.body?.idToken || '').trim();
+    if (!idToken) {
+      res.status(400).json({ error: 'Firebase ID token is required.' });
+      return;
+    }
+
+    const firebaseUser = await verifyFirebasePhoneToken(idToken);
+    const verificationToken = randomBytes(24).toString('hex');
+    verificationTokens.set(verificationToken, {
+      phone: firebaseUser.phone,
+      firebaseUid: firebaseUser.uid,
+      expiresAt: Date.now() + VERIFICATION_TTL_MS,
+    });
+
+    res.json({
+      ok: true,
+      verificationToken,
+      phone: firebaseUser.phone,
+      message: 'Phone OTP verified successfully.',
+    });
+  } catch (error) {
+    res.status(401).json({
+      error: 'Unable to verify phone OTP.',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
 app.post('/api/auth/request-otp', async (req, res) => {
   try {
     const email = normalizeEmail(req.body?.email);
@@ -1764,12 +1795,15 @@ app.post('/api/auth/verify-otp', async (req, res) => {
 app.post('/api/auth/register', async (req, res) => {
   try {
     await refreshUsers();
-    const email = normalizeEmail(req.body?.email);
-    const phone = normalizePhone(req.body?.phone);
+    const requestedEmail = normalizeEmail(req.body?.email);
+    const requestedPhone = normalizePhone(req.body?.phone);
     const password = String(req.body?.password || '');
     const name = String(req.body?.name || '').trim();
     const verificationToken = String(req.body?.verificationToken || '');
     const verification = verificationTokens.get(verificationToken);
+    const isPhoneVerification = Boolean(verification?.phone);
+    const email = isPhoneVerification ? fallbackPhoneEmail(verification.phone) : requestedEmail;
+    const phone = isPhoneVerification ? normalizePhone(verification.phone) : requestedPhone;
 
     if (!verification || verification.expiresAt < Date.now()) {
       verificationTokens.delete(verificationToken);
@@ -1777,8 +1811,13 @@ app.post('/api/auth/register', async (req, res) => {
       return;
     }
 
-    if (verification.email !== email) {
+    if (!isPhoneVerification && verification.email !== email) {
       res.status(400).json({ error: 'Verification token does not match this email address.' });
+      return;
+    }
+
+    if (isPhoneVerification && normalizePhone(verification.phone) !== phone) {
+      res.status(400).json({ error: 'Verification token does not match this phone number.' });
       return;
     }
 
@@ -1787,36 +1826,45 @@ app.post('/api/auth/register', async (req, res) => {
       return;
     }
 
-    const existing = users.find((user) => user.email === email);
+    const existing = users.find((user) => {
+      const entryPhone = normalizePhone(user.phone || '');
+      return user.email === email || (phone && entryPhone === phone) || (verification.firebaseUid && user.firebaseUid === verification.firebaseUid);
+    });
     const passwordState = hashPassword(password);
+    const now = new Date().toISOString();
     const user = existing
       ? {
           ...existing,
-          name: name || existing.name || email.split('@')[0],
+          firebaseUid: verification.firebaseUid || existing.firebaseUid,
+          name: name || existing.name || (phone || email).split('@')[0],
+          email: existing.email || email,
           phone: phone || existing.phone || '',
-          username: existing.username || (existing.phone || phone || email),
-          authMethod: existing.authMethod || (existing.phone || phone ? 'phone' : 'email'),
+          username: phone || existing.username || existing.phone || email,
+          authMethod: isPhoneVerification ? 'phone' : existing.authMethod || (existing.phone || phone ? 'phone' : 'email'),
           passwordHash: passwordState.hash,
           passwordSalt: passwordState.salt,
-          updatedAt: new Date().toISOString(),
-          emailVerifiedAt: new Date().toISOString(),
+          updatedAt: now,
+          emailVerifiedAt: isPhoneVerification ? existing.emailVerifiedAt : now,
+          phoneVerifiedAt: isPhoneVerification ? (existing.phoneVerifiedAt || now) : existing.phoneVerifiedAt,
         }
       : {
           id: randomUUID(),
+          firebaseUid: verification.firebaseUid || undefined,
           email,
-          name: name || email.split('@')[0],
+          name: name || (phone || email).split('@')[0],
           phone: phone || '',
           username: phone || email,
           authMethod: phone ? 'phone' : 'email',
           passwordHash: passwordState.hash,
           passwordSalt: passwordState.salt,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          emailVerifiedAt: new Date().toISOString(),
+          createdAt: now,
+          updatedAt: now,
+          emailVerifiedAt: isPhoneVerification ? undefined : now,
+          phoneVerifiedAt: isPhoneVerification ? now : undefined,
           loginActivity: [],
         };
 
-    users = existing ? users.map((entry) => (entry.email === email ? user : entry)) : [user, ...users];
+    users = existing ? users.map((entry) => (entry.id === existing.id ? user : entry)) : [user, ...users];
     recordUserActivity(user.id, 'register', req, { via: user.authMethod });
     await persistUsers();
     verificationTokens.delete(verificationToken);
@@ -1839,47 +1887,156 @@ app.post('/api/auth/register', async (req, res) => {
 app.post('/api/auth/request-password-reset', async (req, res) => {
   try {
     await refreshUsers();
-    const email = normalizeEmail(req.body?.email);
+    const rawIdentifier = String(req.body?.identifier || req.body?.email || req.body?.phone || '').trim();
+    const email = normalizeEmail(rawIdentifier);
+    const phone = normalizePhone(rawIdentifier);
 
-    if (!isValidEmail(email)) {
-      res.status(400).json({ error: 'Please provide a valid email address.' });
+    if (!isValidEmail(email) && !phone) {
+      res.status(400).json({ error: 'Please provide a valid email address or phone number.' });
       return;
     }
 
-    const user = users.find((entry) => entry.email === email);
-    if (!user) {
+    if (!isValidEmail(email)) {
       res.json({
         ok: true,
-        message: 'If an account exists for that email, we sent a password reset link.',
+        delivery: 'firebase-phone',
+        phone,
+        message: 'If an account exists for that phone number, enter the OTP sent to your phone.',
       });
       return;
     }
 
-    const resetToken = randomBytes(24).toString('hex');
-    const resetTokenHash = hashResetToken(resetToken);
-    const resetExpiresAt = Date.now() + PASSWORD_RESET_TTL_MS;
-    passwordResetTokens.set(resetToken, {
+    const user = users.find((entry) => normalizeEmail(entry.email) === email);
+    if (!user) {
+      res.json({
+        ok: true,
+        delivery: 'email',
+        message: 'If an account exists for that email, we sent a recovery OTP.',
+      });
+      return;
+    }
+
+    const otp = generateOtp();
+    const sessionId = randomUUID();
+    passwordResetOtpSessions.set(sessionId, {
       email,
       userId: user.id,
-      expiresAt: resetExpiresAt,
+      otp,
+      attempts: 0,
+      expiresAt: Date.now() + OTP_TTL_MS,
     });
-    user.passwordResetTokenHash = resetTokenHash;
-    user.passwordResetExpiresAt = resetExpiresAt;
-    user.updatedAt = new Date().toISOString();
-    await persistUsers();
-
-    const delivery = await sendPasswordResetEmail({ email, resetToken });
-    console.log(`[auth] password reset link for ${email} via ${delivery.provider}`);
+    const delivery = await sendOtpEmail({ email, otp });
+    console.log(`[auth] password reset OTP for ${email}: ${otp} via ${delivery.provider}`);
 
     res.json({
       ok: true,
-      message: 'If an account exists for that email, we sent a password reset link.',
-      devResetToken: resend ? undefined : resetToken,
+      delivery: 'email',
+      sessionId,
+      expiresInSeconds: Math.floor(OTP_TTL_MS / 1000),
+      message: 'Recovery OTP sent to your email.',
+      devOtp: resend ? undefined : otp,
       emailProvider: delivery.provider,
     });
   } catch (error) {
     res.status(500).json({
       error: 'Unable to create password reset request',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+function createPasswordResetTokenForUser(user) {
+  const resetToken = randomBytes(24).toString('hex');
+  const resetTokenHash = hashResetToken(resetToken);
+  const resetExpiresAt = Date.now() + PASSWORD_RESET_TTL_MS;
+  passwordResetTokens.set(resetToken, {
+    email: user.email,
+    phone: user.phone || '',
+    userId: user.id,
+    expiresAt: resetExpiresAt,
+  });
+  user.passwordResetTokenHash = resetTokenHash;
+  user.passwordResetExpiresAt = resetExpiresAt;
+  user.updatedAt = new Date().toISOString();
+  return resetToken;
+}
+
+app.post('/api/auth/verify-password-reset-otp', async (req, res) => {
+  try {
+    await refreshUsers();
+    const sessionId = String(req.body?.sessionId || '');
+    const email = normalizeEmail(req.body?.email);
+    const otp = String(req.body?.otp || '').trim();
+    const session = passwordResetOtpSessions.get(sessionId);
+
+    if (!session || session.expiresAt < Date.now()) {
+      passwordResetOtpSessions.delete(sessionId);
+      res.status(400).json({ error: 'Recovery OTP expired. Please request a new OTP.' });
+      return;
+    }
+
+    if (session.email !== email) {
+      res.status(400).json({ error: 'This recovery OTP does not match the email address.' });
+      return;
+    }
+
+    session.attempts += 1;
+    if (session.attempts > 5) {
+      passwordResetOtpSessions.delete(sessionId);
+      res.status(429).json({ error: 'Too many attempts. Please request a fresh recovery OTP.' });
+      return;
+    }
+
+    if (session.otp !== otp) {
+      res.status(400).json({ error: 'Incorrect recovery OTP. Please try again.' });
+      return;
+    }
+
+    const user = users.find((entry) => entry.id === session.userId && normalizeEmail(entry.email) === email);
+    if (!user) {
+      passwordResetOtpSessions.delete(sessionId);
+      res.status(404).json({ error: 'Account not found for this recovery OTP.' });
+      return;
+    }
+
+    const resetToken = createPasswordResetTokenForUser(user);
+    await persistUsers();
+    passwordResetOtpSessions.delete(sessionId);
+    res.json({ ok: true, resetToken, message: 'Recovery OTP verified. Create your new password.' });
+  } catch (error) {
+    res.status(500).json({
+      error: 'Unable to verify recovery OTP',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/auth/verify-phone-password-reset', async (req, res) => {
+  try {
+    await refreshUsers();
+    const idToken = String(req.body?.idToken || '').trim();
+    if (!idToken) {
+      res.status(400).json({ error: 'Firebase ID token is required.' });
+      return;
+    }
+
+    const firebaseUser = await verifyFirebasePhoneToken(idToken);
+    const user = users.find((entry) => {
+      const entryPhone = normalizePhone(entry.phone || '');
+      return entry.firebaseUid === firebaseUser.uid || (entryPhone && entryPhone === firebaseUser.phone);
+    });
+
+    if (!user) {
+      res.status(404).json({ error: 'No account found for that phone number.' });
+      return;
+    }
+
+    const resetToken = createPasswordResetTokenForUser(user);
+    await persistUsers();
+    res.json({ ok: true, resetToken, phone: firebaseUser.phone, message: 'Phone OTP verified. Create your new password.' });
+  } catch (error) {
+    res.status(401).json({
+      error: 'Unable to verify phone recovery OTP.',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }
@@ -1922,7 +2079,7 @@ app.post('/api/auth/confirm-password-reset', async (req, res) => {
       return;
     }
 
-    user = user || users.find((entry) => entry.id === tokenState.userId && entry.email === tokenState.email);
+    user = user || users.find((entry) => entry.id === tokenState.userId);
     if (!user) {
       passwordResetTokens.delete(resetToken);
       res.status(404).json({ error: 'Account not found for this reset link.' });
@@ -1938,7 +2095,7 @@ app.post('/api/auth/confirm-password-reset', async (req, res) => {
 
     passwordResetTokens.delete(resetToken);
     revokeAuthTokensForUser(user.id);
-    recordUserActivity(user.id, 'password_reset', req, { via: 'email' });
+    recordUserActivity(user.id, 'password_reset', req, { via: user.phone && tokenState.phone ? 'phone' : 'email' });
     await persistUsers();
 
     const authToken = createAuthToken(user.id);
