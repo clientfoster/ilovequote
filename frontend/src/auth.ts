@@ -8,7 +8,7 @@ export interface AuthUser {
   name: string;
   phone?: string;
   username?: string;
-  authMethod?: 'email' | 'phone';
+  authMethod?: 'email' | 'phone' | 'google' | 'facebook' | 'apple';
   createdAt?: string;
   updatedAt?: string;
   loginActivity?: Array<{

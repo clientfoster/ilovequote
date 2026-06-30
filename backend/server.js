@@ -784,6 +784,28 @@ async function verifyFirebasePhoneToken(idToken) {
   };
 }
 
+async function verifyFirebaseSocialToken(idToken) {
+  if (!firebaseAdminReady) {
+    throw new Error(firebaseAdminError || 'Firebase Admin is not configured on the backend.');
+  }
+
+  const decoded = await getFirebaseAdminAuth().verifyIdToken(idToken);
+  const provider = String(decoded.firebase?.sign_in_provider || '').trim().toLowerCase();
+  const email = normalizeEmail(decoded.email || '');
+  const name = String(decoded.name || decoded.email || '').trim();
+
+  if (!provider || provider === 'phone') {
+    throw new Error('Firebase token does not include a supported social provider.');
+  }
+
+  return {
+    uid: decoded.uid,
+    provider,
+    email,
+    name,
+  };
+}
+
 function publicShareUrl(req, quote) {
   return `${getBaseUrl(req)}/share/${quote.shareToken}`;
 }
@@ -1677,6 +1699,95 @@ app.post('/api/auth/firebase-phone', async (req, res) => {
   } catch (error) {
     res.status(401).json({
       error: 'Unable to verify phone OTP.',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.post('/api/auth/firebase-social', async (req, res) => {
+  try {
+    await refreshUsers();
+    const idToken = String(req.body?.idToken || '').trim();
+    const requestedProvider = String(req.body?.provider || '').trim().toLowerCase();
+    const nameCandidate = String(req.body?.name || '').trim();
+    const emailCandidate = normalizeEmail(req.body?.email);
+
+    if (!idToken) {
+      res.status(400).json({ error: 'Firebase ID token is required.' });
+      return;
+    }
+
+    const firebaseUser = await verifyFirebaseSocialToken(idToken);
+    const provider = firebaseUser.provider === 'google.com'
+      ? 'google'
+      : firebaseUser.provider === 'facebook.com'
+        ? 'facebook'
+        : firebaseUser.provider === 'apple.com'
+          ? 'apple'
+          : firebaseUser.provider;
+
+    if (!['google', 'facebook', 'apple'].includes(provider)) {
+      res.status(400).json({ error: 'Unsupported social provider.' });
+      return;
+    }
+
+    if (requestedProvider && requestedProvider !== provider) {
+      res.status(400).json({ error: 'Provider mismatch for Firebase social login.' });
+      return;
+    }
+
+    const email = isValidEmail(emailCandidate)
+      ? emailCandidate
+      : isValidEmail(firebaseUser.email)
+        ? firebaseUser.email
+        : '';
+
+    const fallbackEmail = email || `${provider}-${firebaseUser.uid}@social.ilovequote.local`;
+    const now = new Date().toISOString();
+    const existing = users.find((entry) =>
+      entry.firebaseUid === firebaseUser.uid || (fallbackEmail && normalizeEmail(entry.email) === fallbackEmail),
+    );
+
+    const user = existing
+      ? {
+          ...existing,
+          firebaseUid: firebaseUser.uid,
+          email: fallbackEmail,
+          name: nameCandidate || firebaseUser.name || existing.name || fallbackEmail,
+          username: existing.username || fallbackEmail,
+          authMethod: provider,
+          updatedAt: now,
+        }
+      : {
+          id: randomUUID(),
+          firebaseUid: firebaseUser.uid,
+          email: fallbackEmail,
+          name: nameCandidate || firebaseUser.name || fallbackEmail,
+          phone: '',
+          username: fallbackEmail,
+          authMethod: provider,
+          createdAt: now,
+          updatedAt: now,
+          loginActivity: [],
+        };
+
+    users = existing
+      ? users.map((entry) => (entry.id === existing.id ? user : entry))
+      : [user, ...users];
+
+    recordUserActivity(user.id, existing ? 'login' : 'register', req, { via: `firebase_${provider}` });
+    await persistUsers();
+
+    const authToken = createAuthToken(user.id);
+    res.status(existing ? 200 : 201).json({
+      ok: true,
+      authToken,
+      user: makePublicUser(user),
+      message: existing ? `Signed in with ${provider} successfully.` : `${provider} account created successfully.`,
+    });
+  } catch (error) {
+    res.status(401).json({
+      error: 'Unable to verify social sign-in.',
       message: error instanceof Error ? error.message : 'Unknown error',
     });
   }

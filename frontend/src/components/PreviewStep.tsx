@@ -515,21 +515,16 @@ export default function PreviewStep({
 
               <div className="relative flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
                 <div className="flex items-start gap-4">
-                  <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/10 md:h-16 md:w-16">
-                    {businessLogo ? (
+                  {businessLogo ? (
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-white/10 ring-1 ring-white/10 md:h-16 md:w-16">
                       <img
                         src={businessLogo}
                         alt={`${businessName} logo`}
                         className="h-full w-full object-cover"
                         referrerPolicy="no-referrer"
                       />
-                    ) : (
-                      <div className="flex h-full w-full items-center justify-center bg-white/10 text-2xl font-black text-white">
-                        {getInitials(businessName, 'B')}
-                      </div>
-                    )}
-                  </div>
-
+                    </div>
+                  ) : null}
                   <div className="min-w-0">
                     <h2 className="text-2xl font-black tracking-tight md:text-3xl">{businessName || 'SEMIXON'}</h2>
                     <div className="mt-3 space-y-1.5 text-[13px] leading-relaxed text-white/90 md:text-[15px]">
@@ -588,9 +583,9 @@ export default function PreviewStep({
               <div className="grid grid-cols-1 gap-4 md:grid-cols-[150px_minmax(0,1fr)] md:items-center md:gap-6">
                 <div className="text-sm font-medium text-slate-500 md:text-[15px]">Prepared For</div>
 
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_minmax(0,1.3fr)] md:items-start">
-                  <div className="flex items-center justify-center rounded-[22px] border border-slate-100 bg-slate-50 px-6 py-8 md:min-h-[180px]">
-                    {clientLogo ? (
+                {clientLogo ? (
+                  <div className="grid grid-cols-1 gap-4 md:grid-cols-[1fr_minmax(0,1.3fr)] md:items-start">
+                    <div className="flex items-center justify-center rounded-[22px] border border-slate-100 bg-slate-50 px-6 py-8 md:min-h-[180px]">
                       <div className="flex h-24 w-24 items-center justify-center overflow-hidden rounded-3xl bg-white shadow-sm ring-1 ring-slate-100">
                         <img
                           src={clientLogo}
@@ -599,21 +594,27 @@ export default function PreviewStep({
                           referrerPolicy="no-referrer"
                         />
                       </div>
-                    ) : (
-                      <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-white text-3xl font-black text-[#1D4ED8] shadow-sm">
-                        {getInitials(clientName, 'C')}
-                      </div>
-                    )}
-                  </div>
+                    </div>
 
-                  <div className="min-w-0 rounded-[22px] border border-slate-100 bg-white px-5 py-4 md:border-0 md:px-0 md:py-0 md:pl-6 md:border-l md:border-slate-200">
-                    <p className="text-lg font-black text-slate-900">{clientName || 'Client Company'}</p>
-                    <p className="mt-1 text-sm text-slate-600">{clientContactPerson || 'Contact Person'}</p>
-                    {clientEmail && <p className="mt-3 text-sm text-slate-600">{clientEmail}</p>}
-                    {clientPhone && <p className="mt-2 text-sm text-slate-600">{clientPhone}</p>}
-                    {clientAddress && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-600">{clientAddress}</p>}
+                    <div className="min-w-0 rounded-[22px] border border-slate-100 bg-white px-5 py-4 md:border-0 md:px-0 md:py-0 md:pl-6 md:border-l md:border-slate-200">
+                      <p className="text-lg font-black text-slate-900">{clientName || 'Client Company'}</p>
+                      <p className="mt-1 text-sm text-slate-600">{clientContactPerson || 'Contact Person'}</p>
+                      {clientEmail && <p className="mt-3 text-sm text-slate-600">{clientEmail}</p>}
+                      {clientPhone && <p className="mt-2 text-sm text-slate-600">{clientPhone}</p>}
+                      {clientAddress && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-600">{clientAddress}</p>}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className="rounded-[22px] border border-slate-100 bg-white px-5 py-4 shadow-[0_1px_0_rgba(15,23,42,0.02)] md:px-6 md:py-5">
+                    <div className="min-w-0">
+                      <p className="text-lg font-black text-slate-900">{clientName || 'Client Company'}</p>
+                      <p className="mt-1 text-sm text-slate-600">{clientContactPerson || 'Contact Person'}</p>
+                      {clientEmail && <p className="mt-3 text-sm text-slate-600">{clientEmail}</p>}
+                      {clientPhone && <p className="mt-2 text-sm text-slate-600">{clientPhone}</p>}
+                      {clientAddress && <p className="mt-2 whitespace-pre-line text-sm leading-relaxed text-slate-600">{clientAddress}</p>}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="quote-table-shell overflow-hidden rounded-[18px] border border-slate-200">

@@ -16,6 +16,7 @@ import { AuthUser } from '../auth';
 import { signIn } from '../auth';
 import { apiRequest } from '../api';
 import { isFirebasePhoneConfigured, requestPhoneOtp } from '../firebasePhoneAuth';
+import { signInWithSocialProvider, type SocialProviderName } from '../firebaseSocialAuth';
 import { ConfirmationResult } from 'firebase/auth';
 
 interface LoginPageProps {
@@ -79,6 +80,59 @@ function friendlyFirebasePhoneError(error: unknown) {
   return message || 'Could not complete phone OTP request.';
 }
 
+function GoogleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" aria-hidden="true">
+      <path fill="#EA4335" d="M12 10.2v3.9h5.5c-.2 1.2-.9 2.3-1.9 3l3.1 2.4c1.8-1.7 2.8-4.1 2.8-6.9 0-.7-.1-1.5-.2-2.2H12Z" />
+      <path fill="#34A853" d="M12 21c2.5 0 4.7-.8 6.2-2.3l-3.1-2.4c-.9.6-2 .9-3.1.9-2.4 0-4.4-1.6-5.1-3.8l-3.2 2.5C5.2 18.9 8.3 21 12 21Z" />
+      <path fill="#FBBC05" d="M6.9 13.4c-.2-.6-.3-1.1-.3-1.7s.1-1.2.3-1.7L3.7 7.5C3 8.9 2.6 10.4 2.6 12s.4 3.1 1.1 4.5l3.2-2.5Z" />
+      <path fill="#4285F4" d="M12 6.8c1.4 0 2.7.5 3.7 1.4l2.8-2.8C16.7 3.7 14.5 3 12 3 8.3 3 5.2 5.1 3.7 8.1L6.9 10.6C7.6 8.4 9.6 6.8 12 6.8Z" />
+    </svg>
+  );
+}
+
+function FacebookIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M24 12.1C24 5.4 18.6 0 12 0S0 5.4 0 12.1c0 6 4.4 11 10.1 12v-8.4H7.1v-3.6h3V9.3c0-3 1.8-4.7 4.5-4.7 1.3 0 2.7.2 2.7.2v3h-1.5c-1.5 0-2 1-2 1.9v2.3h3.4l-.5 3.6h-2.9v8.4C19.6 23.1 24 18.1 24 12.1Z"
+      />
+    </svg>
+  );
+}
+
+function AppleIcon() {
+  return (
+    <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" aria-hidden="true">
+      <path
+        fill="currentColor"
+        d="M16.8 12.7c0-2.5 2-3.7 2.1-3.8-1.1-1.7-2.9-1.9-3.5-2-1.5-.2-2.9.9-3.6.9-.7 0-1.8-.9-3-.8-1.5 0-3 .9-3.8 2.3-1.6 2.8-.4 6.9 1.2 9.1.8 1.1 1.7 2.3 2.9 2.2 1.2 0 1.6-.8 3-.8s1.8.8 3 .8c1.2 0 2-.9 2.8-2 .9-1.3 1.3-2.6 1.3-2.7 0 0-2.5-1-2.5-4.2Zm-2.4-7.4c.7-.9 1.1-2.1 1-3.3-1 .1-2.2.7-2.9 1.6-.6.8-1.2 2-1 3.2 1.1.1 2.2-.6 2.9-1.5Z"
+      />
+    </svg>
+  );
+}
+
+interface SocialLoginButtonProps {
+  label: string;
+  icon: React.ReactNode;
+  toneClassName: string;
+  onClick: () => void;
+}
+
+function SocialLoginButton({ label, icon, toneClassName, onClick }: SocialLoginButtonProps) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={`inline-flex min-h-[48px] items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 py-3 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-300 hover:bg-slate-50 ${toneClassName}`}
+    >
+      {icon}
+      <span>{label}</span>
+    </button>
+  );
+}
+
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
@@ -134,7 +188,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       setResetToken(tokenParam);
       setError('');
       setInfo('');
-      setDevResetToken('');
+      setDevResetOtp('');
       return;
     }
 
@@ -579,6 +633,30 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     setInfo('');
     setDevResetOtp('');
     setResetPhoneConfirmation(null);
+  };
+
+  const handleSocialSignIn = async (provider: SocialProviderName) => {
+    setError('');
+    setInfo('');
+    setBusy(true);
+
+    try {
+      const social = await signInWithSocialProvider(provider);
+      const result = await apiRequest<{ authToken: string; user: AuthUser; message?: string }>(
+        '/api/auth/firebase-social',
+        {
+          method: 'POST',
+          body: JSON.stringify(social),
+        },
+      );
+      signIn(result.authToken, result.user);
+      onLogin?.(result.user);
+      navigate('/dashboard');
+    } catch (err) {
+      setError(friendlyFirebasePhoneError(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -1189,6 +1267,37 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
                   {busy ? 'Signing in...' : 'Sign in'}
                   <ArrowRight className="h-4.5 w-4.5" />
                 </button>
+
+                <div className="pt-1">
+                  <div className="flex items-center gap-3">
+                    <div className="h-px flex-1 bg-slate-200" />
+                    <span className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">
+                      or continue with
+                    </span>
+                    <div className="h-px flex-1 bg-slate-200" />
+                  </div>
+
+                  <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <SocialLoginButton
+                      label="Google"
+                      icon={<GoogleIcon />}
+                      toneClassName="hover:text-slate-900"
+                      onClick={() => handleSocialSignIn('google')}
+                    />
+                    <SocialLoginButton
+                      label="Facebook"
+                      icon={<FacebookIcon />}
+                      toneClassName="text-[#1877F2] hover:text-[#1667d8]"
+                      onClick={() => handleSocialSignIn('facebook')}
+                    />
+                    <SocialLoginButton
+                      label="Apple"
+                      icon={<AppleIcon />}
+                      toneClassName="text-slate-900 hover:text-slate-700"
+                      onClick={() => handleSocialSignIn('apple')}
+                    />
+                  </div>
+                </div>
               </form>
             )}
 
