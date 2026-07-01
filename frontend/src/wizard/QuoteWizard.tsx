@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useNavigate, useOutletContext } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, LoaderCircle, Moon, Save } from 'lucide-react';
+import { ChevronLeft, ChevronRight, LoaderCircle, Moon, Save, ShieldCheck, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BusinessStep from '../modules/business-module/BusinessModule';
 import ClientStep from '../modules/client-module/ClientModule';
@@ -122,6 +122,7 @@ export default function QuoteWizard() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isFinalizingQuote, setIsFinalizingQuote] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  const [authPromptIntent, setAuthPromptIntent] = useState<'draft' | 'final' | null>(null);
   const quoteContainerRef = useRef<HTMLDivElement | null>(null);
 
   const {
@@ -386,6 +387,11 @@ export default function QuoteWizard() {
 
   const handleSaveDraft = () => {
     if (isSavingDraft) return;
+    if (!isAuthenticated()) {
+      setAuthPromptIntent('draft');
+      return;
+    }
+
     const payload = buildCurrentPayload();
 
     const persistDraftLocally = () => {
@@ -462,8 +468,7 @@ export default function QuoteWizard() {
     }
 
     if (!isAuthenticated()) {
-      onTriggerToast('Please log in or sign up to save your quote.');
-      navigate('/login?mode=login');
+      setAuthPromptIntent('final');
       return;
     }
 
@@ -495,6 +500,73 @@ export default function QuoteWizard() {
 
   return (
     <div className="quote-wizard-shell min-h-dvh overflow-x-hidden bg-slate-50 text-slate-900">
+      <AnimatePresence>
+        {authPromptIntent ? (
+          <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+            <motion.button
+              type="button"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setAuthPromptIntent(null)}
+              className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]"
+              aria-label="Close save prompt"
+            />
+
+            <motion.div
+              initial={{ opacity: 0, scale: 0.96, y: 18 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.96, y: 18 }}
+              transition={{ duration: 0.18 }}
+              className="relative z-10 w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] md:p-7"
+            >
+              <button
+                type="button"
+                onClick={() => setAuthPromptIntent(null)}
+                className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                aria-label="Close"
+              >
+                <X size={18} />
+              </button>
+
+              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EEF4FF] text-[#2457F0]">
+                <ShieldCheck size={26} />
+              </div>
+
+              <h2 className="mt-5 text-[24px] font-black tracking-tight text-slate-950">
+                Create account or sign in to save this quote
+              </h2>
+              <p className="mt-3 text-[15px] leading-7 text-slate-600">
+                {authPromptIntent === 'draft'
+                  ? 'Sign in to save this quote to your records history and access it later from your dashboard.'
+                  : 'Sign in to save this quote, store it in your records history, and continue sharing it with your client.'}
+              </p>
+
+              <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => navigate('/login?mode=signup')}
+                  className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-[#2457F0] px-5 text-[15px] font-bold text-white shadow-[0_14px_28px_rgba(36,87,240,0.24)] transition hover:bg-[#1d4ed8]"
+                >
+                  Create Account
+                </button>
+                <button
+                  type="button"
+                  onClick={() => navigate('/login?mode=login')}
+                  className="inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-[15px] font-bold text-slate-900 transition hover:bg-slate-50"
+                >
+                  Sign In
+                </button>
+              </div>
+
+              <p className="mt-4 text-center text-[12px] font-medium text-slate-400">
+                Your quote will only be added to history after you log in.
+              </p>
+            </motion.div>
+          </div>
+        ) : null}
+      </AnimatePresence>
+
       <header className="no-print sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:relative md:z-30">
         <div className="mx-auto hidden max-w-7xl items-center justify-between gap-4 px-4 py-3 md:flex md:px-8 md:py-4">
           <div className="flex min-w-0 items-center gap-4">
