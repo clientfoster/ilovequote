@@ -55,7 +55,7 @@ const toolCards: ToolCard[] = [
     iconWrap: 'bg-[#EEFCF4]',
     iconColor: 'text-[#22C55E]',
     accent: 'text-[#22C55E]',
-    route: '/login?mode=signup',
+    route: '/create-invoice',
     renderIcon: () => <FileSpreadsheet className="h-16 w-16 text-[#22C55E]" strokeWidth={1.8} />,
   },
   {
@@ -194,7 +194,7 @@ export default function LandingPage() {
                 <button
                   key={item}
                   type="button"
-                  onClick={() => navigate(index === 0 ? '/create-quote' : '/login?mode=signup')}
+                  onClick={() => navigate(index === 0 ? '/create-quote' : index === 1 ? '/create-invoice' : '/login?mode=signup')}
                   className="text-[15px] font-semibold text-slate-900 transition hover:text-[#2457F0]"
                 >
                   {item}
@@ -230,7 +230,7 @@ export default function LandingPage() {
               Popular Tools
             </div>
             <h1 className="mt-4 text-[34px] font-black tracking-[-0.04em] text-[#08143C] md:text-[44px]">
-              Create Business Documents Faster
+              Create Quotes, Invoices &amp; Business Documents
             </h1>
             <p className="mt-2 text-[18px] text-slate-600">All tools are free to use. No hidden charges.</p>
           </section>

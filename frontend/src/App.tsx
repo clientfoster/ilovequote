@@ -16,6 +16,9 @@ import PortfolioPage from './pages/PortfolioPage';
 import QRPortfolioPage from './pages/QRPortfolioPage';
 import QuoteExportPage from './pages/QuoteExportPage';
 import CreateQuotePage from './pages/CreateQuotePage';
+import CreateInvoicePage from './pages/CreateInvoicePage';
+import CreateInvoiceBankDetailsPage from './pages/CreateInvoiceBankDetailsPage';
+import CreateInvoiceDesignPage from './pages/CreateInvoiceDesignPage';
 import SettingsPage from './pages/SettingsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import {
@@ -117,6 +120,9 @@ export default function App() {
         >
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/create-quote" element={<CreateQuotePage />} />
+          <Route path="/create-invoice" element={<CreateInvoicePage />} />
+          <Route path="/create-invoice/bank-details" element={<CreateInvoiceBankDetailsPage />} />
+          <Route path="/create-invoice/design" element={<CreateInvoiceDesignPage />} />
 
           <Route path="/clients" element={<RequireAuth isAuthed={isAuthed}><ClientsPage /></RequireAuth>} />
           <Route path="/items" element={<RequireAuth isAuthed={isAuthed}><ItemsPage /></RequireAuth>} />

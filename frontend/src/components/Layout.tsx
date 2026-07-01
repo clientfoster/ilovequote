@@ -361,13 +361,13 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
               </div>
             )}
 
-            <div className="flex-1 overflow-hidden flex flex-col relative bg-[#F8FAFC]">
+            <div className="relative flex flex-1 flex-col overflow-y-auto overflow-x-hidden bg-[#F8FAFC]">
               <Outlet context={{ onTriggerToast: triggerToast, setSaveStatus }} />
             </div>
           </div>
 
           {/* MAIN DESKTOP CONTENT AREA */}
-          <div className="hidden lg:flex flex-1 flex-col h-full overflow-hidden bg-[#F8FAFC]" id="main-content-flow">
+          <div className="hidden h-full flex-1 flex-col overflow-y-auto overflow-x-hidden bg-[#F8FAFC] lg:flex" id="main-content-flow">
             <Outlet context={{ onTriggerToast: triggerToast, setSaveStatus }} />
           </div>
         </div>
