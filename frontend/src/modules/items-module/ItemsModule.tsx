@@ -161,7 +161,7 @@ export default function ItemsWorkspace({
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="hidden lg:grid grid-cols-[minmax(220px,1.2fr)_74px_116px_112px_110px_120px_42px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+            <div className="hidden lg:grid grid-cols-[minmax(170px,1.35fr)_72px_96px_84px_118px_108px_72px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
               <div>Item / Description</div>
               <div className="text-center">Qty</div>
               <div>Unit Price</div>
@@ -213,14 +213,14 @@ export default function ItemsWorkspace({
                   const row = getRowBreakdown(item);
                   return (
                     <div key={item.id} className="px-4 py-4 lg:py-6">
-                      <div className="hidden lg:grid grid-cols-[minmax(220px,1.2fr)_74px_116px_112px_110px_120px_42px] gap-3 items-center min-h-[96px]">
+                      <div className="hidden lg:grid grid-cols-[minmax(170px,1.35fr)_72px_96px_84px_118px_108px_72px] gap-3 items-center min-h-[96px]">
                         <div className="flex items-start gap-3 min-w-0">
                           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border bg-slate-50 border-slate-200 text-slate-800 text-xl font-bold">
                             {index + 1}
                           </div>
                           <div className="min-w-0">
-                            <h4 className="max-w-[165px] text-sm font-bold text-slate-900 leading-tight">{item.name}</h4>
-                            <p className="mt-1 max-w-[175px] text-xs leading-relaxed text-slate-500 break-words">
+                            <h4 className="max-w-[120px] text-sm font-bold text-slate-900 leading-tight">{item.name}</h4>
+                            <p className="mt-1 max-w-[132px] text-xs leading-relaxed text-slate-500 break-words">
                               {item.description || 'No description provided.'}
                             </p>
                           </div>
@@ -233,7 +233,7 @@ export default function ItemsWorkspace({
                           <span className="ml-2 text-xs text-slate-500">{item.unit || 'Nos'}</span>
                         </div>
 
-                        <div className="text-sm font-bold text-slate-900 font-mono">
+                        <div className="text-sm font-bold text-slate-900 font-mono whitespace-nowrap">
                           {formatCurrency(item.price, meta.currency)}
                         </div>
 
@@ -251,22 +251,24 @@ export default function ItemsWorkspace({
                         </div>
 
                         <div>
-                          <div className="inline-flex min-h-[44px] items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800">
+                          <div className="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-sm font-medium text-slate-800 whitespace-nowrap">
                             {item.gstRate}% GST
                             <ChevronDown size={14} className="text-slate-400" />
                           </div>
                         </div>
 
-                        <div className="text-sm font-bold text-slate-900 font-mono">
+                        <div className="text-sm font-bold text-slate-900 font-mono whitespace-nowrap">
                           {formatCurrency(row.amount, meta.currency)}
                         </div>
 
-                        <div className="flex justify-end">
+                        <div className="flex items-center justify-end gap-1 pl-1">
                           <div className="relative inline-block text-left">
                             <button
                               type="button"
                               onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
-                              className="inline-flex h-9 w-9 items-center justify-center rounded-lg border border-transparent text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors cursor-pointer"
+                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700"
+                              aria-label={`More actions for ${item.name}`}
+                              title="More actions"
                             >
                               <MoreVertical size={16} />
                             </button>
@@ -277,7 +279,7 @@ export default function ItemsWorkspace({
                                   className="fixed inset-0 z-10" 
                                   onClick={() => setActiveMenuId(null)}
                                 />
-                                <div className="absolute right-0 z-20 mt-1 w-36 origin-top-right rounded-xl bg-white shadow-lg ring-1 ring-black ring-opacity-5 focus:outline-none overflow-hidden">
+                                <div className="absolute right-0 z-20 mt-1 w-36 origin-top-right overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
                                   <div className="py-1">
                                     <button
                                       type="button"
@@ -286,7 +288,7 @@ export default function ItemsWorkspace({
                                         setIsModalOpen(true);
                                         setActiveMenuId(null);
                                       }}
-                                      className="text-slate-700 hover:bg-slate-50 hover:text-slate-900 group flex w-full items-center px-3 py-2 text-sm font-medium"
+                                      className="group flex w-full items-center px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                                     >
                                       <Pencil className="mr-2 h-4 w-4 text-slate-400 group-hover:text-blue-500" />
                                       Edit
@@ -297,7 +299,7 @@ export default function ItemsWorkspace({
                                         handleDuplicateItem(item);
                                         setActiveMenuId(null);
                                       }}
-                                      className="text-slate-700 hover:bg-slate-50 hover:text-slate-900 group flex w-full items-center px-3 py-2 text-sm font-medium"
+                                      className="group flex w-full items-center px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                                     >
                                       <Copy className="mr-2 h-4 w-4 text-slate-400 group-hover:text-indigo-500" />
                                       Duplicate
@@ -308,16 +310,28 @@ export default function ItemsWorkspace({
                                         handleDeleteItem(item.id);
                                         setActiveMenuId(null);
                                       }}
-                                      className="text-red-600 hover:bg-red-50 hover:text-red-700 group flex w-full items-center px-3 py-2 text-sm font-medium"
+                                      className="group flex w-full items-center px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
                                     >
                                       <Trash2 className="mr-2 h-4 w-4 text-red-400 group-hover:text-red-500" />
-                                      Remove
+                                      Delete
                                     </button>
                                   </div>
                                 </div>
                               </>
                             )}
                           </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              handleDeleteItem(item.id);
+                              setActiveMenuId(null);
+                            }}
+                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-red-400 shadow-sm transition-colors hover:bg-red-50 hover:text-red-600"
+                            aria-label={`Delete ${item.name}`}
+                            title="Delete item"
+                          >
+                            <Trash2 size={14} />
+                          </button>
                         </div>
                       </div>
 
@@ -331,6 +345,7 @@ export default function ItemsWorkspace({
                             setIsModalOpen(true);
                           }}
                           onDelete={handleDeleteItem}
+                          onDuplicate={handleDuplicateItem}
                         />
                       </div>
                     </div>
