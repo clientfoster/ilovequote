@@ -1,6 +1,5 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
-  Banknote,
   CalendarDays,
   ChevronDown,
   ChevronRight,
@@ -16,64 +15,27 @@ import {
   Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { fetchUserQuotes } from '../quoteApi';
+import { AUTH_STATE_EVENT, getScopedStorageKey, isAuthenticated } from '../auth';
 import {
   formatInvoiceCurrency,
   getDiscountAmount,
   getInvoiceTotal,
+  getLineItemAmount,
   getSubTotal,
+  makeInvoiceExtraField,
   makeInvoiceLineItem,
   makeInvoiceTerm,
+  type InvoiceDraft,
   useInvoiceDraft,
 } from '../invoiceDraft';
+import { BUSINESS_DRAFT_KEY, CLIENT_DRAFT_KEY } from '../wizard/WizardState';
+import type { BusinessFormValues, ClientFormValues, Quote } from '../types';
 
 const steps = [
   { number: '1', label: 'Invoice Details', active: true },
   { number: '2', label: 'Your Bank Details', active: false, optional: true },
   { number: '3', label: 'Select Design & Colors', active: false, subtitle: '(Download or Email Invoice)' },
-];
-
-const sampleBusinesses = [
-  {
-    businessName: 'Sakshi',
-    email: 'sakshi30@gmail.com',
-    businessAddress: 'Surat, Gujarat, India 395017',
-    gstin: '24BFTPS4040D1ZF',
-    pan: 'BFTPS4040D',
-    businessPostal: '395017',
-    businessCity: 'Surat',
-    businessCountry: 'India',
-  },
-  {
-    businessName: 'Semixon Creative Agency',
-    email: 'hello@semixon.com',
-    businessAddress: 'Hubballi, Karnataka, India 580021',
-    gstin: '29ABCDE1234F1Z7',
-    pan: 'ABCDE1234F',
-    businessPostal: '580021',
-    businessCity: 'Hubballi',
-    businessCountry: 'India',
-  },
-];
-
-const sampleClients = [
-  {
-    clientName: 'S. Demo',
-    billedToCompany: 'S Demo Private Limited',
-    billedToAddress: 'MG Road, Bengaluru',
-    billedToCity: 'Bengaluru',
-    billedToCountry: 'India',
-    billedToPostal: '560001',
-    clientId: '015845',
-  },
-  {
-    clientName: 'Refrens Client',
-    billedToCompany: 'Refrens Technologies',
-    billedToAddress: 'Satellite Road, Ahmedabad',
-    billedToCity: 'Ahmedabad',
-    billedToCountry: 'India',
-    billedToPostal: '380015',
-    clientId: 'RFN2401',
-  },
 ];
 
 function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
@@ -88,24 +50,32 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
   );
 }
 
+type ProfileOption = {
+  id: string;
+  label: string;
+  patch: Partial<InvoiceDraft>;
+};
+
 function Field({
   label,
   value,
   onChange,
   type = 'text',
   icon,
+  required = true,
 }: {
   label: string;
   value: string;
   onChange: (value: string) => void;
   type?: string;
   icon?: React.ReactNode;
+  required?: boolean;
 }) {
   return (
     <label className="space-y-2">
       <span className="text-sm font-semibold text-slate-700">
         {label}
-        <span className="text-rose-500">*</span>
+        {required ? <span className="text-rose-500">*</span> : null}
       </span>
       <div className="flex min-h-[46px] items-center rounded-xl border border-slate-200 bg-white px-4 shadow-sm">
         <input
@@ -120,30 +90,420 @@ function Field({
   );
 }
 
+function ProfileSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ProfileOption[];
+  placeholder: string;
+}) {
+  return (
+    <div className="space-y-2">
+      <span className="text-sm font-semibold text-slate-700">{label}</span>
+      <div className="relative">
+        <select
+          value={value}
+          onChange={(event) => onChange(event.target.value)}
+          className="flex min-h-[46px] w-full appearance-none rounded-xl border border-slate-200 bg-white px-4 pr-10 text-sm font-semibold text-slate-700 shadow-sm outline-none focus:border-[#2E6EAB]"
+        >
+          <option value="manual">{placeholder}</option>
+          {options.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      </div>
+    </div>
+  );
+}
+
+function BusinessDetailsFields({
+  draft,
+  updateDraft,
+  isEditing,
+  setIsEditing,
+}: {
+  draft: InvoiceDraft;
+  updateDraft: (patch: Partial<InvoiceDraft>) => void;
+  isEditing: boolean;
+  setIsEditing: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
+  return (
+    <div className={`rounded-2xl border bg-white p-4 shadow-sm ${isEditing ? 'border-[#B7D4F0] ring-2 ring-[#EAF4FF]' : 'border-slate-200'}`}>
+      <div className="mb-4 flex items-center justify-end">
+        <button
+          type="button"
+          onClick={() => setIsEditing((current) => !current)}
+          className="inline-flex items-center gap-2 text-sm font-bold text-[#2E6EAB]"
+        >
+          <Pencil className="h-4 w-4" />
+          {isEditing ? 'Done' : 'Edit'}
+        </button>
+      </div>
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Business Name" value={draft.businessName} onChange={(businessName) => updateDraft({ businessName })} />
+        <Field label="Email" value={draft.email} onChange={(email) => updateDraft({ email })} />
+        <Field label="Phone No" value={draft.businessPhone} type="tel" required={false} onChange={(businessPhone) => updateDraft({ businessPhone })} />
+        <Field label="Address" value={draft.businessAddress} onChange={(businessAddress) => updateDraft({ businessAddress })} />
+        <Field label="GSTIN" value={draft.gstin} onChange={(gstin) => updateDraft({ gstin })} />
+        <Field label="PAN" value={draft.pan} onChange={(pan) => updateDraft({ pan })} />
+        <Field label="Postal" value={draft.businessPostal} onChange={(businessPostal) => updateDraft({ businessPostal })} />
+        <Field label="City" value={draft.businessCity} onChange={(businessCity) => updateDraft({ businessCity })} />
+        <Field label="Country" value={draft.businessCountry} onChange={(businessCountry) => updateDraft({ businessCountry })} />
+      </div>
+    </div>
+  );
+}
+
+function ClientDetailsFields({
+  draft,
+  updateDraft,
+}: {
+  draft: InvoiceDraft;
+  updateDraft: (patch: Partial<InvoiceDraft>) => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div className="grid gap-3 md:grid-cols-2">
+        <Field label="Client Name" value={draft.clientName} onChange={(clientName) => updateDraft({ clientName })} />
+        <Field label="Company Name" value={draft.billedToCompany} onChange={(billedToCompany) => updateDraft({ billedToCompany })} />
+        <Field label="Phone No" value={draft.billedToPhone} type="tel" required={false} onChange={(billedToPhone) => updateDraft({ billedToPhone })} />
+        <Field label="Client ID" value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
+        <Field label="Address" value={draft.billedToAddress} onChange={(billedToAddress) => updateDraft({ billedToAddress })} />
+        <Field label="City" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} />
+        <Field label="Country" value={draft.billedToCountry} onChange={(billedToCountry) => updateDraft({ billedToCountry })} />
+        <Field label="Postal" value={draft.billedToPostal} onChange={(billedToPostal) => updateDraft({ billedToPostal })} />
+        <Field label="PO Number" value={draft.subtitle} onChange={(subtitle) => updateDraft({ subtitle, showSubtitle: true })} />
+        <Field label="Reference Number" value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
+      </div>
+    </div>
+  );
+}
+
+function buildProfileKey(parts: Array<string | undefined | null>) {
+  return parts
+    .map((part) => part?.trim().toLowerCase() || '')
+    .join('|');
+}
+
+function buildBusinessProfileOption(
+  id: string,
+  source: Partial<BusinessFormValues> & {
+    companyName?: string;
+    email?: string;
+    address?: string;
+    city?: string;
+    country?: string;
+    zipCode?: string;
+    taxType?: string;
+    taxId?: string;
+  },
+) {
+  const label = [source.companyName || 'Business Profile', source.phone, source.email, source.city].filter(Boolean).join(' | ');
+  const patch: Partial<InvoiceDraft> = {
+    businessName: source.companyName?.trim() || '',
+    email: source.email?.trim() || '',
+    businessPhone: source.phone?.trim() || '',
+    businessAddress: source.address?.trim() || '',
+    businessCity: source.city?.trim() || '',
+    businessCountry: source.country?.trim() || '',
+    businessPostal: source.zipCode?.trim() || '',
+    gstin: source.taxType === 'GSTIN' ? source.taxId?.trim() || '' : '',
+    pan: source.taxType === 'PAN' ? source.taxId?.trim() || '' : '',
+  };
+
+  return {
+    id,
+    label,
+    patch,
+  } satisfies ProfileOption;
+}
+
+function buildClientProfileOption(
+  id: string,
+  source: Partial<ClientFormValues> & {
+    name?: string;
+    address?: string;
+    email?: string;
+    phone?: string;
+  },
+) {
+  const label = [source.companyName || source.name || 'Client Profile', source.phone, source.email].filter(Boolean).join(' | ');
+  const patch: Partial<InvoiceDraft> = {
+    clientName: source.companyName?.trim() || source.contactPerson?.trim() || source.name?.trim() || '',
+    clientId: source.poNumber?.trim() || source.taxId?.trim() || '',
+    billedToCompany: source.companyName?.trim() || source.name?.trim() || '',
+    billedToPhone: source.phone?.trim() || '',
+    billedToAddress: source.billingAddress?.trim() || source.address?.trim() || '',
+    billedToCity: source.city?.trim() || '',
+    billedToCountry: source.country?.trim() || '',
+    billedToPostal: source.zipCode?.trim() || '',
+  };
+
+  return {
+    id,
+    label,
+    patch,
+  } satisfies ProfileOption;
+}
+
 export default function CreateInvoicePage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useInvoiceDraft();
-  const [showExtraFields, setShowExtraFields] = useState(false);
-  const [showShippingExtraFields, setShowShippingExtraFields] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(isAuthenticated());
   const [isBusinessEditing, setIsBusinessEditing] = useState(true);
-  const [businessIndex, setBusinessIndex] = useState(0);
-  const [clientIndex, setClientIndex] = useState(0);
+  const [businessProfiles, setBusinessProfiles] = useState<ProfileOption[]>([]);
+  const [clientProfiles, setClientProfiles] = useState<ProfileOption[]>([]);
+  const [selectedBusinessProfileId, setSelectedBusinessProfileId] = useState('manual');
+  const [selectedClientProfileId, setSelectedClientProfileId] = useState('manual');
 
-  const updateDraft = (patch: Partial<typeof draft>) => setDraft((current) => ({ ...current, ...patch }));
+  const updateDraft = (patch: Partial<InvoiceDraft>) => setDraft((current) => ({ ...current, ...patch }));
   const subtotal = getSubTotal(draft.lineItems);
   const discountAmount = getDiscountAmount(draft);
-  const total = getInvoiceTotal(draft);
+  const total = getInvoiceTotal(draft, draft.showTax);
+  const lineItemGridClass = draft.showTax
+    ? 'md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_120px_130px_44px]'
+    : 'md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_130px_44px]';
+  const optionalFieldsGridClass = draft.showDueDate && draft.showCustomFields ? 'grid gap-3 md:grid-cols-2 md:items-start' : 'grid gap-3';
+  const updateBusinessDraft = (patch: Partial<InvoiceDraft>) => {
+    setSelectedBusinessProfileId('manual');
+    updateDraft(patch);
+  };
+  const updateClientDraft = (patch: Partial<InvoiceDraft>) => {
+    setSelectedClientProfileId('manual');
+    updateDraft(patch);
+  };
+  const updateCustomField = (id: string, patch: { label?: string; value?: string }) => {
+    updateDraft({
+      customFields: draft.customFields.map((field) => (field.id === id ? { ...field, ...patch } : field)),
+    });
+  };
+  const addCustomField = () => {
+    updateDraft({
+      customFields: [...draft.customFields, makeInvoiceExtraField()],
+      showCustomFields: true,
+    });
+  };
+  const toggleCustomFields = () => {
+    if (!draft.showCustomFields && draft.customFields.length === 0) {
+      updateDraft({
+        showCustomFields: true,
+        customFields: [makeInvoiceExtraField()],
+      });
+      return;
+    }
 
-  const cycleBusiness = () => {
-    const nextIndex = (businessIndex + 1) % sampleBusinesses.length;
-    setBusinessIndex(nextIndex);
-    updateDraft(sampleBusinesses[nextIndex]);
+    updateDraft({ showCustomFields: !draft.showCustomFields });
+  };
+  const removeCustomField = (id: string) => {
+    updateDraft({
+      customFields: draft.customFields.filter((field) => field.id !== id),
+    });
   };
 
-  const cycleClient = () => {
-    const nextIndex = (clientIndex + 1) % sampleClients.length;
-    setClientIndex(nextIndex);
-    updateDraft(sampleClients[nextIndex]);
+  useEffect(() => {
+    const syncAuth = () => setIsAuthed(isAuthenticated());
+    syncAuth();
+
+    window.addEventListener(AUTH_STATE_EVENT, syncAuth);
+    window.addEventListener('storage', syncAuth);
+
+    return () => {
+      window.removeEventListener(AUTH_STATE_EVENT, syncAuth);
+      window.removeEventListener('storage', syncAuth);
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProfiles = async () => {
+      if (!isAuthed) {
+        if (!cancelled) {
+          setBusinessProfiles([]);
+          setClientProfiles([]);
+          setSelectedBusinessProfileId('manual');
+          setSelectedClientProfileId('manual');
+        }
+        return;
+      }
+
+      const nextBusinessProfiles: ProfileOption[] = [];
+      const nextClientProfiles: ProfileOption[] = [];
+      const seenBusinessKeys = new Set<string>();
+      const seenClientKeys = new Set<string>();
+
+      const pushBusinessProfile = (profile: ProfileOption, key: string) => {
+        if (!key || seenBusinessKeys.has(key)) return;
+        seenBusinessKeys.add(key);
+        nextBusinessProfiles.push(profile);
+      };
+
+      const pushClientProfile = (profile: ProfileOption, key: string) => {
+        if (!key || seenClientKeys.has(key)) return;
+        seenClientKeys.add(key);
+        nextClientProfiles.push(profile);
+      };
+
+      try {
+        const businessDraftRaw = localStorage.getItem(getScopedStorageKey(BUSINESS_DRAFT_KEY));
+        if (businessDraftRaw) {
+          const parsed = JSON.parse(businessDraftRaw) as Partial<BusinessFormValues>;
+          if (parsed.companyName?.trim()) {
+            const profile = buildBusinessProfileOption('business-draft', parsed);
+            pushBusinessProfile(
+              profile,
+              buildProfileKey([
+                parsed.companyName,
+                parsed.phone,
+                parsed.email,
+                parsed.address,
+                parsed.city,
+                parsed.country,
+                parsed.zipCode,
+              ]),
+            );
+          }
+        }
+      } catch {
+        // Ignore malformed drafts and continue with quote history.
+      }
+
+      try {
+        const clientDraftRaw = localStorage.getItem(getScopedStorageKey(CLIENT_DRAFT_KEY));
+        if (clientDraftRaw) {
+          const parsed = JSON.parse(clientDraftRaw) as Partial<ClientFormValues>;
+          if (parsed.companyName?.trim() || parsed.contactPerson?.trim()) {
+            const profile = buildClientProfileOption('client-draft', parsed);
+            pushClientProfile(
+              profile,
+              buildProfileKey([
+                parsed.companyName,
+                parsed.contactPerson,
+                parsed.email,
+                parsed.phone,
+                parsed.billingAddress,
+                parsed.city,
+                parsed.country,
+              ]),
+            );
+          }
+        }
+      } catch {
+        // Ignore malformed drafts and continue with quote history.
+      }
+
+      try {
+        const quotes = await fetchUserQuotes();
+        quotes.forEach((quote: Quote) => {
+          const businessProfile = buildBusinessProfileOption(`quote-business-${quote.id}`, {
+            companyName: quote.businessDetails.companyName,
+            email: quote.businessDetails.email,
+            address: quote.businessDetails.address,
+            city: quote.businessDetails.city,
+            country: quote.businessDetails.country,
+            zipCode: quote.businessDetails.zipCode,
+            taxType: quote.businessDetails.taxType,
+            taxId: quote.businessDetails.taxId,
+          });
+
+          const clientProfile = buildClientProfileOption(`quote-client-${quote.id}`, {
+            name: quote.clientDetails.name,
+            email: quote.clientDetails.email,
+            phone: quote.clientDetails.phone,
+            address: quote.clientDetails.address,
+          });
+
+          if (quote.businessDetails.companyName?.trim()) {
+            pushBusinessProfile(
+              businessProfile,
+              buildProfileKey([
+                quote.businessDetails.companyName,
+                quote.businessDetails.phone,
+                quote.businessDetails.email,
+                quote.businessDetails.address,
+                quote.businessDetails.city,
+                quote.businessDetails.country,
+                quote.businessDetails.zipCode,
+              ]),
+            );
+          }
+
+          if (quote.clientDetails.name?.trim()) {
+            pushClientProfile(
+              clientProfile,
+              buildProfileKey([
+                quote.clientDetails.name,
+                quote.clientDetails.email,
+                quote.clientDetails.phone,
+                quote.clientDetails.address,
+              ]),
+            );
+          }
+        });
+      } catch {
+        // Signed-in users can still work manually if quote history is unavailable.
+      }
+
+      if (!cancelled) {
+        setBusinessProfiles(nextBusinessProfiles);
+        setClientProfiles(nextClientProfiles);
+      }
+    };
+
+    void loadProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthed]);
+
+  const applyBusinessProfile = (profileId: string) => {
+    if (profileId === 'manual') {
+      setSelectedBusinessProfileId('manual');
+      return;
+    }
+
+    const selected = businessProfiles.find((profile) => profile.id === profileId);
+    if (!selected) return;
+
+    setSelectedBusinessProfileId(profileId);
+    updateDraft(selected.patch);
+  };
+
+  const applyClientProfile = (profileId: string) => {
+    if (profileId === 'manual') {
+      setSelectedClientProfileId('manual');
+      return;
+    }
+
+    const selected = clientProfiles.find((profile) => profile.id === profileId);
+    if (!selected) return;
+
+    setSelectedClientProfileId(profileId);
+    updateDraft(selected.patch);
+  };
+
+  const startNewClient = () => {
+    setSelectedClientProfileId('manual');
+      updateDraft({
+      clientName: '',
+      clientId: '',
+      billedToCompany: '',
+      billedToPhone: '',
+      billedToAddress: '',
+      billedToCity: '',
+      billedToCountry: '',
+      billedToPostal: '',
+    });
   };
 
   return (
@@ -174,6 +534,7 @@ export default function CreateInvoicePage() {
             <div className="text-center">
               <h1 className="text-4xl font-black tracking-[-0.04em] text-slate-900">Invoice</h1>
               <button
+                type="button"
                 onClick={() => updateDraft({ showSubtitle: !draft.showSubtitle })}
                 className="mt-3 inline-flex items-center gap-2 rounded-full border border-[#B7D4F0] bg-[#EAF4FF] px-3 py-1.5 text-sm font-semibold text-[#2E6EAB]"
               >
@@ -192,34 +553,118 @@ export default function CreateInvoicePage() {
               ) : null}
             </div>
 
-            <div className="grid gap-5 lg:grid-cols-2">
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_200px] xl:grid-cols-[minmax(0,1.7fr)_220px] lg:items-start">
               <div className="space-y-5">
-                <div>
-                  <Field label="Invoice No" value={draft.invoiceNumber} onChange={(invoiceNumber) => updateDraft({ invoiceNumber })} />
-                  <p className="mt-2 text-sm font-semibold text-slate-400">Latest Invoice No: A00005 (Jan 17, 2024)</p>
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div>
+                    <Field label="Invoice No" value={draft.invoiceNumber} onChange={(invoiceNumber) => updateDraft({ invoiceNumber })} />
+                    <p className="mt-2 text-sm font-semibold text-slate-400">Latest Invoice No: A00005 (Jan 17, 2024)</p>
+                  </div>
+                  <Field
+                    label="Invoice Date"
+                    value={draft.invoiceDate}
+                    type="date"
+                    onChange={(invoiceDate) => updateDraft({ invoiceDate })}
+                    icon={<CalendarDays className="h-4 w-4 text-slate-400" />}
+                  />
                 </div>
-                <Field
-                  label="Invoice Date"
-                  value={draft.invoiceDate}
-                  type="date"
-                  onChange={(invoiceDate) => updateDraft({ invoiceDate })}
-                  icon={<CalendarDays className="h-4 w-4 text-slate-400" />}
-                />
-                <div className="space-y-3 pt-1">
-                  <button onClick={() => updateDraft({ showDueDate: !draft.showDueDate })} className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]">
+                <div className="space-y-1.5 pt-0.5">
+                  <button
+                    type="button"
+                    onClick={() => updateDraft({ showDueDate: !draft.showDueDate })}
+                    className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]"
+                  >
                     <CirclePlus className="h-4 w-4" />
                     {draft.showDueDate ? 'Hide Due Date' : 'Add Due Date'}
                   </button>
-                  <button onClick={() => setShowExtraFields((current) => !current)} className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]">
+                  <button
+                    type="button"
+                    onClick={toggleCustomFields}
+                    className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]"
+                  >
                     <CirclePlus className="h-4 w-4" />
-                    {showExtraFields ? 'Hide Extra Fields' : 'Add More Fields'}
+                    {draft.showCustomFields ? 'Hide Extra Fields' : 'Add More Fields'}
                   </button>
                 </div>
+                {(draft.showDueDate || draft.showCustomFields) ? (
+                  <div className={optionalFieldsGridClass}>
+                    {draft.showDueDate ? (
+                      <div className="self-start rounded-2xl border border-slate-200 bg-slate-50/70 px-2.5 py-2.5">
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                          <span className="text-sm font-semibold text-slate-700">Due Date</span>
+                          <div className="flex min-h-[40px] w-full items-center rounded-xl border border-slate-200 bg-white px-3 shadow-sm sm:w-[260px] sm:max-w-[260px]">
+                            <input
+                              type="date"
+                              value={draft.dueDate}
+                              onChange={(event) => updateDraft({ dueDate: event.target.value })}
+                              className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none"
+                            />
+                            <CalendarDays className="h-4 w-4 shrink-0 text-slate-400" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : null}
+                    {draft.showCustomFields ? (
+                      <div className="self-start rounded-2xl border border-slate-200 bg-slate-50/70 px-2.5 py-2.5">
+                        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                          <div className="space-y-0.5">
+                            <h4 className="text-sm font-black tracking-[-0.02em] text-slate-900">Custom Fields</h4>
+                            <p className="text-xs leading-4 text-slate-500">Add labels such as Client ID, GST Number, PO Number, or Vehicle No.</p>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={addCustomField}
+                            className="inline-flex min-h-[36px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+                          >
+                            <Plus className="h-4 w-4" />
+                            Add Field
+                          </button>
+                        </div>
+
+                        <div className="mt-2 space-y-1.5">
+                          {draft.customFields.length === 0 ? (
+                            <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-2.5 text-center">
+                              <p className="text-sm font-semibold text-slate-700">No custom fields yet</p>
+                              <p className="mt-1 text-xs text-slate-500">Add your first field to start capturing extra invoice details.</p>
+                            </div>
+                          ) : (
+                            draft.customFields.map((field) => (
+                              <div key={field.id} className="grid gap-1.5 sm:grid-cols-[minmax(0,4fr)_minmax(0,5fr)_48px] sm:items-center">
+                                <input
+                                  type="text"
+                                  value={field.label}
+                                  onChange={(event) => updateCustomField(field.id, { label: event.target.value })}
+                                  placeholder="Field label"
+                                  className="min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2E6EAB]"
+                                />
+                                <input
+                                  type="text"
+                                  value={field.value}
+                                  onChange={(event) => updateCustomField(field.id, { value: event.target.value })}
+                                  placeholder="Field value"
+                                  className="min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2E6EAB]"
+                                />
+                                <button
+                                  type="button"
+                                  onClick={() => removeCustomField(field.id)}
+                                  className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-200 bg-white px-0 text-slate-400 shadow-sm hover:bg-red-50 hover:text-red-500"
+                                  aria-label="Delete custom field"
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </button>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
 
               <div className="flex items-start justify-center lg:justify-end">
-                <label className="flex min-h-[124px] w-full max-w-[270px] cursor-pointer items-center justify-center gap-3 rounded-2xl border border-dashed border-[#B7D4F0] bg-[#F4FAFF] px-5 text-base font-semibold text-[#5D78A4]">
-                  <ImagePlus className="h-6 w-6" />
+                <label className="flex min-h-[104px] w-full max-w-[220px] cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-[#B7D4F0] bg-[#F4FAFF] px-4 text-sm font-semibold text-[#5D78A4]">
+                  <ImagePlus className="h-5 w-5" />
                   {draft.logoName || 'Add Business Logo'}
                   <input
                     type="file"
@@ -229,112 +674,65 @@ export default function CreateInvoicePage() {
                   />
                 </label>
               </div>
+
             </div>
 
             <div className="grid gap-4 xl:grid-cols-2">
               <SectionCard title="Billed By" subtitle="(Your Details)">
                 <div className="space-y-4">
-                  <button
-                    type="button"
-                    onClick={cycleBusiness}
-                    className="flex min-h-[46px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-left text-sm font-semibold text-slate-700 shadow-sm"
-                  >
-                    <div className="flex items-center gap-2">
-                      <div className="flex h-7 w-7 items-center justify-center rounded-lg bg-[#EAF4FF] text-[#2E6EAB]">
-                        <ReceiptText className="h-4 w-4" />
-                      </div>
-                      {draft.businessName}
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  </button>
+                  {isAuthed && businessProfiles.length > 0 ? (
+                    <ProfileSelect
+                      label="Business Profile"
+                      value={selectedBusinessProfileId}
+                      onChange={applyBusinessProfile}
+                      options={businessProfiles}
+                      placeholder="Manual entry"
+                    />
+                  ) : null}
 
-                  <div className={`rounded-2xl border bg-white p-4 shadow-sm ${isBusinessEditing ? 'border-[#B7D4F0] ring-2 ring-[#EAF4FF]' : 'border-slate-200'}`}>
-                    <div className="mb-4 flex items-center justify-between">
-                      <h4 className="text-2xl font-black tracking-[-0.03em] text-slate-900">Business details</h4>
-                      <button onClick={() => setIsBusinessEditing((current) => !current)} className="inline-flex items-center gap-2 text-sm font-bold text-[#2E6EAB]">
-                        <Pencil className="h-4 w-4" />
-                        {isBusinessEditing ? 'Done' : 'Edit'}
-                      </button>
-                    </div>
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Business Name" value={draft.businessName} onChange={(businessName) => updateDraft({ businessName })} />
-                      <Field label="Email" value={draft.email} onChange={(email) => updateDraft({ email })} />
-                      <Field label="Address" value={draft.businessAddress} onChange={(businessAddress) => updateDraft({ businessAddress })} />
-                      <Field label="GSTIN" value={draft.gstin} onChange={(gstin) => updateDraft({ gstin })} />
-                      <Field label="PAN" value={draft.pan} onChange={(pan) => updateDraft({ pan })} />
-                      <Field label="Postal" value={draft.businessPostal} onChange={(businessPostal) => updateDraft({ businessPostal })} />
-                      {showExtraFields ? (
-                        <>
-                          <Field label="City" value={draft.businessCity} onChange={(businessCity) => updateDraft({ businessCity })} />
-                          <Field label="Country" value={draft.businessCountry} onChange={(businessCountry) => updateDraft({ businessCountry })} />
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
+                  <BusinessDetailsFields
+                    draft={draft}
+                    updateDraft={updateBusinessDraft}
+                    isEditing={isBusinessEditing}
+                    setIsEditing={setIsBusinessEditing}
+                  />
                 </div>
               </SectionCard>
 
               <SectionCard title="Billed To" subtitle="(Client Details)">
                 <div className="space-y-4">
-                  <div className="flex gap-3">
-                    <div className="flex-1">
-                      <Field label="Client Name" value={draft.clientName} onChange={(clientName) => updateDraft({ clientName })} />
-                    </div>
-                    <div className="flex items-end">
-                      <button onClick={cycleClient} className="inline-flex min-h-[46px] items-center gap-2 rounded-xl bg-[#2E6EAB] px-4 text-sm font-bold text-white shadow-sm">
+                  {isAuthed ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                      <div className="min-w-0 flex-1">
+                        {clientProfiles.length > 0 ? (
+                          <ProfileSelect
+                            label="Client Profile"
+                            value={selectedClientProfileId}
+                            onChange={applyClientProfile}
+                            options={clientProfiles}
+                            placeholder="Manual entry"
+                          />
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
+                            No saved clients yet. Enter details below to keep working.
+                          </div>
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={startNewClient}
+                        className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2E6EAB] px-4 text-sm font-bold text-white shadow-sm"
+                      >
                         <CirclePlus className="h-4 w-4" />
                         Add New Client
                       </button>
                     </div>
-                  </div>
-                  <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <Field label="Company Name" value={draft.billedToCompany} onChange={(billedToCompany) => updateDraft({ billedToCompany })} />
-                      <Field label="Client ID" value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
-                      <Field label="Address" value={draft.billedToAddress} onChange={(billedToAddress) => updateDraft({ billedToAddress })} />
-                      <Field label="City" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} />
-                      <Field label="Country" value={draft.billedToCountry} onChange={(billedToCountry) => updateDraft({ billedToCountry })} />
-                      <Field label="Postal" value={draft.billedToPostal} onChange={(billedToPostal) => updateDraft({ billedToPostal })} />
-                      {showExtraFields ? (
-                        <>
-                          <Field label="PO Number" value={draft.subtitle} onChange={(subtitle) => updateDraft({ subtitle, showSubtitle: true })} />
-                          <Field label="Reference Number" value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
-                        </>
-                      ) : null}
-                    </div>
-                  </div>
+                  ) : null}
+
+                  <ClientDetailsFields draft={draft} updateDraft={updateClientDraft} />
                 </div>
               </SectionCard>
             </div>
-
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-              <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_128px]">
-                <div className="grid gap-4 md:grid-cols-2">
-                  <Field label="Invoice Date" value={draft.invoiceDate} type="date" onChange={(invoiceDate) => updateDraft({ invoiceDate })} icon={<CalendarDays className="h-4 w-4 text-slate-400" />} />
-                  {draft.showDueDate ? <Field label="Due Date" value={draft.dueDate} type="date" onChange={(dueDate) => updateDraft({ dueDate })} icon={<CalendarDays className="h-4 w-4 text-slate-400" />} /> : <div />}
-                  <Field label="Client ID" value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
-                  <div className="flex items-end">
-                    <button onClick={() => setShowExtraFields((current) => !current)} className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]">
-                      <CirclePlus className="h-4 w-4" />
-                      {showExtraFields ? 'Hide Extra Fields' : 'Add More Fields'}
-                    </button>
-                  </div>
-                  {showExtraFields ? <Field label="Place Of Supply" value={draft.businessCountry} onChange={(businessCountry) => updateDraft({ businessCountry })} /> : null}
-                  {showExtraFields ? <Field label="Purchase Order No" value={draft.invoiceNumber} onChange={(invoiceNumber) => updateDraft({ invoiceNumber })} /> : null}
-                </div>
-                <div className="flex items-center justify-center rounded-2xl border border-slate-200 bg-[#EAF4FF] p-4">
-                  <div className="text-center">
-                    <div className="mx-auto flex h-24 w-24 items-center justify-center rounded-2xl bg-[#2E6EAB] text-white shadow-sm">
-                      <Banknote className="h-10 w-10" />
-                    </div>
-                    <button onClick={() => updateDraft({ currency: draft.currency === 'INR (INR, Rs)' ? 'USD ($)' : 'INR (INR, Rs)' })} className="mt-3 inline-flex items-center gap-2 text-sm font-bold text-[#2E6EAB]">
-                      <Pencil className="h-4 w-4" />
-                      Change
-                    </button>
-                  </div>
-                </div>
-              </div>
-            </section>
 
             <section className="space-y-3">
               <label className="inline-flex items-center gap-3 text-sm font-bold text-[#2E6EAB]">
@@ -359,11 +757,15 @@ export default function CreateInvoicePage() {
                       <Field label="Address" value={draft.billedToAddress} onChange={(billedToAddress) => updateDraft({ billedToAddress })} />
                       <Field label="City" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} />
                       <Field label="Postal Code" value={draft.billedToPostal} onChange={(billedToPostal) => updateDraft({ billedToPostal })} />
-                      <button onClick={() => setShowShippingExtraFields((current) => !current)} className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]">
+                      <button
+                        type="button"
+                        onClick={() => updateDraft({ showShippingExtraFields: !draft.showShippingExtraFields })}
+                        className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]"
+                      >
                         <CirclePlus className="h-4 w-4" />
-                        {showShippingExtraFields ? 'Hide Extra Fields' : 'Add More Fields'}
+                        {draft.showShippingExtraFields ? 'Hide Extra Fields' : 'Add More Fields'}
                       </button>
-                      {showShippingExtraFields ? <Field label="State" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} /> : null}
+                      {draft.showShippingExtraFields ? <Field label="State" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} /> : null}
                     </div>
                   </SectionCard>
                   <SectionCard title="Transport Details">
@@ -378,63 +780,85 @@ export default function CreateInvoicePage() {
               ) : null}
             </section>
 
-            <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-              <div className="flex flex-wrap gap-3">
-                <button className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm">Configure Tax</button>
-                <button className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm">
-                  {draft.currency}
-                  <ChevronDown className="h-4 w-4 text-slate-400" />
-                </button>
-              </div>
+            <div className="space-y-3">
+              <label className="inline-flex items-center gap-3 text-sm font-bold text-[#2E6EAB]">
+                <input
+                  type="checkbox"
+                  checked={draft.showTaxItemsSection}
+                  onChange={(event) => updateDraft({ showTaxItemsSection: event.target.checked })}
+                  className="h-4 w-4 rounded border-slate-300 text-[#2E6EAB] focus:ring-[#2E6EAB]"
+                />
+                {draft.showTaxItemsSection ? 'Hide Tax & Items' : 'Show Tax & Items'}
+              </label>
 
-              <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-                <div className="hidden md:grid grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_120px_130px_44px] gap-3 bg-slate-50 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-                  <div>#</div><div>Item / Description</div><div>Quantity</div><div>Rate</div><div>Tax (%)</div><div>Amount</div><div />
-                </div>
-                <div className="divide-y divide-slate-200">
-                  {draft.lineItems.map((row, index) => {
-                    const amount = row.quantity * row.rate * (1 + row.tax / 100);
-                    return (
-                      <div key={row.id} className="grid gap-3 px-4 py-4 md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_120px_130px_44px] md:items-center">
-                        <div className="text-sm font-bold text-slate-900">{index + 1}</div>
-                        <div className="grid gap-2">
-                          <input value={row.name} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, name: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none" />
-                          <input value={row.description} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, description: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-500 outline-none" />
+              {draft.showTaxItemsSection ? (
+                <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+                  <div className="flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => updateDraft({ showTax: !draft.showTax })}
+                      className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm"
+                    >
+                      Configure Tax
+                    </button>
+                    <button className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm">
+                      {draft.currency}
+                      <ChevronDown className="h-4 w-4 text-slate-400" />
+                    </button>
+                  </div>
+
+                  <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
+                    <div className={`hidden md:grid ${lineItemGridClass} gap-3 bg-slate-50 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500`}>
+                      <div>#</div><div>Item / Description</div><div>Quantity</div><div>Rate</div>{draft.showTax ? <div>Tax (%)</div> : null}<div>Amount</div><div />
+                    </div>
+                    <div className="divide-y divide-slate-200">
+                      {draft.lineItems.map((row, index) => {
+                        const amount = getLineItemAmount(row, draft.showTax);
+                        return (
+                          <div key={row.id} className={`grid gap-3 px-4 py-4 ${lineItemGridClass} md:items-center`}>
+                            <div className="text-sm font-bold text-slate-900">{index + 1}</div>
+                            <div className="grid gap-2">
+                              <input value={row.name} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, name: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none" />
+                              <input value={row.description} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, description: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-500 outline-none" />
+                            </div>
+                            <input type="number" value={row.quantity} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, quantity: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                            <input type="number" value={row.rate} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, rate: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                            {draft.showTax ? (
+                              <input type="number" value={row.tax} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                            ) : null}
+                            <div className="flex items-center text-sm font-bold text-slate-900">{formatInvoiceCurrency(amount)}</div>
+                            <button onClick={() => setDraft((current) => ({ ...current, lineItems: current.lineItems.filter((item) => item.id !== row.id) }))} className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-red-500">
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="grid gap-4 border-t border-slate-200 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
+                      <button onClick={() => setDraft((current) => ({ ...current, lineItems: [...current.lineItems, makeInvoiceLineItem()] }))} className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-dashed border-[#B7D4F0] bg-[#EAF4FF] px-4 text-sm font-bold text-[#2E6EAB]">
+                        <Plus className="h-4 w-4" />
+                        Add Item
+                      </button>
+                      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
+                        <div className="space-y-3 text-sm">
+                          <div className="flex items-center justify-between font-semibold text-slate-600"><span>Sub Total</span><span>{formatInvoiceCurrency(subtotal)}</span></div>
+                          <div className="grid gap-2 sm:grid-cols-[1fr_82px_64px] sm:items-center">
+                            <span className="font-semibold text-slate-600">Discount</span>
+                            <input type="number" value={draft.discountValue} onChange={(e) => updateDraft({ discountValue: Number(e.target.value) || 0 })} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                            <select value={draft.discountType} onChange={(e) => updateDraft({ discountType: e.target.value as '%' | 'Flat' })} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none">
+                              <option value="%">%</option>
+                              <option value="Flat">Flat</option>
+                            </select>
+                          </div>
+                          <div className="flex items-center justify-between font-semibold text-slate-600"><span /><span>(-) {formatInvoiceCurrency(discountAmount)}</span></div>
+                            <div className="text-right text-3xl font-black tracking-[-0.04em] text-[#2E6EAB]">{formatInvoiceCurrency(total)}</div>
                         </div>
-                        <input type="number" value={row.quantity} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, quantity: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                        <input type="number" value={row.rate} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, rate: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                        <input type="number" value={row.tax} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                        <div className="flex items-center text-sm font-bold text-slate-900">{formatInvoiceCurrency(amount)}</div>
-                        <button onClick={() => setDraft((current) => ({ ...current, lineItems: current.lineItems.filter((item) => item.id !== row.id) }))} className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-red-500">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
                       </div>
-                    );
-                  })}
-                </div>
-                <div className="grid gap-4 border-t border-slate-200 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-                  <button onClick={() => setDraft((current) => ({ ...current, lineItems: [...current.lineItems, makeInvoiceLineItem()] }))} className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-dashed border-[#B7D4F0] bg-[#EAF4FF] px-4 text-sm font-bold text-[#2E6EAB]">
-                    <Plus className="h-4 w-4" />
-                    Add Item
-                  </button>
-                  <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                    <div className="space-y-3 text-sm">
-                      <div className="flex items-center justify-between font-semibold text-slate-600"><span>Sub Total</span><span>{formatInvoiceCurrency(subtotal)}</span></div>
-                      <div className="grid gap-2 sm:grid-cols-[1fr_82px_64px] sm:items-center">
-                        <span className="font-semibold text-slate-600">Discount</span>
-                        <input type="number" value={draft.discountValue} onChange={(e) => updateDraft({ discountValue: Number(e.target.value) || 0 })} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                        <select value={draft.discountType} onChange={(e) => updateDraft({ discountType: e.target.value as '%' | 'Flat' })} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none">
-                          <option value="%">%</option>
-                          <option value="Flat">Flat</option>
-                        </select>
-                      </div>
-                      <div className="flex items-center justify-between font-semibold text-slate-600"><span /><span>(-) {formatInvoiceCurrency(discountAmount)}</span></div>
-                        <div className="text-right text-3xl font-black tracking-[-0.04em] text-[#2E6EAB]">{formatInvoiceCurrency(total)}</div>
                     </div>
                   </div>
-                </div>
-              </div>
-            </section>
+                </section>
+              ) : null}
+            </div>
 
             <div className="flex flex-wrap gap-3">
               {[

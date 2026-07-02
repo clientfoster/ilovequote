@@ -124,7 +124,11 @@ export default function CreateInvoiceBankDetailsPage() {
                     <h2 className="text-xl font-black tracking-[-0.03em] text-slate-900">Additional Payment Notes</h2>
                     <p className="mt-1 text-sm text-slate-500">Shown near the payment section in your invoice preview.</p>
                   </div>
-                  <button onClick={() => updateDraft({ paymentNotes: `${draft.paymentNotes}\nAdditional note` })} className="inline-flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]">
+                  <button
+                    type="button"
+                    onClick={() => updateDraft({ paymentNotes: `${draft.paymentNotes}\nAdditional note` })}
+                    className="inline-flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]"
+                  >
                     <CirclePlus className="h-4 w-4" />
                     Add More Fields
                   </button>
@@ -133,10 +137,10 @@ export default function CreateInvoiceBankDetailsPage() {
               </section>
 
               <div className="flex flex-col justify-between gap-3 border-t border-slate-200 pt-4 sm:flex-row">
-                <button onClick={() => navigate('/create-invoice')} className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 text-sm font-bold text-slate-600 shadow-sm"><ChevronLeft className="h-4 w-4" />Back</button>
+                <button type="button" onClick={() => navigate('/create-invoice')} className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-6 text-sm font-bold text-slate-600 shadow-sm"><ChevronLeft className="h-4 w-4" />Back</button>
                 <div className="flex items-stretch rounded-xl bg-[#2E6EAB] shadow-[0_12px_24px_rgba(46,110,171,0.22)]">
-                  <button onClick={() => navigate('/create-invoice/design')} className="inline-flex min-h-[50px] items-center justify-center px-8 text-sm font-bold text-white">Save & Continue</button>
-                  <button className="border-l border-[#5D8CC0] px-4 text-white"><ChevronDown className="h-4 w-4" /></button>
+                  <button type="button" onClick={() => navigate('/create-invoice/design')} className="inline-flex min-h-[50px] items-center justify-center px-8 text-sm font-bold text-white">Save & Continue</button>
+                  <button type="button" className="border-l border-[#5D8CC0] px-4 text-white"><ChevronDown className="h-4 w-4" /></button>
                 </div>
               </div>
             </div>

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { AUTH_STATE_EVENT, getScopedStorageKey, isAuthenticated } from './auth';
 
 export type InvoiceLineItem = {
   id: string;
@@ -14,6 +15,12 @@ export type InvoiceTerm = {
   text: string;
 };
 
+export type InvoiceExtraField = {
+  id: string;
+  label: string;
+  value: string;
+};
+
 export type InvoiceDraft = {
   invoiceNumber: string;
   subtitle: string;
@@ -21,6 +28,12 @@ export type InvoiceDraft = {
   invoiceDate: string;
   dueDate: string;
   showDueDate: boolean;
+  showCustomFields: boolean;
+  customFields: InvoiceExtraField[];
+  showExtraFields: boolean;
+  showShippingExtraFields: boolean;
+  showTaxItemsSection: boolean;
+  showTax: boolean;
   clientId: string;
   clientName: string;
   logoName: string;
@@ -29,10 +42,12 @@ export type InvoiceDraft = {
   businessCity: string;
   businessCountry: string;
   businessPostal: string;
+  businessPhone: string;
   gstin: string;
   pan: string;
   email: string;
   billedToCompany: string;
+  billedToPhone: string;
   billedToAddress: string;
   billedToCity: string;
   billedToCountry: string;
@@ -60,9 +75,15 @@ export type InvoiceDraft = {
   upiId: string;
   qrImageName: string;
   paymentNotes: string;
+  draftVersion?: number;
 };
 
 const STORAGE_KEY = 'ilovequote_invoice_draft_v1';
+const DRAFT_VERSION = 2;
+
+function getInvoiceDraftStorageKey() {
+  return getScopedStorageKey(STORAGE_KEY);
+}
 
 const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
@@ -72,24 +93,32 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   showSubtitle: false,
   invoiceDate: '2024-01-17',
   dueDate: '2024-01-31',
-  showDueDate: true,
-  clientId: '015845',
-  clientName: 'Select a Client',
+  showDueDate: false,
+  showCustomFields: false,
+  customFields: [],
+  showExtraFields: false,
+  showShippingExtraFields: false,
+  showTaxItemsSection: true,
+  showTax: false,
+  clientId: '',
+  clientName: '',
   logoName: '',
-  businessName: 'Sakshi',
-  businessAddress: 'Surat, Gujarat, India 395017',
-  businessCity: 'Surat',
-  businessCountry: 'India',
-  businessPostal: '395017',
-  gstin: '24BFTPS4040D1ZF',
-  pan: 'BFTPS4040D',
-  email: 'sakshi30@gmail.com',
-  billedToCompany: 'Company Name',
-  billedToAddress: 'Address',
-  billedToCity: 'City',
-  billedToCountry: 'Country',
-  billedToPostal: 'Postal',
-  shippingEnabled: true,
+  businessName: '',
+  businessAddress: '',
+  businessCity: '',
+  businessCountry: '',
+  businessPostal: '',
+  businessPhone: '',
+  gstin: '',
+  pan: '',
+  email: '',
+  billedToCompany: '',
+  billedToPhone: '',
+  billedToAddress: '',
+  billedToCity: '',
+  billedToCountry: '',
+  billedToPostal: '',
+  shippingEnabled: false,
   transportMode: '',
   transporter: '',
   distanceKm: '',
@@ -119,26 +148,41 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   upiId: 'sakshi@upi',
   qrImageName: '',
   paymentNotes: 'Kindly make payment within 15 days. Use the invoice number as your payment reference. UPI and bank transfer are both accepted.',
+  draftVersion: DRAFT_VERSION,
 };
 
 export function loadInvoiceDraft(): InvoiceDraft {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(getInvoiceDraftStorageKey()) || (isAuthenticated() ? localStorage.getItem(STORAGE_KEY) : null);
     if (!raw) return defaultInvoiceDraft;
     const parsed = JSON.parse(raw) as Partial<InvoiceDraft>;
-    return {
+    const isCurrentSchema = parsed.draftVersion === DRAFT_VERSION;
+    const draft: InvoiceDraft = {
       ...defaultInvoiceDraft,
       ...parsed,
+      showDueDate: isCurrentSchema ? parsed.showDueDate ?? defaultInvoiceDraft.showDueDate : false,
+      showCustomFields: isCurrentSchema ? parsed.showCustomFields ?? defaultInvoiceDraft.showCustomFields : false,
+      showExtraFields: isCurrentSchema ? parsed.showExtraFields ?? defaultInvoiceDraft.showExtraFields : false,
+      showShippingExtraFields: isCurrentSchema ? parsed.showShippingExtraFields ?? defaultInvoiceDraft.showShippingExtraFields : false,
+      showTaxItemsSection: parsed.showTaxItemsSection ?? defaultInvoiceDraft.showTaxItemsSection,
+      showTax: parsed.showTax ?? defaultInvoiceDraft.showTax,
+      shippingEnabled: isCurrentSchema ? parsed.shippingEnabled ?? defaultInvoiceDraft.shippingEnabled : false,
       lineItems: Array.isArray(parsed.lineItems) && parsed.lineItems.length > 0 ? parsed.lineItems : defaultInvoiceDraft.lineItems,
       terms: Array.isArray(parsed.terms) && parsed.terms.length > 0 ? parsed.terms : defaultInvoiceDraft.terms,
+      customFields: Array.isArray(parsed.customFields) ? parsed.customFields : defaultInvoiceDraft.customFields,
+      draftVersion: DRAFT_VERSION,
     };
+    if (!localStorage.getItem(getInvoiceDraftStorageKey()) && isAuthenticated()) {
+      saveInvoiceDraft(draft);
+    }
+    return draft;
   } catch {
     return defaultInvoiceDraft;
   }
 }
 
 export function saveInvoiceDraft(draft: InvoiceDraft) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(draft));
+  localStorage.setItem(getInvoiceDraftStorageKey(), JSON.stringify(draft));
 }
 
 export function useInvoiceDraft() {
@@ -147,6 +191,18 @@ export function useInvoiceDraft() {
   useEffect(() => {
     saveInvoiceDraft(draft);
   }, [draft]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+
+    const syncDraft = () => setDraft(loadInvoiceDraft());
+    window.addEventListener(AUTH_STATE_EVENT, syncDraft);
+    window.addEventListener('storage', syncDraft);
+    return () => {
+      window.removeEventListener(AUTH_STATE_EVENT, syncDraft);
+      window.removeEventListener('storage', syncDraft);
+    };
+  }, []);
 
   return [draft, setDraft] as const;
 }
@@ -159,9 +215,9 @@ export function formatInvoiceCurrency(amount: number) {
   }).format(amount);
 }
 
-export function getLineItemAmount(item: InvoiceLineItem) {
+export function getLineItemAmount(item: InvoiceLineItem, includeTax = true) {
   const subtotal = item.quantity * item.rate;
-  return subtotal + subtotal * (item.tax / 100);
+  return subtotal + subtotal * (includeTax ? item.tax / 100 : 0);
 }
 
 export function getSubTotal(items: InvoiceLineItem[]) {
@@ -173,8 +229,8 @@ export function getDiscountAmount(draft: InvoiceDraft) {
   return draft.discountType === '%' ? subtotal * (draft.discountValue / 100) : draft.discountValue;
 }
 
-export function getInvoiceTotal(draft: InvoiceDraft) {
-  const itemsTotal = draft.lineItems.reduce((sum, item) => sum + getLineItemAmount(item), 0);
+export function getInvoiceTotal(draft: InvoiceDraft, includeTax = true) {
+  const itemsTotal = draft.lineItems.reduce((sum, item) => sum + getLineItemAmount(item, includeTax), 0);
   return itemsTotal - getDiscountAmount(draft);
 }
 
@@ -184,4 +240,8 @@ export function makeInvoiceLineItem(): InvoiceLineItem {
 
 export function makeInvoiceTerm(): InvoiceTerm {
   return { id: makeId('term'), text: 'New term' };
+}
+
+export function makeInvoiceExtraField(): InvoiceExtraField {
+  return { id: makeId('field'), label: '', value: '' };
 }

@@ -1,6 +1,7 @@
 export const AUTH_STORAGE_KEY = 'ilovequote_auth_state';
 export const AUTH_TOKEN_KEY = 'ilovequote_auth_token';
 export const AUTH_USER_KEY = 'ilovequote_auth_user';
+export const AUTH_STATE_EVENT = 'auth-state-changed';
 
 export interface AuthUser {
   id: string;
@@ -29,6 +30,11 @@ function normalizeScope(value: string) {
     .replace(/^_+|_+$/g, '') || 'guest';
 }
 
+function notifyAuthStateChanged() {
+  if (typeof window === 'undefined') return;
+  window.dispatchEvent(new Event(AUTH_STATE_EVENT));
+}
+
 export function isInternalPhoneEmail(value?: string) {
   return /@phone\.ilovequote\.local$/i.test(String(value || '').trim());
 }
@@ -53,12 +59,14 @@ export function signIn(token: string, user?: AuthUser | string) {
   if (payload) {
     localStorage.setItem(AUTH_USER_KEY, JSON.stringify(payload));
   }
+  notifyAuthStateChanged();
 }
 
 export function signOut() {
   localStorage.removeItem(AUTH_STORAGE_KEY);
   localStorage.removeItem(AUTH_TOKEN_KEY);
   localStorage.removeItem(AUTH_USER_KEY);
+  notifyAuthStateChanged();
 }
 
 export function getAuthToken() {
@@ -86,6 +94,7 @@ export function setStoredAuthUser(user: AuthUser) {
   localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user));
   const scope = isInternalPhoneEmail(user.email) ? user.phone || user.username || user.id : user.email || user.phone || user.username || user.id;
   localStorage.setItem(AUTH_STORAGE_KEY, normalizeScope(scope || user.name || 'signed_in'));
+  notifyAuthStateChanged();
 }
 
 export function getDisplayAuthUser() {

@@ -16,7 +16,10 @@ export default function CreateInvoiceDesignPage() {
   const [draft] = useInvoiceDraft();
   const [isDownloading, setIsDownloading] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
-  const total = getInvoiceTotal(draft);
+  const total = getInvoiceTotal(draft, draft.showTax);
+  const lineItemGridClass = draft.showTax
+    ? 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.6fr_0.9fr]'
+    : 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.9fr]';
 
   const handleDownloadPdf = async () => {
     if (!previewRef.current || isDownloading) return;
@@ -148,6 +151,7 @@ export default function CreateInvoiceDesignPage() {
 
               <div className="space-y-4 md:pl-12">
                 <div className="bg-[#76A4D6]/70 px-5 py-3 text-right text-2xl font-semibold">{draft.businessName || 'Your Company Name'}</div>
+                <div className="bg-[#76A4D6]/70 px-5 py-2 text-right text-sm font-medium">{draft.businessPhone ? `Phone: ${draft.businessPhone}` : 'Phone: -'}</div>
                 <div className="bg-[#76A4D6]/70 px-5 py-2 text-right text-sm font-medium">{draft.businessAddress || 'Your Business Address'}</div>
                 <div className="bg-[#76A4D6]/70 px-5 py-2 text-right text-sm font-medium">{draft.businessCity || 'City'}</div>
                 <div className="bg-[#76A4D6]/70 px-5 py-2 text-right text-sm font-medium">{draft.businessCountry || 'Country'}</div>
@@ -160,7 +164,7 @@ export default function CreateInvoiceDesignPage() {
                 <div>
                   <div className="text-lg font-black text-[#0F2F59]">BILL TO:</div>
                   <div className="mt-2 space-y-2">
-                    {[draft.billedToCompany, draft.billedToAddress, draft.billedToCity, draft.billedToCountry, draft.billedToPostal].map((line, index) => (
+                    {[draft.billedToCompany, draft.billedToPhone ? `Phone: ${draft.billedToPhone}` : 'Phone: -', draft.billedToAddress, draft.billedToCity, draft.billedToCountry, draft.billedToPostal].map((line, index) => (
                       <div key={`${line}-${index}`} className={`px-3 py-2 text-[#5D78A4] ${index === 0 ? 'bg-[#EEF3FF] text-2xl' : 'bg-[#F4F7FF] text-lg'}`}>
                         {line || '-'}
                       </div>
@@ -182,19 +186,42 @@ export default function CreateInvoiceDesignPage() {
                 </div>
               </div>
 
+              {draft.customFields.length > 0 ? (
+                <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+                  <div className="mb-4 flex items-center justify-between gap-3">
+                    <div>
+                      <div className="text-lg font-black text-[#0F2F59]">Additional Fields</div>
+                      <p className="mt-1 text-sm text-slate-500">Cleanly displayed invoice-specific details.</p>
+                    </div>
+                  </div>
+                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                    {draft.customFields.map((field) => (
+                      <div key={field.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
+                        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
+                          {field.label || 'Custom Field'}
+                        </div>
+                        <div className="mt-1 text-sm font-semibold leading-6 text-slate-800">
+                          {field.value || '-'}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
+
               <div className="mt-10 border-t-4 border-slate-300 pt-8">
-                <div className="grid grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.6fr_0.9fr] gap-4 px-1 pb-3 text-[15px] font-black uppercase text-[#0F2F59]">
-                  <div>Items</div><div>Description</div><div className="text-right">Quantity</div><div className="text-right">Price</div><div className="text-right">Tax</div><div className="text-right">Amount</div>
+                <div className={`grid ${lineItemGridClass} gap-4 px-1 pb-3 text-[15px] font-black uppercase text-[#0F2F59]`}>
+                  <div>Items</div><div>Description</div><div className="text-right">Quantity</div><div className="text-right">Price</div>{draft.showTax ? <div className="text-right">Tax</div> : null}<div className="text-right">Amount</div>
                 </div>
                 <div className="space-y-3">
                   {draft.lineItems.map((row) => (
-                    <div key={row.id} className="grid grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.6fr_0.9fr] gap-4">
+                    <div key={row.id} className={`grid ${lineItemGridClass} gap-4`}>
                       <div className="bg-[#F4F7FF] px-3 py-4 text-xl font-semibold text-[#6E89B4]">{row.name}</div>
                       <div className="bg-[#F4F7FF] px-3 py-4 text-xl text-[#7E95BA]">{row.description}</div>
                       <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{row.quantity}</div>
                       <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(row.rate)}</div>
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{row.tax}%</div>
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(getLineItemAmount(row))}</div>
+                      {draft.showTax ? <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{row.tax}%</div> : null}
+                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(getLineItemAmount(row, draft.showTax))}</div>
                     </div>
                   ))}
                 </div>
