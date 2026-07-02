@@ -901,10 +901,6 @@ export default function CreateInvoicePage() {
                       <CirclePlus className="h-4 w-4" />
                       Add New Term
                     </button>
-                    <button onClick={() => setDraft((current) => ({ ...current, terms: [...current.terms, makeInvoiceTerm()] }))} className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]">
-                      <CirclePlus className="h-4 w-4" />
-                      Add New Group
-                    </button>
                   </div>
                 </div>
               </SectionCard>
