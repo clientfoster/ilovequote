@@ -770,8 +770,6 @@ export default function CreateInvoicePage() {
                   </SectionCard>
                   <SectionCard title="Transport Details">
                     <div className="space-y-3">
-                      <Field label="Mode of Transport" value={draft.transportMode} onChange={(transportMode) => updateDraft({ transportMode })} />
-                      <Field label="Transporter" value={draft.transporter} onChange={(transporter) => updateDraft({ transporter })} />
                       <Field label="Distance (km)" value={draft.distanceKm} onChange={(distanceKm) => updateDraft({ distanceKm })} />
                       <button className="text-sm font-semibold text-[#2E6EAB]">Calculate distance here</button>
                     </div>

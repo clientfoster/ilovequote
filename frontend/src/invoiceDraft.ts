@@ -53,8 +53,6 @@ export type InvoiceDraft = {
   billedToCountry: string;
   billedToPostal: string;
   shippingEnabled: boolean;
-  transportMode: string;
-  transporter: string;
   distanceKm: string;
   currency: string;
   lineItems: InvoiceLineItem[];
@@ -119,8 +117,6 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   billedToCountry: '',
   billedToPostal: '',
   shippingEnabled: false,
-  transportMode: '',
-  transporter: '',
   distanceKm: '',
   currency: 'INR (INR, Rs)',
   lineItems: [
