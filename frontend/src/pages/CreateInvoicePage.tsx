@@ -864,9 +864,7 @@ export default function CreateInvoicePage() {
               {[
                 { label: 'Add Notes', icon: <ReceiptText className="h-4 w-4" />, action: () => updateDraft({ notes: `${draft.notes}\nNew note` }) },
                 { label: 'Add Attachments', icon: <Upload className="h-4 w-4" />, action: () => updateDraft({ notes: `${draft.notes}\nAttachment added.` }) },
-                { label: 'Add Additional Info', icon: <CirclePlus className="h-4 w-4" />, action: () => updateDraft({ subtitle: draft.subtitle || 'Additional information' , showSubtitle: true }) },
                 { label: 'Add Signature', icon: <Pencil className="h-4 w-4" />, action: () => updateDraft({ notes: `${draft.notes}\nSigned by authorised person.` }) },
-                { label: 'Add Contact Details', icon: <Package className="h-4 w-4" />, action: () => updateDraft({ paymentNotes: `${draft.paymentNotes}\nContact: ${draft.email}` }) },
               ].map((action) => (
                 <button key={action.label} onClick={action.action} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#2E6EAB] shadow-sm">
                   {action.icon}
