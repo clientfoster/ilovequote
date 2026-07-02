@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   CalendarDays,
   ChevronDown,
@@ -11,7 +11,6 @@ import {
   Plus,
   ReceiptText,
   Trash2,
-  Truck,
   Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
@@ -37,6 +36,8 @@ const steps = [
   { number: '2', label: 'Your Bank Details', active: false, optional: true },
   { number: '3', label: 'Select Design & Colors', active: false, subtitle: '(Download or Email Invoice)' },
 ];
+
+const currencyOptions = ['INR (INR, Rs)', 'USD (USD, $)', 'EUR (EUR, €)', 'GBP (GBP, £)'];
 
 function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -260,10 +261,12 @@ export default function CreateInvoicePage() {
   const [draft, setDraft] = useInvoiceDraft();
   const [isAuthed, setIsAuthed] = useState(isAuthenticated());
   const [isBusinessEditing, setIsBusinessEditing] = useState(true);
+  const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
   const [businessProfiles, setBusinessProfiles] = useState<ProfileOption[]>([]);
   const [clientProfiles, setClientProfiles] = useState<ProfileOption[]>([]);
   const [selectedBusinessProfileId, setSelectedBusinessProfileId] = useState('manual');
   const [selectedClientProfileId, setSelectedClientProfileId] = useState('manual');
+  const currencyMenuRef = useRef<HTMLDivElement | null>(null);
 
   const updateDraft = (patch: Partial<InvoiceDraft>) => setDraft((current) => ({ ...current, ...patch }));
   const subtotal = getSubTotal(draft.lineItems);
@@ -465,6 +468,21 @@ export default function CreateInvoicePage() {
       cancelled = true;
     };
   }, [isAuthed]);
+
+  useEffect(() => {
+    if (!isCurrencyMenuOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (currencyMenuRef.current && !currencyMenuRef.current.contains(event.target as Node)) {
+        setIsCurrencyMenuOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+    };
+  }, [isCurrencyMenuOpen]);
 
   const applyBusinessProfile = (profileId: string) => {
     if (profileId === 'manual') {
@@ -768,12 +786,6 @@ export default function CreateInvoicePage() {
                       {draft.showShippingExtraFields ? <Field label="State" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} /> : null}
                     </div>
                   </SectionCard>
-                  <SectionCard title="Transport Details">
-                    <div className="space-y-3">
-                      <Field label="Distance (km)" value={draft.distanceKm} onChange={(distanceKm) => updateDraft({ distanceKm })} />
-                      <button className="text-sm font-semibold text-[#2E6EAB]">Calculate distance here</button>
-                    </div>
-                  </SectionCard>
                 </div>
               ) : null}
             </section>
@@ -799,10 +811,36 @@ export default function CreateInvoicePage() {
                     >
                       Configure Tax
                     </button>
-                    <button className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm">
-                      {draft.currency}
-                      <ChevronDown className="h-4 w-4 text-slate-400" />
-                    </button>
+                    <div ref={currencyMenuRef} className="relative">
+                      <button
+                        type="button"
+                        onClick={() => setIsCurrencyMenuOpen((current) => !current)}
+                        className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm"
+                      >
+                        {draft.currency === 'INR (INR, Rs)' ? 'Choose currency' : draft.currency}
+                        <ChevronDown className="h-4 w-4 text-slate-400" />
+                      </button>
+                      {isCurrencyMenuOpen ? (
+                        <div className="absolute left-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                          {currencyOptions.map((option) => (
+                            <button
+                              key={option}
+                              type="button"
+                              onClick={() => {
+                                updateDraft({ currency: option });
+                                setIsCurrencyMenuOpen(false);
+                              }}
+                              className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
+                                draft.currency === option ? 'bg-[#EAF4FF] text-[#2E6EAB]' : 'text-slate-700 hover:bg-slate-50'
+                              }`}
+                            >
+                              <span>{option}</span>
+                              {draft.currency === option ? <span className="text-xs font-black">✓</span> : null}
+                            </button>
+                          ))}
+                        </div>
+                      ) : null}
+                    </div>
                   </div>
 
                   <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
@@ -901,27 +939,6 @@ export default function CreateInvoicePage() {
                 </div>
               </SectionCard>
 
-              <div className="space-y-4">
-                <SectionCard title="">
-                  <div className="space-y-5">
-                    <label className="inline-flex items-start gap-3 text-sm">
-                      <input type="checkbox" checked={draft.recurring} onChange={(e) => updateDraft({ recurring: e.target.checked })} className="mt-1 h-4 w-4 rounded border-slate-300 text-[#2E6EAB] focus:ring-[#2E6EAB]" />
-                      <span>
-                        <span className="block font-semibold text-slate-700">This is a recurring invoice.</span>
-                        <span className="block text-slate-400">A draft invoice will be created with same details every next period.</span>
-                      </span>
-                    </label>
-                    <div>
-                      <h4 className="text-xl font-black tracking-[-0.03em] text-slate-900">Advance Options</h4>
-                      <div className="mt-3 space-y-3 text-sm">
-                        <label className="inline-flex items-center gap-3 text-slate-700"><input type="checkbox" checked={draft.hidePlaceOfSupply} onChange={(e) => updateDraft({ hidePlaceOfSupply: e.target.checked })} className="h-4 w-4 rounded border-slate-300 text-[#2E6EAB]" />Hide Place Of Supply/Country Of Supply</label>
-                        <label className="inline-flex items-center gap-3 text-slate-700"><input type="checkbox" checked={draft.addOriginalImages} onChange={(e) => updateDraft({ addOriginalImages: e.target.checked })} className="h-4 w-4 rounded border-slate-300 text-[#2E6EAB]" />Add Original Images in Line Items</label>
-                        <label className="inline-flex items-center gap-3 text-slate-700"><input type="checkbox" checked={draft.fullWidthDescription} onChange={(e) => updateDraft({ fullWidthDescription: e.target.checked })} className="h-4 w-4 rounded border-slate-300 text-[#2E6EAB]" />Show description in full width</label>
-                      </div>
-                    </div>
-                  </div>
-                </SectionCard>
-              </div>
             </div>
 
             <div className="flex flex-col justify-between gap-3 border-t border-slate-200 pt-4 sm:flex-row">

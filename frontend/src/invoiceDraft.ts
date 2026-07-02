@@ -53,17 +53,12 @@ export type InvoiceDraft = {
   billedToCountry: string;
   billedToPostal: string;
   shippingEnabled: boolean;
-  distanceKm: string;
   currency: string;
   lineItems: InvoiceLineItem[];
   discountValue: number;
   discountType: '%' | 'Flat';
   notes: string;
   terms: InvoiceTerm[];
-  recurring: boolean;
-  hidePlaceOfSupply: boolean;
-  addOriginalImages: boolean;
-  fullWidthDescription: boolean;
   accountHolderName: string;
   bankName: string;
   accountNumber: string;
@@ -117,7 +112,6 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   billedToCountry: '',
   billedToPostal: '',
   shippingEnabled: false,
-  distanceKm: '',
   currency: 'INR (INR, Rs)',
   lineItems: [
     { id: makeId('item'), name: 'Item 1', description: 'Description', quantity: 1, rate: 100, tax: 0 },
@@ -131,10 +125,6 @@ export const defaultInvoiceDraft: InvoiceDraft = {
     { id: makeId('term'), text: 'Please pay within 15 days from the date of invoice. overdue interest @ 14% will be charged on delayed payments.' },
     { id: makeId('term'), text: 'Please quote invoice number when remitting funds.' },
   ],
-  recurring: false,
-  hidePlaceOfSupply: true,
-  addOriginalImages: false,
-  fullWidthDescription: false,
   accountHolderName: 'Sakshi Enterprises',
   bankName: 'HDFC Bank',
   accountNumber: 'XXXXXX452178',
