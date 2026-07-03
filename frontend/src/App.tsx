@@ -12,6 +12,7 @@ import BusinessPage from './pages/BusinessPage';
 import ItemsPage from './pages/ItemsPage';
 import HelpSupportPage from './pages/HelpSupportPage';
 import QuotesPage from './pages/QuotesPage';
+import InvoicesPage from './pages/InvoicesPage';
 import PortfolioPage from './pages/PortfolioPage';
 import QRPortfolioPage from './pages/QRPortfolioPage';
 import QuoteExportPage from './pages/QuoteExportPage';
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="/items" element={<RequireAuth isAuthed={isAuthed}><ItemsPage /></RequireAuth>} />
 
           <Route path="/quotes" element={<RequireAuth isAuthed={isAuthed}><QuotesPage /></RequireAuth>} />
+          <Route path="/invoices" element={<RequireAuth isAuthed={isAuthed}><InvoicesPage /></RequireAuth>} />
 
           <Route path="/business" element={<RequireAuth isAuthed={isAuthed}><BusinessPage /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth isAuthed={isAuthed}><SettingsPage /></RequireAuth>} />

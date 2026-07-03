@@ -14,6 +14,7 @@ import {
   Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { fetchCustomers } from '../customerApi';
 import { fetchUserQuotes } from '../quoteApi';
 import { AUTH_STATE_EVENT, getScopedStorageKey, isAuthenticated } from '../auth';
 import {
@@ -29,7 +30,7 @@ import {
   useInvoiceDraft,
 } from '../invoiceDraft';
 import { BUSINESS_DRAFT_KEY, CLIENT_DRAFT_KEY } from '../wizard/WizardState';
-import type { BusinessFormValues, ClientFormValues, Quote } from '../types';
+import type { BusinessFormValues, ClientFormValues, Customer, Quote } from '../types';
 
 const steps = [
   { number: '1', label: 'Invoice Details', active: true },
@@ -405,6 +406,27 @@ export default function CreateInvoicePage() {
       }
 
       try {
+        const savedCustomers = await fetchCustomers();
+        savedCustomers.forEach((customer: Customer) => {
+          const clientProfile = buildClientProfileOption(`customer-${customer.id}`, customer);
+          const key = buildProfileKey([
+            customer.companyName,
+            customer.contactPerson,
+            customer.email,
+            customer.phone,
+            customer.billingAddress,
+            customer.city,
+            customer.country,
+          ]);
+          if (customer.companyName?.trim() || customer.contactPerson?.trim()) {
+            pushClientProfile(clientProfile, key);
+          }
+        });
+      } catch {
+        // Signed-in users can still work manually if customer history is unavailable.
+      }
+
+      try {
         const quotes = await fetchUserQuotes();
         quotes.forEach((quote: Quote) => {
           const businessProfile = buildBusinessProfileOption(`quote-business-${quote.id}`, {
@@ -416,13 +438,6 @@ export default function CreateInvoicePage() {
             zipCode: quote.businessDetails.zipCode,
             taxType: quote.businessDetails.taxType,
             taxId: quote.businessDetails.taxId,
-          });
-
-          const clientProfile = buildClientProfileOption(`quote-client-${quote.id}`, {
-            name: quote.clientDetails.name,
-            email: quote.clientDetails.email,
-            phone: quote.clientDetails.phone,
-            address: quote.clientDetails.address,
           });
 
           if (quote.businessDetails.companyName?.trim()) {
@@ -440,17 +455,6 @@ export default function CreateInvoicePage() {
             );
           }
 
-          if (quote.clientDetails.name?.trim()) {
-            pushClientProfile(
-              clientProfile,
-              buildProfileKey([
-                quote.clientDetails.name,
-                quote.clientDetails.email,
-                quote.clientDetails.phone,
-                quote.clientDetails.address,
-              ]),
-            );
-          }
         });
       } catch {
         // Signed-in users can still work manually if quote history is unavailable.
@@ -732,18 +736,28 @@ export default function CreateInvoicePage() {
                           />
                         ) : (
                           <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
-                            No saved clients yet. Enter details below to keep working.
+                            No saved customers yet. Enter details below or add them from the Customers menu.
                           </div>
                         )}
                       </div>
-                      <button
-                        type="button"
-                        onClick={startNewClient}
-                        className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2E6EAB] px-4 text-sm font-bold text-white shadow-sm"
-                      >
-                        <CirclePlus className="h-4 w-4" />
-                        Add New Client
-                      </button>
+                      <div className="flex gap-3">
+                        <button
+                          type="button"
+                          onClick={startNewClient}
+                          className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"
+                        >
+                          <CirclePlus className="h-4 w-4" />
+                          New
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => navigate('/clients')}
+                          className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2E6EAB] px-4 text-sm font-bold text-white shadow-sm"
+                        >
+                          <CirclePlus className="h-4 w-4" />
+                          Customers
+                        </button>
+                      </div>
                     </div>
                   ) : null}
 

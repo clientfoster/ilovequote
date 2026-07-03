@@ -10,6 +10,7 @@ import {
   Settings as SettingsIcon,
   QrCode,
   FileText,
+  Receipt,
   Users,
   ShoppingBag,
   Menu,
@@ -67,7 +68,8 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   const navItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiresAuth: false },
     { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4" />, requiresAuth: true },
-    { path: '/clients', label: 'Clients', icon: <Users className="w-4 h-4" />, requiresAuth: true },
+    { path: '/invoices', label: 'My Invoices', icon: <Receipt className="w-4 h-4" />, requiresAuth: true },
+    { path: '/clients', label: 'Customers', icon: <Users className="w-4 h-4" />, requiresAuth: true },
     { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4" />, requiresAuth: true },
     { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" />, requiresAuth: true },
     { path: '/templates', label: 'Templates', icon: <Layers3 className="w-4 h-4" />, requiresAuth: true },

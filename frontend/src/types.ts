@@ -91,6 +91,76 @@ export interface Quote {
   terms: string;
 }
 
+export interface Customer {
+  id: string;
+  companyName: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  website: string;
+  taxIdType: 'GSTIN' | 'VAT' | 'PAN' | 'Other';
+  taxId: string;
+  poNumber: string;
+  billingAddress: string;
+  city: string;
+  state: string;
+  zipCode: string;
+  country: string;
+  notes?: string;
+  ownerUserId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface InvoiceRecord {
+  id: string;
+  invoiceNumber: string;
+  subtitle: string;
+  showSubtitle: boolean;
+  invoiceDate: string;
+  dueDate: string;
+  showDueDate: boolean;
+  clientId: string;
+  clientName: string;
+  businessName: string;
+  billedToCompany: string;
+  billedToPhone: string;
+  billedToAddress: string;
+  billedToCity: string;
+  billedToCountry: string;
+  billedToPostal: string;
+  currency: string;
+  lineItems: Array<{
+    id: string;
+    name: string;
+    description: string;
+    quantity: number;
+    rate: number;
+    tax: number;
+    amount: number;
+  }>;
+  discountValue: number;
+  discountType: '%' | 'Flat';
+  discountAmount: number;
+  subtotal: number;
+  totalAmount: number;
+  notes: string;
+  terms: Array<{ id: string; text: string }>;
+  accountHolderName: string;
+  bankName: string;
+  accountNumber: string;
+  ifsc: string;
+  branchName: string;
+  accountType: string;
+  upiId: string;
+  qrImageName: string;
+  paymentNotes: string;
+  status: 'Draft' | 'Completed';
+  ownerUserId?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export interface AppSettings {
   defaultGstPercent: number;
   defaultTerms: string;

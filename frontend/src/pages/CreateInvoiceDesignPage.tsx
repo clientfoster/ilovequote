@@ -1,9 +1,11 @@
-import React, { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Mail, MoreHorizontal } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ChevronLeft, ChevronRight, Download, Mail, MoreHorizontal, ShieldCheck, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
 import { formatInvoiceCurrency, getInvoiceTotal, getLineItemAmount, useInvoiceDraft } from '../invoiceDraft';
+import { createInvoice } from '../invoiceApi';
+import { AUTH_STATE_EVENT, isAuthenticated } from '../auth';
 
 const steps = [
   { number: '1', label: 'Invoice Details', active: false },
@@ -15,11 +17,24 @@ export default function CreateInvoiceDesignPage() {
   const navigate = useNavigate();
   const [draft] = useInvoiceDraft();
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isAuthed, setIsAuthed] = useState(isAuthenticated());
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const total = getInvoiceTotal(draft, draft.showTax);
   const lineItemGridClass = draft.showTax
     ? 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.6fr_0.9fr]'
     : 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.9fr]';
+
+  useEffect(() => {
+    const syncAuth = () => setIsAuthed(isAuthenticated());
+    window.addEventListener(AUTH_STATE_EVENT, syncAuth);
+    window.addEventListener('storage', syncAuth);
+    return () => {
+      window.removeEventListener(AUTH_STATE_EVENT, syncAuth);
+      window.removeEventListener('storage', syncAuth);
+    };
+  }, []);
 
   const handleDownloadPdf = async () => {
     if (!previewRef.current || isDownloading) return;
@@ -95,8 +110,76 @@ export default function CreateInvoiceDesignPage() {
     }
   };
 
+  const handleSaveInvoice = async () => {
+    if (!isAuthed) {
+      setShowAuthPrompt(true);
+      return;
+    }
+
+    try {
+      setIsSaving(true);
+      await createInvoice({
+        ...draft,
+        status: 'Completed',
+      });
+      navigate('/invoices');
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not save invoice.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   return (
     <div className="min-h-full bg-[#F8FAFF] px-3 py-4 md:px-5 md:py-6">
+      {showAuthPrompt ? (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
+          <button type="button" onClick={() => setShowAuthPrompt(false)} className="absolute inset-0 bg-slate-950/45 backdrop-blur-[2px]" aria-label="Close save prompt" />
+          <div className="relative z-10 w-full max-w-md rounded-[28px] border border-slate-200 bg-white p-6 shadow-[0_28px_80px_rgba(15,23,42,0.24)] md:p-7">
+            <button
+              type="button"
+              onClick={() => setShowAuthPrompt(false)}
+              className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+              aria-label="Close"
+            >
+              <X size={18} />
+            </button>
+
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[#EEF4FF] text-[#2457F0]">
+              <ShieldCheck size={26} />
+            </div>
+
+            <h2 className="mt-5 text-[24px] font-black tracking-tight text-slate-950">
+              Create account or sign in to save this invoice
+            </h2>
+            <p className="mt-3 text-[15px] leading-7 text-slate-600">
+              Sign in to save this invoice to your records history and reuse it later from your account.
+            </p>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => navigate('/login?mode=signup')}
+                className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-[#2457F0] px-5 text-[15px] font-bold text-white shadow-[0_14px_28px_rgba(36,87,240,0.24)] transition hover:bg-[#1d4ed8]"
+              >
+                Create Account
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate('/login?mode=login')}
+                className="inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-[15px] font-bold text-slate-900 transition hover:bg-slate-50"
+              >
+                Sign In
+              </button>
+            </div>
+
+            <p className="mt-4 text-center text-[12px] font-medium text-slate-400">
+              Your invoice will only be added to history after you log in.
+            </p>
+          </div>
+        </div>
+      ) : null}
+
       <div className="mx-auto max-w-[1380px] space-y-4">
         <section className="rounded-2xl border border-slate-200 bg-white/95 px-4 py-4 shadow-sm md:px-6">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-center">
@@ -126,6 +209,14 @@ export default function CreateInvoiceDesignPage() {
               <button className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
                 <Mail className="h-4 w-4" />
                 Email Invoice
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveInvoice}
+                disabled={isSaving}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSaving ? 'Saving...' : 'Save Invoice'}
               </button>
               <button
                 type="button"
@@ -266,8 +357,13 @@ export default function CreateInvoiceDesignPage() {
               <button onClick={() => navigate('/create-invoice')} className="inline-flex min-h-[46px] items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-bold text-slate-700 shadow-sm">
                 Change Template
               </button>
-              <button className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2E6EAB] px-6 text-sm font-bold text-white shadow-[0_12px_24px_rgba(46,110,171,0.22)]">
-                Continue
+              <button
+                type="button"
+                onClick={handleSaveInvoice}
+                disabled={isSaving}
+                className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2E6EAB] px-6 text-sm font-bold text-white shadow-[0_12px_24px_rgba(46,110,171,0.22)] disabled:cursor-not-allowed disabled:opacity-70"
+              >
+                {isSaving ? 'Saving...' : 'Save Invoice'}
                 <MoreHorizontal className="h-4 w-4" />
               </button>
             </div>

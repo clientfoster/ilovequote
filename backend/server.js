@@ -16,6 +16,8 @@ const DATA_DIR = path.join(__dirname, 'data');
 const STORE_FILE = path.join(DATA_DIR, 'quotes.json');
 const USERS_FILE = path.join(DATA_DIR, 'users.json');
 const PRODUCTS_FILE = path.join(DATA_DIR, 'products.json');
+const CUSTOMERS_FILE = path.join(DATA_DIR, 'customers.json');
+const INVOICES_FILE = path.join(DATA_DIR, 'invoices.json');
 
 function loadLocalEnv() {
   const envPath = path.join(__dirname, '.env');
@@ -107,6 +109,8 @@ let mongoDb = null;
 let usersCollection = null;
 let quotesCollection = null;
 let productsCollection = null;
+let customersCollection = null;
+let invoicesCollection = null;
 let mongoReady = false;
 let mongoDisabled = false;
 let mongoLastError = mongoConfigSource === 'invalid-env'
@@ -115,6 +119,8 @@ let mongoLastError = mongoConfigSource === 'invalid-env'
 let quotes = [];
 let users = [];
 let products = [];
+let customers = [];
+let invoices = [];
 app.use(express.json({ limit: '5mb' }));
 app.use((req, res, next) => {
   res.setHeader('Access-Control-Allow-Origin', process.env.CORS_ORIGIN || '*');
@@ -325,7 +331,7 @@ async function ensureMongo() {
     return false;
   }
 
-  if (mongoReady && mongoDb && usersCollection && quotesCollection && productsCollection) {
+  if (mongoReady && mongoDb && usersCollection && quotesCollection && productsCollection && customersCollection && invoicesCollection) {
     return true;
   }
 
@@ -338,6 +344,8 @@ async function ensureMongo() {
     usersCollection = mongoDb.collection('users');
     quotesCollection = mongoDb.collection('quotes');
     productsCollection = mongoDb.collection('products');
+    customersCollection = mongoDb.collection('customers');
+    invoicesCollection = mongoDb.collection('invoices');
     await Promise.all([
       usersCollection.createIndex({ email: 1 }, { unique: true }),
       quotesCollection.createIndex({ ownerUserId: 1 }),
@@ -345,6 +353,10 @@ async function ensureMongo() {
       quotesCollection.createIndex({ quoteNumber: 1 }),
       productsCollection.createIndex({ ownerUserId: 1 }),
       productsCollection.createIndex({ ownerUserId: 1, name: 1 }),
+      customersCollection.createIndex({ ownerUserId: 1 }),
+      customersCollection.createIndex({ ownerUserId: 1, companyName: 1, email: 1 }),
+      invoicesCollection.createIndex({ ownerUserId: 1 }),
+      invoicesCollection.createIndex({ ownerUserId: 1, invoiceNumber: 1 }),
     ]);
     mongoReady = true;
     return true;
@@ -357,6 +369,8 @@ async function ensureMongo() {
     usersCollection = null;
     quotesCollection = null;
     productsCollection = null;
+    customersCollection = null;
+    invoicesCollection = null;
     return false;
   }
 }
@@ -641,6 +655,116 @@ function normalizeProductPayload(payload = {}, ownerUserId) {
   };
 }
 
+function normalizeCustomerPayload(payload = {}, ownerUserId) {
+  const now = new Date().toISOString();
+  return {
+    id: payload.id || `customer_${randomUUID()}`,
+    ownerUserId,
+    companyName: String(payload.companyName || payload.billedToCompany || '').trim(),
+    contactPerson: String(payload.contactPerson || payload.clientName || '').trim(),
+    email: String(payload.email || '').trim(),
+    phone: String(payload.phone || payload.billedToPhone || '').trim(),
+    website: String(payload.website || '').trim(),
+    taxIdType: String(payload.taxIdType || 'GSTIN').trim() || 'GSTIN',
+    taxId: String(payload.taxId || payload.clientId || '').trim(),
+    poNumber: String(payload.poNumber || payload.subtitle || '').trim(),
+    billingAddress: String(payload.billingAddress || payload.billedToAddress || '').trim(),
+    city: String(payload.city || payload.billedToCity || '').trim(),
+    state: String(payload.state || '').trim(),
+    zipCode: String(payload.zipCode || payload.billedToPostal || '').trim(),
+    country: String(payload.country || payload.billedToCountry || '').trim(),
+    notes: String(payload.notes || '').trim(),
+    createdAt: payload.createdAt || now,
+    updatedAt: now,
+  };
+}
+
+function normalizeInvoiceLineItem(item = {}) {
+  const quantity = Math.max(0, Number(item.quantity ?? 0) || 0);
+  const rate = Math.max(0, Number(item.rate ?? 0) || 0);
+  const tax = Math.max(0, Number(item.tax ?? 0) || 0);
+  const subtotal = quantity * rate;
+  const amount = subtotal + subtotal * (tax / 100);
+
+  return {
+    id: item.id || `invoice_item_${randomUUID()}`,
+    name: String(item.name || '').trim(),
+    description: String(item.description || '').trim(),
+    quantity,
+    rate,
+    tax,
+    amount: Number(amount.toFixed(2)),
+  };
+}
+
+function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
+  const now = new Date().toISOString();
+  const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems.map(normalizeInvoiceLineItem) : [];
+  const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+  const grossTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+  const discountValue = Math.max(0, Number(payload.discountValue ?? 0) || 0);
+  const discountType = payload.discountType === 'Flat' ? 'Flat' : '%';
+  const discountAmount = discountType === '%' ? subtotal * (discountValue / 100) : discountValue;
+  const totalAmount = Number((grossTotal - discountAmount).toFixed(2));
+
+  return {
+    id: payload.id || `invoice_${randomUUID()}`,
+    ownerUserId,
+    invoiceNumber: String(payload.invoiceNumber || `INV-${new Date().getFullYear()}-${String(Math.floor(Math.random() * 9000) + 1000)}`).trim(),
+    subtitle: String(payload.subtitle || '').trim(),
+    showSubtitle: Boolean(payload.showSubtitle),
+    invoiceDate: toIsoDate(payload.invoiceDate || currentIsoDate()),
+    dueDate: payload.showDueDate ? toIsoDate(payload.dueDate || addDays(new Date(payload.invoiceDate || currentIsoDate()), 14)) : '',
+    showDueDate: Boolean(payload.showDueDate),
+    showCustomFields: Boolean(payload.showCustomFields),
+    customFields: Array.isArray(payload.customFields) ? payload.customFields : [],
+    showExtraFields: Boolean(payload.showExtraFields),
+    showShippingExtraFields: Boolean(payload.showShippingExtraFields),
+    showTaxItemsSection: payload.showTaxItemsSection !== false,
+    showTax: Boolean(payload.showTax),
+    clientId: String(payload.clientId || '').trim(),
+    clientName: String(payload.clientName || '').trim(),
+    logoName: String(payload.logoName || '').trim(),
+    businessName: String(payload.businessName || '').trim(),
+    businessAddress: String(payload.businessAddress || '').trim(),
+    businessCity: String(payload.businessCity || '').trim(),
+    businessCountry: String(payload.businessCountry || '').trim(),
+    businessPostal: String(payload.businessPostal || '').trim(),
+    businessPhone: String(payload.businessPhone || '').trim(),
+    gstin: String(payload.gstin || '').trim(),
+    pan: String(payload.pan || '').trim(),
+    email: String(payload.email || '').trim(),
+    billedToCompany: String(payload.billedToCompany || '').trim(),
+    billedToPhone: String(payload.billedToPhone || '').trim(),
+    billedToAddress: String(payload.billedToAddress || '').trim(),
+    billedToCity: String(payload.billedToCity || '').trim(),
+    billedToCountry: String(payload.billedToCountry || '').trim(),
+    billedToPostal: String(payload.billedToPostal || '').trim(),
+    shippingEnabled: Boolean(payload.shippingEnabled),
+    currency: String(payload.currency || 'INR (INR, Rs)').trim(),
+    lineItems,
+    discountValue,
+    discountType,
+    discountAmount: Number(discountAmount.toFixed(2)),
+    subtotal: Number(subtotal.toFixed(2)),
+    totalAmount,
+    notes: String(payload.notes || '').trim(),
+    terms: Array.isArray(payload.terms) ? payload.terms : [],
+    accountHolderName: String(payload.accountHolderName || '').trim(),
+    bankName: String(payload.bankName || '').trim(),
+    accountNumber: String(payload.accountNumber || '').trim(),
+    ifsc: String(payload.ifsc || '').trim(),
+    branchName: String(payload.branchName || '').trim(),
+    accountType: String(payload.accountType || '').trim(),
+    upiId: String(payload.upiId || '').trim(),
+    qrImageName: String(payload.qrImageName || '').trim(),
+    paymentNotes: String(payload.paymentNotes || '').trim(),
+    status: payload.status === 'Completed' ? 'Completed' : 'Draft',
+    createdAt: payload.createdAt || now,
+    updatedAt: now,
+  };
+}
+
 async function loadProducts() {
   const canUseMongo = await ensureMongo();
   if (canUseMongo) {
@@ -663,6 +787,52 @@ async function loadProducts() {
 }
 
 await loadProducts();
+
+async function loadCustomers() {
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    const storedCustomers = await customersCollection.find({}).sort({ createdAt: -1 }).toArray();
+    if (storedCustomers.length > 0) {
+      customers = storedCustomers.map(stripMongoId);
+      return customers;
+    }
+
+    const legacyCustomers = await readLegacyJsonArray(CUSTOMERS_FILE, 'customers');
+    if (legacyCustomers.length > 0) {
+      customers = legacyCustomers;
+      await customersCollection.insertMany(legacyCustomers);
+      return customers;
+    }
+  }
+
+  customers = await readLegacyJsonArray(CUSTOMERS_FILE, 'customers');
+  return customers;
+}
+
+await loadCustomers();
+
+async function loadInvoices() {
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    const storedInvoices = await invoicesCollection.find({}).sort({ createdAt: -1 }).toArray();
+    if (storedInvoices.length > 0) {
+      invoices = storedInvoices.map(stripMongoId);
+      return invoices;
+    }
+
+    const legacyInvoices = await readLegacyJsonArray(INVOICES_FILE, 'invoices');
+    if (legacyInvoices.length > 0) {
+      invoices = legacyInvoices;
+      await invoicesCollection.insertMany(legacyInvoices);
+      return invoices;
+    }
+  }
+
+  invoices = await readLegacyJsonArray(INVOICES_FILE, 'invoices');
+  return invoices;
+}
+
+await loadInvoices();
 
 async function persistQuotes() {
   const canUseMongo = await ensureMongo();
@@ -688,6 +858,32 @@ async function persistProducts() {
   }
 
   await writeLegacyJsonArray(PRODUCTS_FILE, 'products', products);
+}
+
+async function persistCustomers() {
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    await customersCollection.deleteMany({});
+    if (customers.length > 0) {
+      await customersCollection.insertMany(customers);
+    }
+    return;
+  }
+
+  await writeLegacyJsonArray(CUSTOMERS_FILE, 'customers', customers);
+}
+
+async function persistInvoices() {
+  const canUseMongo = await ensureMongo();
+  if (canUseMongo) {
+    await invoicesCollection.deleteMany({});
+    if (invoices.length > 0) {
+      await invoicesCollection.insertMany(invoices);
+    }
+    return;
+  }
+
+  await writeLegacyJsonArray(INVOICES_FILE, 'invoices', invoices);
 }
 
 async function persistUsers() {
@@ -828,6 +1024,18 @@ function findOwnedQuoteById(id, ownerUserId) {
 
 function findQuoteByToken(token) {
   return quotes.find((quote) => quote.shareToken === token || quote.id === token || quote.quoteNumber === token);
+}
+
+function findOwnedCustomerById(id, ownerUserId) {
+  if (!ownerUserId) return null;
+  return customers.find((customer) => customer.id === id && customer.ownerUserId === ownerUserId) || null;
+}
+
+function findOwnedInvoiceById(id, ownerUserId) {
+  if (!ownerUserId) return null;
+  return invoices.find((invoice) =>
+    (invoice.id === id || invoice.invoiceNumber === id) && invoice.ownerUserId === ownerUserId
+  ) || null;
 }
 
 function quoteSummary(quote, req) {
@@ -2478,12 +2686,20 @@ app.get('/api/account/export', async (req, res) => {
   }
 
   const ownedQuotes = quotes.filter((quote) => quote.ownerUserId === user.id);
-  recordUserActivity(user.id, 'export_data', req, { quoteCount: ownedQuotes.length });
+  const ownedCustomers = customers.filter((customer) => customer.ownerUserId === user.id);
+  const ownedInvoices = invoices.filter((invoice) => invoice.ownerUserId === user.id);
+  recordUserActivity(user.id, 'export_data', req, {
+    quoteCount: ownedQuotes.length,
+    customerCount: ownedCustomers.length,
+    invoiceCount: ownedInvoices.length,
+  });
   await persistUsers();
 
   const payload = {
     user: makePublicUser(user),
     quotes: ownedQuotes,
+    customers: ownedCustomers,
+    invoices: ownedInvoices,
     exportedAt: new Date().toISOString(),
   };
   const filename = `ilovequote-account-data-${slugify(user.username || user.email || user.id)}.json`;
@@ -2505,8 +2721,10 @@ app.delete('/api/account', async (req, res) => {
     users = users.filter((entry) => entry.id !== userId);
     quotes = quotes.filter((quote) => quote.ownerUserId !== userId);
     products = products.filter((product) => product.ownerUserId !== userId);
+    customers = customers.filter((customer) => customer.ownerUserId !== userId);
+    invoices = invoices.filter((invoice) => invoice.ownerUserId !== userId);
     revokeAuthTokensForUser(userId);
-    await Promise.all([persistUsers(), persistQuotes(), persistProducts()]);
+    await Promise.all([persistUsers(), persistQuotes(), persistProducts(), persistCustomers(), persistInvoices()]);
     res.json({ ok: true });
   } catch (error) {
     res.status(400).json({
@@ -2602,6 +2820,190 @@ app.delete('/api/products/:id', async (req, res) => {
 
   products = products.filter((entry) => entry.id !== item.id);
   await persistProducts();
+  res.json({ ok: true });
+});
+
+app.get('/api/customers', (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Please log in or sign up to view customers.' });
+    return;
+  }
+
+  res.json({
+    items: customers.filter((customer) => customer.ownerUserId === user.id),
+  });
+});
+
+app.post('/api/customers', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Please log in or sign up to save customers.' });
+      return;
+    }
+
+    const customer = normalizeCustomerPayload(req.body || {}, user.id);
+    const existingIndex = customers.findIndex((entry) => entry.id === customer.id && entry.ownerUserId === user.id);
+    const storedCustomer = existingIndex >= 0
+      ? customers[existingIndex] = {
+        ...customers[existingIndex],
+        ...customer,
+        ownerUserId: user.id,
+        createdAt: customers[existingIndex].createdAt || customer.createdAt,
+      }
+      : customer;
+
+    if (existingIndex < 0) {
+      customers = [customer, ...customers.filter((entry) => entry.id !== customer.id)];
+    }
+
+    await persistCustomers();
+    res.status(201).json({ customer: storedCustomer });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to save customer',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.patch('/api/customers/:id', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Please log in or sign up to save customers.' });
+      return;
+    }
+
+    const existing = findOwnedCustomerById(req.params.id, user.id);
+    if (!existing) {
+      res.status(404).json({ error: 'Customer not found.' });
+      return;
+    }
+
+    const customer = normalizeCustomerPayload({ ...existing, ...req.body, id: existing.id, createdAt: existing.createdAt }, user.id);
+    customers = customers.map((entry) => (entry.id === existing.id ? customer : entry));
+    await persistCustomers();
+    res.json({ customer });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to update customer',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.delete('/api/customers/:id', async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Please log in or sign up to delete customers.' });
+    return;
+  }
+
+  const customer = findOwnedCustomerById(req.params.id, user.id);
+  if (!customer) {
+    res.status(404).json({ error: 'Customer not found.' });
+    return;
+  }
+
+  customers = customers.filter((entry) => entry.id !== customer.id);
+  await persistCustomers();
+  res.json({ ok: true });
+});
+
+app.get('/api/invoices', (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Please log in or sign up to view invoices.' });
+    return;
+  }
+
+  res.json({
+    items: invoices.filter((invoice) => invoice.ownerUserId === user.id),
+  });
+});
+
+app.post('/api/invoices', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Please log in or sign up to save invoices.' });
+      return;
+    }
+
+    const invoice = buildInvoiceFromPayload(req.body || {}, user.id);
+    const existingIndex = invoices.findIndex((entry) => {
+      if (entry.ownerUserId !== user.id) return false;
+      return entry.id === invoice.id || entry.invoiceNumber === invoice.invoiceNumber;
+    });
+
+    let storedInvoice = invoice;
+    if (existingIndex >= 0) {
+      const existing = invoices[existingIndex];
+      storedInvoice = invoices[existingIndex] = {
+        ...existing,
+        ...invoice,
+        id: existing.id,
+        ownerUserId: user.id,
+        createdAt: existing.createdAt || invoice.createdAt,
+        updatedAt: new Date().toISOString(),
+      };
+    } else {
+      invoices = [invoice, ...invoices.filter((entry) => entry.id !== invoice.id)];
+    }
+
+    await persistInvoices();
+    res.status(201).json({ invoice: storedInvoice });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to save invoice',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.patch('/api/invoices/:id', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    if (!user) {
+      res.status(401).json({ error: 'Please log in or sign up to save invoices.' });
+      return;
+    }
+
+    const existing = findOwnedInvoiceById(req.params.id, user.id);
+    if (!existing) {
+      res.status(404).json({ error: 'Invoice not found.' });
+      return;
+    }
+
+    const invoice = buildInvoiceFromPayload({ ...existing, ...req.body, id: existing.id, createdAt: existing.createdAt }, user.id);
+    invoices = invoices.map((entry) => (entry.id === existing.id ? invoice : entry));
+    await persistInvoices();
+    res.json({ invoice });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to update invoice',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+app.delete('/api/invoices/:id', async (req, res) => {
+  const user = getAuthenticatedUser(req);
+  if (!user) {
+    res.status(401).json({ error: 'Please log in or sign up to delete invoices.' });
+    return;
+  }
+
+  const invoice = findOwnedInvoiceById(req.params.id, user.id);
+  if (!invoice) {
+    res.status(404).json({ error: 'Invoice not found.' });
+    return;
+  }
+
+  invoices = invoices.filter((entry) => entry.id !== invoice.id);
+  await persistInvoices();
   res.json({ ok: true });
 });
 
