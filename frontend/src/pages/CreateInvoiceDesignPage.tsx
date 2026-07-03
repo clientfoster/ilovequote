@@ -1,11 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronLeft, ChevronRight, Download, Mail, MoreHorizontal, ShieldCheck, X } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import html2canvas from 'html2canvas-pro';
-import { jsPDF } from 'jspdf';
 import { formatInvoiceCurrency, getInvoiceTotal, getLineItemAmount, useInvoiceDraft } from '../invoiceDraft';
 import { createInvoice } from '../invoiceApi';
 import { AUTH_STATE_EVENT, isAuthenticated } from '../auth';
+import { downloadElementAsPdf } from '../download';
 
 const steps = [
   { number: '1', label: 'Invoice Details', active: false },
@@ -42,66 +41,7 @@ export default function CreateInvoiceDesignPage() {
     try {
       setIsDownloading(true);
       const fileName = `${draft.invoiceNumber || 'invoice'}.pdf`;
-      const canvas = await html2canvas(previewRef.current, {
-        backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        allowTaint: true,
-        scrollX: 0,
-        scrollY: 0,
-        windowWidth: previewRef.current.scrollWidth,
-        windowHeight: previewRef.current.scrollHeight,
-      });
-
-      const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF('p', 'pt', 'a4');
-      const pageWidth = pdf.internal.pageSize.getWidth();
-      const pageHeight = pdf.internal.pageSize.getHeight();
-      const margin = 12;
-      const availableWidth = pageWidth - margin * 2;
-      const renderHeight = (canvas.height * availableWidth) / canvas.width;
-
-      if (renderHeight <= pageHeight - margin * 2) {
-        pdf.addImage(imgData, 'PNG', margin, margin, availableWidth, renderHeight, undefined, 'FAST');
-      } else {
-        const ratio = availableWidth / canvas.width;
-        const pageCanvasHeight = Math.floor((pageHeight - margin * 2) / ratio);
-        let renderedHeight = 0;
-        let page = 0;
-
-        while (renderedHeight < canvas.height) {
-          const pageCanvas = document.createElement('canvas');
-          pageCanvas.width = canvas.width;
-          pageCanvas.height = Math.min(pageCanvasHeight, canvas.height - renderedHeight);
-          const ctx = pageCanvas.getContext('2d');
-          if (!ctx) break;
-
-          ctx.fillStyle = '#ffffff';
-          ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-          ctx.drawImage(
-            canvas,
-            0,
-            renderedHeight,
-            canvas.width,
-            pageCanvas.height,
-            0,
-            0,
-            canvas.width,
-            pageCanvas.height,
-          );
-
-          const pageImg = pageCanvas.toDataURL('image/png');
-          const pageRenderHeight = pageCanvas.height * ratio;
-
-          if (page > 0) pdf.addPage();
-          pdf.addImage(pageImg, 'PNG', margin, margin, availableWidth, pageRenderHeight, undefined, 'FAST');
-
-          renderedHeight += pageCanvas.height;
-          page += 1;
-        }
-      }
-
-      pdf.save(fileName);
+      await downloadElementAsPdf(previewRef.current, fileName);
     } catch (error) {
       console.error('Failed to download invoice PDF', error);
       window.alert('Could not download PDF. Please try again.');
@@ -230,7 +170,8 @@ export default function CreateInvoiceDesignPage() {
             </div>
           </div>
 
-          <div ref={previewRef} className="overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-sm">
+          <div className="mx-auto w-full max-w-[794px] overflow-hidden rounded-[10px] border border-slate-200 bg-white shadow-sm">
+            <div ref={previewRef} className="quote-pdf-surface mx-auto w-full overflow-hidden bg-white">
             <div className="grid gap-8 bg-[#2E6EAB] px-8 py-8 text-white md:grid-cols-[1fr_1.15fr] md:px-12 md:py-10">
               <div>
                 <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-xl border border-white/20 bg-white/5">
@@ -345,6 +286,7 @@ export default function CreateInvoiceDesignPage() {
 
             <div className="border-t border-slate-200 bg-white px-6 py-6 text-center text-lg text-slate-500">
               Powered by <span className="font-bold text-[#2E6EAB]">all</span> <span className="font-black text-slate-800">wave</span>
+            </div>
             </div>
           </div>
 
