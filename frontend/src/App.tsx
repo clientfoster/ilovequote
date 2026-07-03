@@ -146,6 +146,7 @@ export default function App() {
           <Route path="/business" element={<RequireAuth isAuthed={isAuthed}><BusinessPage /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth isAuthed={isAuthed}><SettingsPage /></RequireAuth>} />
           <Route path="/help-support" element={<HelpSupportPage />} />
+          <Route path="/invoice-help-support" element={<RequireAuth isAuthed={isAuthed}><HelpSupportPage /></RequireAuth>} />
 
           {/* Placeholder subviews for Coming Soon products */}
           <Route

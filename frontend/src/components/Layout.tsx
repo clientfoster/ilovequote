@@ -69,6 +69,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     location.pathname.startsWith('/create-invoice')
     || location.pathname === '/invoices'
     || location.pathname === '/clients'
+    || location.pathname === '/invoice-help-support'
   );
 
   const quoteNavItems = [
@@ -87,7 +88,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     { path: '/create-invoice', label: 'New Invoice', icon: <Receipt className="w-4 h-4" />, requiresAuth: true },
     { path: '/invoices', label: 'My Invoices', icon: <FileText className="w-4 h-4" />, requiresAuth: true },
     { path: '/clients', label: 'Customers', icon: <Users className="w-4 h-4" />, requiresAuth: true },
-    { path: '/help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" />, requiresAuth: false },
+    { path: '/invoice-help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" />, requiresAuth: false },
   ];
 
   const navItems = isInvoiceModuleRoute ? invoiceNavItems : quoteNavItems;
