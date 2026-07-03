@@ -4,7 +4,7 @@ import { BookOpen, ChevronRight, Headphones, MessageCircle, PlayCircle, Search, 
 const helpTiles = [
   {
     title: 'Help Center',
-    description: 'Browse articles and guides to learn how to use ilovequote.com',
+    description: 'Browse articles and guides to learn how to create and manage invoices.',
     action: 'Browse Articles',
     icon: BookOpen,
     iconWrap: 'bg-[#EEF2FF] text-[#2F55FF]',
@@ -12,7 +12,7 @@ const helpTiles = [
   },
   {
     title: 'Contact Support',
-    description: 'Can’t find what you need? We’re here to help.',
+    description: 'Cannot find what you need? We are here to help with invoice setup and delivery.',
     action: 'Send a Message',
     icon: MessageCircle,
     iconWrap: 'bg-emerald-50 text-emerald-600',
@@ -20,7 +20,7 @@ const helpTiles = [
   },
   {
     title: 'FAQ',
-    description: 'Find answers to commonly asked questions.',
+    description: 'Find answers to common invoice, customer, and payment questions.',
     action: 'View FAQ',
     icon: Star,
     iconWrap: 'bg-violet-50 text-violet-600',
@@ -28,7 +28,7 @@ const helpTiles = [
   },
   {
     title: 'Video Tutorials',
-    description: 'Watch step-by-step videos to get the most out of ilovequote.',
+    description: 'Watch invoice walkthroughs for customer fetch, saving, and PDF export.',
     action: 'Watch Now',
     icon: PlayCircle,
     iconWrap: 'bg-amber-50 text-amber-500',
@@ -38,35 +38,39 @@ const helpTiles = [
 
 const articles = [
   {
-    title: 'How to create a new quote',
-    description: 'Learn how to use this feature inside ilovequote.',
+    title: 'How to create a new invoice',
+    description: 'Learn how to fill invoice details, dates, and line items correctly.',
   },
   {
-    title: 'Managing clients',
-    description: 'Learn how to add, edit, and organize your client list.',
+    title: 'Managing customers',
+    description: 'Learn how to add, edit, and fetch customer details inside the invoice module.',
   },
   {
     title: 'Adding products and services',
-    description: 'See how to build your item catalog faster.',
+    description: 'See how to add line items, tax values, and pricing inside invoices.',
   },
   {
-    title: 'Sharing and downloading quotes',
-    description: 'Understand the share link, PDF download, and WhatsApp options.',
+    title: 'Saving and downloading invoices',
+    description: 'Understand how saved invoices, PDF export, and invoice history work.',
   },
 ];
 
 const faqs = [
   {
-    question: 'How do I save a draft quote?',
-    answer: 'Use the Save Draft button in the quote builder. Your work will stay saved to your account and local backup.',
+    question: 'How do I save an invoice?',
+    answer: 'Open the invoice preview and use the Save Invoice action. Logged-in users will find it later in My Invoices.',
   },
   {
     question: 'How do I download the PDF?',
-    answer: 'Open the quote preview and tap the Download button. It will export the designed quote as a PDF file.',
+    answer: 'Open the invoice design preview and tap Download PDF. It will export the live invoice layout as a PDF file.',
   },
   {
-    question: 'How do I share a quote with a client?',
-    answer: 'Use the Share Link button, or open the WhatsApp action to send the quote directly.',
+    question: 'How do I fetch customer details while creating an invoice?',
+    answer: 'Save customer records in the Customers section, then select them from the invoice customer profile dropdown.',
+  },
+  {
+    question: 'What if I do not want bank details on the invoice?',
+    answer: 'Bank details are optional. You can leave that step blank and the invoice preview will still render cleanly.',
   },
 ];
 
@@ -78,8 +82,8 @@ export default function HelpSupportPage() {
   };
 
   const openSupportEmail = () => {
-    const subject = encodeURIComponent('ilovequote support request');
-    const body = encodeURIComponent('Hi support team,\n\nI need help with...');
+    const subject = encodeURIComponent('Invoice module support request');
+    const body = encodeURIComponent('Hi support team,\n\nI need help with the invoice module...');
     window.location.href = `mailto:support@ilovequote.com?subject=${subject}&body=${body}`;
   };
 
@@ -89,14 +93,14 @@ export default function HelpSupportPage() {
         <div>
           <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">Help &amp; Support</h1>
           <p className="mt-2 text-[15px] text-slate-500">
-            We’re here to help. Find answers or get in touch with our support team.
+            We are here to help with invoice creation, customer management, saving, and PDF export.
           </p>
         </div>
 
         <div className="flex items-center rounded-[12px] border border-slate-200 bg-white px-4 py-3 shadow-sm">
           <input
             type="text"
-            placeholder="Search for help articles..."
+            placeholder="Search invoice help articles..."
             className="w-full border-none bg-transparent text-[15px] font-medium text-slate-700 outline-none placeholder:text-slate-400"
             onKeyDown={(event) => {
               if (event.key === 'Enter') {
@@ -172,7 +176,7 @@ export default function HelpSupportPage() {
                 <Headphones className="h-9 w-9" />
               </div>
               <p className="mt-6 max-w-[220px] text-[14px] leading-6 text-slate-500">
-                Our support team is ready to assist you with any questions.
+                Our support team is ready to assist you with invoice flow, customer fetch, and PDF export questions.
               </p>
               <button
                 type="button"
@@ -210,7 +214,7 @@ export default function HelpSupportPage() {
             <div>
               <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">Video Tutorials</h2>
               <p className="mt-1 text-[13px] leading-6 text-slate-500">
-                Tutorial videos are being prepared. For now, use the support link above to get live help.
+                Tutorial videos for the invoice module are being prepared. For now, use the support link above to get live help.
               </p>
             </div>
           </div>
