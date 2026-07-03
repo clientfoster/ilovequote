@@ -25,7 +25,9 @@ export function getFirebasePhoneAuth() {
   }
 
   const app = getApps().length ? getApps()[0] : initializeApp(firebaseConfig);
-  return getAuth(app);
+  const auth = getAuth(app);
+  auth.useDeviceLanguage();
+  return auth;
 }
 
 export async function requestPhoneOtp(phone: string, containerId: string): Promise<ConfirmationResult> {
@@ -33,12 +35,20 @@ export async function requestPhoneOtp(phone: string, containerId: string): Promi
   const existingVerifier = (window as typeof window & { recaptchaVerifier?: RecaptchaVerifier }).recaptchaVerifier;
   if (existingVerifier) {
     existingVerifier.clear();
+    (window as typeof window & { recaptchaVerifier?: RecaptchaVerifier }).recaptchaVerifier = undefined;
   }
+
+  const container = document.getElementById(containerId);
+  if (!container) {
+    throw new Error('Could not start phone OTP. Please refresh and try again.');
+  }
+  container.innerHTML = '';
 
   const verifier = new RecaptchaVerifier(auth, containerId, {
     size: 'invisible',
   });
   (window as typeof window & { recaptchaVerifier?: RecaptchaVerifier }).recaptchaVerifier = verifier;
+  await verifier.render();
 
   return signInWithPhoneNumber(auth, phone, verifier);
 }
