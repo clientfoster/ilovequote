@@ -6,7 +6,6 @@ import { Layers3, FolderGit2, QrCode } from 'lucide-react';
 import Layout from './components/Layout';
 import LandingPage from './pages/LandingPage';
 import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
 import ClientsPage from './pages/ClientsPage';
 import BusinessPage from './pages/BusinessPage';
 import ItemsPage from './pages/ItemsPage';
@@ -87,13 +86,26 @@ export default function App() {
   return (
     <Router>
       <Routes>
-        <Route path="/" element={<LandingPage />} />
+        <Route
+          path="/"
+          element={
+            <LandingPage
+              isAuthed={isAuthed}
+              userName={currentUser?.name}
+              onLogout={() => {
+                signOut();
+                setIsAuthed(false);
+                setCurrentUser(null);
+              }}
+            />
+          }
+        />
 
         <Route
           path="/login"
           element={
             isAuthed ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to="/" replace />
             ) : (
               <LoginPage
                 onLogin={(user) => {
@@ -119,7 +131,7 @@ export default function App() {
             />
           }
         >
-          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/dashboard" element={<Navigate to="/" replace />} />
           <Route path="/create-quote" element={<CreateQuotePage />} />
           <Route path="/create-invoice" element={<CreateInvoicePage />} />
           <Route path="/create-invoice/bank-details" element={<CreateInvoiceBankDetailsPage />} />

@@ -11,6 +11,7 @@ import {
   FileText,
   Gift,
   LogIn,
+  LogOut,
   PackageCheck,
   Plane,
   ReceiptIndianRupee,
@@ -21,6 +22,7 @@ import {
   UserPlus,
 } from 'lucide-react';
 import BrandMark from '../components/BrandMark';
+import { AuthUser, getDisplayAuthUser } from '../auth';
 
 type ToolCard = {
   title: string;
@@ -166,9 +168,19 @@ const workSteps = [
 
 const topNav = ['Quote', 'Invoice', 'Estimate', 'Purchase Order', 'Sales Receipt', 'Receipt'];
 
-export default function LandingPage() {
+interface LandingPageProps {
+  isAuthed?: boolean;
+  userName?: string;
+  onLogout?: () => void;
+}
+
+export default function LandingPage({ isAuthed = false, userName, onLogout }: LandingPageProps) {
   const navigate = useNavigate();
   const toolsScrollerRef = React.useRef<HTMLDivElement | null>(null);
+  const authUser = getDisplayAuthUser();
+  const displayName = userName?.trim() || authUser.displayName;
+  const initials = authUser.initials;
+  const username = authUser.username || authUser.email || authUser.phone || '';
 
   const scrollTools = (direction: 'left' | 'right') => {
     const node = toolsScrollerRef.current;
@@ -203,22 +215,46 @@ export default function LandingPage() {
             </nav>
 
             <div className="flex items-center gap-4">
-              <button
-                type="button"
-                onClick={() => navigate('/login?mode=login')}
-                className="inline-flex h-[50px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 text-[15px] font-semibold text-slate-900 shadow-[0_1px_5px_rgba(15,23,42,0.04)]"
-              >
-                <LogIn className="h-4.5 w-4.5" />
-                Login
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate('/login?mode=signup')}
-                className="inline-flex h-[50px] items-center gap-2 rounded-2xl bg-[#2563EB] px-7 text-[15px] font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.22)]"
-              >
-                <UserPlus className="h-4.5 w-4.5" />
-                Sign Up
-              </button>
+              {isAuthed ? (
+                <>
+                  <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
+                    <button type="button" className="flex h-10 w-10 items-center justify-center rounded-full bg-[#1D4ED8] text-[12px] font-semibold text-white shadow-sm">
+                      {initials}
+                    </button>
+                    <div className="flex flex-col items-start leading-tight">
+                      <span className="text-[13px] font-semibold text-slate-800">{displayName}</span>
+                      <span className="text-[11px] text-slate-500">{username || 'Signed in'}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={onLogout}
+                    className="inline-flex h-[50px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 text-[15px] font-semibold text-slate-900 shadow-[0_1px_5px_rgba(15,23,42,0.04)]"
+                  >
+                    <LogOut className="h-4.5 w-4.5" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login?mode=login')}
+                    className="inline-flex h-[50px] items-center gap-2 rounded-2xl border border-slate-200 bg-white px-7 text-[15px] font-semibold text-slate-900 shadow-[0_1px_5px_rgba(15,23,42,0.04)]"
+                  >
+                    <LogIn className="h-4.5 w-4.5" />
+                    Login
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => navigate('/login?mode=signup')}
+                    className="inline-flex h-[50px] items-center gap-2 rounded-2xl bg-[#2563EB] px-7 text-[15px] font-semibold text-white shadow-[0_10px_24px_rgba(37,99,235,0.22)]"
+                  >
+                    <UserPlus className="h-4.5 w-4.5" />
+                    Sign Up
+                  </button>
+                </>
+              )}
             </div>
           </div>
         </header>

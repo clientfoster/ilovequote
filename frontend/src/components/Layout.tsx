@@ -51,7 +51,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   const handleLogout = () => {
     signOut();
     onLogout?.();
-    navigate('/dashboard');
+    navigate('/');
   };
 
   const authUser = getDisplayAuthUser();
@@ -65,11 +65,15 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     setIsMobileMenuOpen(false);
   }, [location.pathname]);
 
-  const navItems = [
+  const isInvoiceModuleRoute = isAuthed && (
+    location.pathname.startsWith('/create-invoice')
+    || location.pathname === '/invoices'
+    || location.pathname === '/clients'
+  );
+
+  const quoteNavItems = [
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiresAuth: false },
     { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4" />, requiresAuth: true },
-    { path: '/invoices', label: 'My Invoices', icon: <Receipt className="w-4 h-4" />, requiresAuth: true },
-    { path: '/clients', label: 'Customers', icon: <Users className="w-4 h-4" />, requiresAuth: true },
     { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4" />, requiresAuth: true },
     { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" />, requiresAuth: true },
     { path: '/templates', label: 'Templates', icon: <Layers3 className="w-4 h-4" />, requiresAuth: true },
@@ -78,7 +82,21 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     { path: '/settings', label: 'Settings', icon: <SettingsIcon className="w-4 h-4" />, requiresAuth: true },
     { path: '/help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" />, requiresAuth: false },
   ];
+
+  const invoiceNavItems = [
+    { path: '/', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiresAuth: true },
+    { path: '/create-invoice', label: 'New Invoice', icon: <Receipt className="w-4 h-4" />, requiresAuth: true },
+    { path: '/invoices', label: 'My Invoices', icon: <FileText className="w-4 h-4" />, requiresAuth: true },
+    { path: '/clients', label: 'Customers', icon: <Users className="w-4 h-4" />, requiresAuth: true },
+    { path: '/help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" />, requiresAuth: false },
+  ];
+
+  const navItems = isInvoiceModuleRoute ? invoiceNavItems : quoteNavItems;
   const visibleNavItems = navItems.filter((item) => isAuthed || !item.requiresAuth);
+  const primaryActionLabel = isInvoiceModuleRoute ? 'New Invoice' : 'New Quote';
+  const primaryActionTarget = isInvoiceModuleRoute ? '/create-invoice' : '/create-quote';
+  const primaryActionStorageKey = isInvoiceModuleRoute ? null : 'ilovequote_editing_quote_id';
+  const primaryActionToast = isInvoiceModuleRoute ? 'Opening invoice builder...' : 'Initializing fresh quote container...';
 
   return (
     <div className="flex h-screen w-screen overflow-hidden bg-[#F8FAFC] font-sans antialiased text-slate-800" id="app-viewport">
@@ -181,16 +199,18 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 <div className="px-4 py-4">
                   <button
                     onClick={() => {
-                      localStorage.removeItem('ilovequote_editing_quote_id');
+                      if (primaryActionStorageKey) {
+                        localStorage.removeItem(primaryActionStorageKey);
+                      }
                       setIsDesktopMenuOpen(false);
-                      triggerToast('Initializing fresh quote container...');
-                      navigate('/create-quote');
+                      triggerToast(primaryActionToast);
+                      navigate(primaryActionTarget);
                     }}
                     className="w-full inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-blue-800 text-white text-xs font-bold py-2.5 px-4 rounded-xl shadow-lg shadow-blue-100 transition-all cursor-pointer transform active:scale-95 hover:-translate-y-0.5"
                     id="btn-sidebar-newquote"
                   >
                     <PlusCircle className="w-4 h-4" />
-                    New Quote
+                    {primaryActionLabel}
                   </button>
                 </div>
 
@@ -257,11 +277,13 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 )}
                 <button
                   onClick={() => {
-                    localStorage.removeItem('ilovequote_editing_quote_id');
-                    navigate('/create-quote');
+                    if (primaryActionStorageKey) {
+                      localStorage.removeItem(primaryActionStorageKey);
+                    }
+                    navigate(primaryActionTarget);
                   }}
                   className="p-1.5 bg-[#1D4ED8] hover:bg-blue-800 text-white rounded-lg shrink-0 cursor-pointer shadow-sm"
-                  title="New Quote"
+                  title={primaryActionLabel}
                 >
                   <PlusCircle className="w-4 h-4" />
                 </button>
@@ -292,15 +314,17 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                     <div className="p-3">
                       <button
                         onClick={() => {
-                          localStorage.removeItem('ilovequote_editing_quote_id');
+                          if (primaryActionStorageKey) {
+                            localStorage.removeItem(primaryActionStorageKey);
+                          }
                           setIsMobileMenuOpen(false);
-                          triggerToast('Initializing fresh quote container...');
-                          navigate('/create-quote');
+                          triggerToast(primaryActionToast);
+                          navigate(primaryActionTarget);
                         }}
                         className="w-full inline-flex items-center justify-center gap-2 bg-[#1D4ED8] hover:bg-blue-800 text-white text-xs font-bold py-2 px-3 rounded-lg shadow-sm transition-all cursor-pointer"
                       >
                         <PlusCircle className="w-3.5 h-3.5" />
-                        New Quote
+                        {primaryActionLabel}
                       </button>
                     </div>
 
