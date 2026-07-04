@@ -10,11 +10,12 @@ import {
   Pencil,
   Plus,
   ReceiptText,
+  Search,
   Trash2,
   Upload,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { fetchCustomers } from '../customerApi';
+import { createCustomer, fetchCustomers } from '../customerApi';
 import { fetchUserQuotes } from '../quoteApi';
 import { AUTH_STATE_EVENT, getScopedStorageKey, isAuthenticated } from '../auth';
 import {
@@ -39,6 +40,8 @@ const steps = [
 ];
 
 const currencyOptions = ['INR (INR, Rs)', 'USD (USD, $)', 'EUR (EUR, €)', 'GBP (GBP, £)'];
+
+const BUSINESS_LIBRARY_KEY = 'ilovequote_invoice_business_library';
 
 function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -122,6 +125,97 @@ function ProfileSelect({
           ))}
         </select>
         <ChevronDown className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+      </div>
+    </div>
+  );
+}
+
+function SearchableProfileSelect({
+  label,
+  value,
+  onChange,
+  options,
+  placeholder,
+  emptyMessage,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  options: ProfileOption[];
+  placeholder: string;
+  emptyMessage: string;
+}) {
+  const [query, setQuery] = useState('');
+  const [isOpen, setIsOpen] = useState(false);
+  const containerRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const selected = options.find((option) => option.id === value);
+    setQuery(selected?.label || '');
+  }, [options, value]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setIsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    return () => document.removeEventListener('mousedown', handlePointerDown);
+  }, [isOpen]);
+
+  const filteredOptions = options.filter((option) =>
+    !query.trim() || option.label.toLowerCase().includes(query.trim().toLowerCase()),
+  );
+
+  return (
+    <div ref={containerRef} className="space-y-2">
+      <span className="text-sm font-semibold text-slate-700">{label}</span>
+      <div className="relative">
+        <div className="flex min-h-[46px] items-center rounded-xl border border-slate-200 bg-white px-4 shadow-sm">
+          <Search className="mr-3 h-4 w-4 shrink-0 text-slate-400" />
+          <input
+            value={query}
+            onFocus={() => setIsOpen(true)}
+            onChange={(event) => {
+              const nextValue = event.target.value;
+              setQuery(nextValue);
+              setIsOpen(true);
+              if (!nextValue.trim()) {
+                onChange('manual');
+              }
+            }}
+            placeholder={placeholder}
+            className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
+          />
+          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
+        </div>
+
+        {isOpen ? (
+          <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+            {filteredOptions.length > 0 ? (
+              filteredOptions.map((option) => (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => {
+                    onChange(option.id);
+                    setQuery(option.label);
+                    setIsOpen(false);
+                  }}
+                  className="flex w-full items-center px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
+                >
+                  {option.label}
+                </button>
+              ))
+            ) : (
+              <div className="px-4 py-3 text-sm font-medium text-slate-500">{emptyMessage}</div>
+            )}
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -276,7 +370,7 @@ export default function CreateInvoicePage() {
   const lineItemGridClass = draft.showTax
     ? 'md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_120px_130px_44px]'
     : 'md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_130px_44px]';
-  const optionalFieldsGridClass = draft.showDueDate && draft.showCustomFields ? 'grid gap-3 md:grid-cols-2 md:items-start' : 'grid gap-3';
+  const shippingExtraFieldsVisible = draft.showShippingExtraFields || draft.showCustomFields || draft.showExtraFields;
   const updateBusinessDraft = (patch: Partial<InvoiceDraft>) => {
     setSelectedBusinessProfileId('manual');
     updateDraft(patch);
@@ -284,6 +378,18 @@ export default function CreateInvoicePage() {
   const updateClientDraft = (patch: Partial<InvoiceDraft>) => {
     setSelectedClientProfileId('manual');
     updateDraft(patch);
+  };
+  const handleLogoUpload = (file?: File | null) => {
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateDraft({
+        logoName: file.name,
+        logoData: typeof reader.result === 'string' ? reader.result : '',
+      });
+    };
+    reader.readAsDataURL(file);
   };
   const updateCustomField = (id: string, patch: { label?: string; value?: string }) => {
     updateDraft({
@@ -294,22 +400,37 @@ export default function CreateInvoicePage() {
     updateDraft({
       customFields: [...draft.customFields, makeInvoiceExtraField()],
       showCustomFields: true,
+      showShippingExtraFields: true,
+      showExtraFields: true,
     });
   };
-  const toggleCustomFields = () => {
-    if (!draft.showCustomFields && draft.customFields.length === 0) {
-      updateDraft({
-        showCustomFields: true,
-        customFields: [makeInvoiceExtraField()],
-      });
-      return;
-    }
-
-    updateDraft({ showCustomFields: !draft.showCustomFields });
+  const toggleShippingExtraFields = () => {
+    const nextVisible = !shippingExtraFieldsVisible;
+    updateDraft({
+      showCustomFields: nextVisible,
+      showShippingExtraFields: nextVisible,
+      showExtraFields: nextVisible,
+      customFields: nextVisible && draft.customFields.length === 0 ? [makeInvoiceExtraField()] : draft.customFields,
+    });
   };
   const removeCustomField = (id: string) => {
     updateDraft({
       customFields: draft.customFields.filter((field) => field.id !== id),
+    });
+  };
+  const startNewBusiness = () => {
+    setSelectedBusinessProfileId('manual');
+    setIsBusinessEditing(true);
+    updateDraft({
+      businessName: '',
+      email: '',
+      businessPhone: '',
+      businessAddress: '',
+      businessCity: '',
+      businessCountry: '',
+      businessPostal: '',
+      gstin: '',
+      pan: '',
     });
   };
 
@@ -356,6 +477,31 @@ export default function CreateInvoicePage() {
         seenClientKeys.add(key);
         nextClientProfiles.push(profile);
       };
+
+      try {
+        const businessLibraryRaw = localStorage.getItem(getScopedStorageKey(BUSINESS_LIBRARY_KEY));
+        if (businessLibraryRaw) {
+          const parsed = JSON.parse(businessLibraryRaw) as Array<Partial<BusinessFormValues>>;
+          parsed.forEach((entry, index) => {
+            if (entry.companyName?.trim()) {
+              pushBusinessProfile(
+                buildBusinessProfileOption(`business-library-${index}`, entry),
+                buildProfileKey([
+                  entry.companyName,
+                  entry.phone,
+                  entry.email,
+                  entry.address,
+                  entry.city,
+                  entry.country,
+                  entry.zipCode,
+                ]),
+              );
+            }
+          });
+        }
+      } catch {
+        // Ignore malformed business library data.
+      }
 
       try {
         const businessDraftRaw = localStorage.getItem(getScopedStorageKey(BUSINESS_DRAFT_KEY));
@@ -516,7 +662,7 @@ export default function CreateInvoicePage() {
 
   const startNewClient = () => {
     setSelectedClientProfileId('manual');
-      updateDraft({
+    updateDraft({
       clientName: '',
       clientId: '',
       billedToCompany: '',
@@ -526,6 +672,121 @@ export default function CreateInvoicePage() {
       billedToCountry: '',
       billedToPostal: '',
     });
+  };
+
+  const handleSaveAndContinue = async () => {
+    try {
+      const businessDraft = {
+        companyName: draft.businessName,
+        tagline: '',
+        email: draft.email,
+        phone: draft.businessPhone,
+        website: '',
+        logo: '',
+        address: draft.businessAddress,
+        city: draft.businessCity,
+        state: '',
+        zipCode: draft.businessPostal,
+        country: draft.businessCountry,
+        taxType: draft.gstin ? 'GSTIN' : draft.pan ? 'PAN' : 'Other',
+        taxId: draft.gstin || draft.pan,
+        socialLinks: [],
+        businessSlug: '',
+      } satisfies BusinessFormValues;
+
+      localStorage.setItem(getScopedStorageKey(BUSINESS_DRAFT_KEY), JSON.stringify(businessDraft));
+
+      const existingBusinessLibraryRaw = localStorage.getItem(getScopedStorageKey(BUSINESS_LIBRARY_KEY));
+      const existingBusinessLibrary = existingBusinessLibraryRaw ? (JSON.parse(existingBusinessLibraryRaw) as BusinessFormValues[]) : [];
+      const nextBusinessLibrary = [businessDraft, ...existingBusinessLibrary].filter(
+        (entry, index, array) =>
+          entry.companyName.trim() &&
+          array.findIndex((candidate) =>
+            buildProfileKey([
+              candidate.companyName,
+              candidate.phone,
+              candidate.email,
+              candidate.address,
+              candidate.city,
+              candidate.country,
+              candidate.zipCode,
+            ]) ===
+            buildProfileKey([
+              entry.companyName,
+              entry.phone,
+              entry.email,
+              entry.address,
+              entry.city,
+              entry.country,
+              entry.zipCode,
+            ]),
+          ) === index,
+      );
+      localStorage.setItem(getScopedStorageKey(BUSINESS_LIBRARY_KEY), JSON.stringify(nextBusinessLibrary));
+
+      const clientDraft = {
+        companyName: draft.billedToCompany,
+        contactPerson: draft.clientName,
+        email: '',
+        phone: draft.billedToPhone,
+        website: '',
+        taxIdType: 'GSTIN',
+        taxId: draft.clientId,
+        poNumber: draft.subtitle,
+        billingAddress: draft.billedToAddress,
+        city: draft.billedToCity,
+        state: '',
+        zipCode: draft.billedToPostal,
+        country: draft.billedToCountry,
+      } satisfies ClientFormValues;
+      localStorage.setItem(getScopedStorageKey(CLIENT_DRAFT_KEY), JSON.stringify(clientDraft));
+
+      const hasManualClientDetails = selectedClientProfileId === 'manual' && (draft.billedToCompany.trim() || draft.clientName.trim());
+      if (isAuthed && hasManualClientDetails) {
+        const duplicateExists = clientProfiles.some((profile) =>
+          buildProfileKey([
+            profile.patch.billedToCompany,
+            profile.patch.clientName,
+            profile.patch.billedToPhone,
+            profile.patch.billedToAddress,
+            profile.patch.billedToCity,
+            profile.patch.billedToCountry,
+            profile.patch.billedToPostal,
+          ]) ===
+          buildProfileKey([
+            draft.billedToCompany,
+            draft.clientName,
+            draft.billedToPhone,
+            draft.billedToAddress,
+            draft.billedToCity,
+            draft.billedToCountry,
+            draft.billedToPostal,
+          ]),
+        );
+
+        if (!duplicateExists) {
+          await createCustomer({
+            companyName: draft.billedToCompany,
+            contactPerson: draft.clientName,
+            email: '',
+            phone: draft.billedToPhone,
+            website: '',
+            taxIdType: 'GSTIN',
+            taxId: draft.clientId,
+            poNumber: draft.subtitle,
+            billingAddress: draft.billedToAddress,
+            city: draft.billedToCity,
+            state: '',
+            zipCode: draft.billedToPostal,
+            country: draft.billedToCountry,
+          });
+        }
+      }
+    } catch {
+      // Keep the flow usable even if background profile persistence fails.
+    }
+
+    navigate('/create-invoice/bank-details');
   };
 
   return (
@@ -599,100 +860,45 @@ export default function CreateInvoicePage() {
                     <CirclePlus className="h-4 w-4" />
                     {draft.showDueDate ? 'Hide Due Date' : 'Add Due Date'}
                   </button>
-                  <button
-                    type="button"
-                    onClick={toggleCustomFields}
-                    className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]"
-                  >
-                    <CirclePlus className="h-4 w-4" />
-                    {draft.showCustomFields ? 'Hide Extra Fields' : 'Add More Fields'}
-                  </button>
                 </div>
-                {(draft.showDueDate || draft.showCustomFields) ? (
-                  <div className={optionalFieldsGridClass}>
-                    {draft.showDueDate ? (
-                      <div className="self-start rounded-2xl border border-slate-200 bg-slate-50/70 px-2.5 py-2.5">
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
-                          <span className="text-sm font-semibold text-slate-700">Due Date</span>
-                          <div className="flex min-h-[40px] w-full items-center rounded-xl border border-slate-200 bg-white px-3 shadow-sm sm:w-[260px] sm:max-w-[260px]">
-                            <input
-                              type="date"
-                              value={draft.dueDate}
-                              onChange={(event) => updateDraft({ dueDate: event.target.value })}
-                              className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none"
-                            />
-                            <CalendarDays className="h-4 w-4 shrink-0 text-slate-400" />
-                          </div>
-                        </div>
+                {draft.showDueDate ? (
+                  <div className="self-start rounded-2xl border border-slate-200 bg-slate-50/70 px-2.5 py-2.5">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-4">
+                      <span className="text-sm font-semibold text-slate-700">Due Date</span>
+                      <div className="flex min-h-[40px] w-full items-center rounded-xl border border-slate-200 bg-white px-3 shadow-sm sm:w-[260px] sm:max-w-[260px]">
+                        <input
+                          type="date"
+                          value={draft.dueDate}
+                          onChange={(event) => updateDraft({ dueDate: event.target.value })}
+                          className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none"
+                        />
+                        <CalendarDays className="h-4 w-4 shrink-0 text-slate-400" />
                       </div>
-                    ) : null}
-                    {draft.showCustomFields ? (
-                      <div className="self-start rounded-2xl border border-slate-200 bg-slate-50/70 px-2.5 py-2.5">
-                        <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
-                          <div className="space-y-0.5">
-                            <h4 className="text-sm font-black tracking-[-0.02em] text-slate-900">Custom Fields</h4>
-                            <p className="text-xs leading-4 text-slate-500">Add labels such as Client ID, GST Number, PO Number, or Vehicle No.</p>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={addCustomField}
-                            className="inline-flex min-h-[36px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50"
-                          >
-                            <Plus className="h-4 w-4" />
-                            Add Field
-                          </button>
-                        </div>
-
-                        <div className="mt-2 space-y-1.5">
-                          {draft.customFields.length === 0 ? (
-                            <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-2.5 text-center">
-                              <p className="text-sm font-semibold text-slate-700">No custom fields yet</p>
-                              <p className="mt-1 text-xs text-slate-500">Add your first field to start capturing extra invoice details.</p>
-                            </div>
-                          ) : (
-                            draft.customFields.map((field) => (
-                              <div key={field.id} className="grid gap-1.5 sm:grid-cols-[minmax(0,4fr)_minmax(0,5fr)_48px] sm:items-center">
-                                <input
-                                  type="text"
-                                  value={field.label}
-                                  onChange={(event) => updateCustomField(field.id, { label: event.target.value })}
-                                  placeholder="Field label"
-                                  className="min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2E6EAB]"
-                                />
-                                <input
-                                  type="text"
-                                  value={field.value}
-                                  onChange={(event) => updateCustomField(field.id, { value: event.target.value })}
-                                  placeholder="Field value"
-                                  className="min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2E6EAB]"
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => removeCustomField(field.id)}
-                                  className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-200 bg-white px-0 text-slate-400 shadow-sm hover:bg-red-50 hover:text-red-500"
-                                  aria-label="Delete custom field"
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))
-                          )}
-                        </div>
-                      </div>
-                    ) : null}
+                    </div>
                   </div>
                 ) : null}
               </div>
 
               <div className="flex items-start justify-center lg:justify-end">
-                <label className="flex min-h-[104px] w-full max-w-[220px] cursor-pointer items-center justify-center gap-2 rounded-2xl border border-dashed border-[#B7D4F0] bg-[#F4FAFF] px-4 text-sm font-semibold text-[#5D78A4]">
-                  <ImagePlus className="h-5 w-5" />
-                  {draft.logoName || 'Add Business Logo'}
+                <label className="flex min-h-[104px] w-full max-w-[220px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[#B7D4F0] bg-[#F4FAFF] px-3 text-sm font-semibold text-[#5D78A4]">
+                  {draft.logoData ? (
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
+                      <div className="flex h-16 w-full items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 shadow-sm">
+                        <img src={draft.logoData} alt="Business logo preview" className="max-h-full max-w-full object-contain" />
+                      </div>
+                      <span className="w-full truncate text-[11px] font-semibold text-slate-600">{draft.logoName}</span>
+                    </div>
+                  ) : (
+                    <div className="flex flex-col items-center gap-2 text-center">
+                      <ImagePlus className="h-5 w-5" />
+                      <span>{draft.logoName || 'Add Business Logo'}</span>
+                    </div>
+                  )}
                   <input
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(event) => updateDraft({ logoName: event.target.files?.[0]?.name ?? '' })}
+                    onChange={(event) => handleLogoUpload(event.target.files?.[0] ?? null)}
                   />
                 </label>
               </div>
@@ -702,14 +908,27 @@ export default function CreateInvoicePage() {
             <div className="grid gap-4 xl:grid-cols-2">
               <SectionCard title="Billed By" subtitle="(Your Details)">
                 <div className="space-y-4">
-                  {isAuthed && businessProfiles.length > 0 ? (
-                    <ProfileSelect
-                      label="Business Profile"
-                      value={selectedBusinessProfileId}
-                      onChange={applyBusinessProfile}
-                      options={businessProfiles}
-                      placeholder="Manual entry"
-                    />
+                  {isAuthed ? (
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                      <div className="min-w-0 flex-1">
+                        <SearchableProfileSelect
+                          label="Search Business"
+                          value={selectedBusinessProfileId}
+                          onChange={applyBusinessProfile}
+                          options={businessProfiles}
+                          placeholder="Search by business name"
+                          emptyMessage="No matching business found."
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={startNewBusiness}
+                        className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"
+                      >
+                        <CirclePlus className="h-4 w-4" />
+                        Add New Business
+                      </button>
+                    </div>
                   ) : null}
 
                   <BusinessDetailsFields
@@ -726,19 +945,14 @@ export default function CreateInvoicePage() {
                   {isAuthed ? (
                     <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                       <div className="min-w-0 flex-1">
-                        {clientProfiles.length > 0 ? (
-                          <ProfileSelect
-                            label="Client Profile"
-                            value={selectedClientProfileId}
-                            onChange={applyClientProfile}
-                            options={clientProfiles}
-                            placeholder="Manual entry"
-                          />
-                        ) : (
-                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50 px-4 py-3 text-sm font-medium text-slate-500">
-                            No saved customers yet. Enter details below or add them from the Customers menu.
-                          </div>
-                        )}
+                        <SearchableProfileSelect
+                          label="Search Client"
+                          value={selectedClientProfileId}
+                          onChange={applyClientProfile}
+                          options={clientProfiles}
+                          placeholder="Search by client name"
+                          emptyMessage="No matching client found."
+                        />
                       </div>
                       <div className="flex gap-3">
                         <button
@@ -747,15 +961,7 @@ export default function CreateInvoicePage() {
                           className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"
                         >
                           <CirclePlus className="h-4 w-4" />
-                          New
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate('/clients')}
-                          className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2E6EAB] px-4 text-sm font-bold text-white shadow-sm"
-                        >
-                          <CirclePlus className="h-4 w-4" />
-                          Customers
+                          Add New Client
                         </button>
                       </div>
                     </div>
@@ -772,34 +978,89 @@ export default function CreateInvoicePage() {
                 Add Shipping Details
               </label>
               {draft.shippingEnabled ? (
-                <div className="grid gap-4 xl:grid-cols-3">
-                  <SectionCard title="Shipped From">
-                    <div className="space-y-3">
-                      <Field label="Business / Freelancer Name" value={draft.businessName} onChange={(businessName) => updateDraft({ businessName })} />
-                      <Field label="Country" value={draft.businessCountry} onChange={(businessCountry) => updateDraft({ businessCountry })} />
-                      <Field label="Address" value={draft.businessAddress} onChange={(businessAddress) => updateDraft({ businessAddress })} />
-                      <Field label="City" value={draft.businessCity} onChange={(businessCity) => updateDraft({ businessCity })} />
-                      <Field label="Postal Code" value={draft.businessPostal} onChange={(businessPostal) => updateDraft({ businessPostal })} />
-                    </div>
-                  </SectionCard>
-                  <SectionCard title="Shipped To">
-                    <div className="space-y-3">
-                      <Field label="Client Business Name" value={draft.billedToCompany} onChange={(billedToCompany) => updateDraft({ billedToCompany })} />
-                      <Field label="Country" value={draft.billedToCountry} onChange={(billedToCountry) => updateDraft({ billedToCountry })} />
-                      <Field label="Address" value={draft.billedToAddress} onChange={(billedToAddress) => updateDraft({ billedToAddress })} />
-                      <Field label="City" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} />
-                      <Field label="Postal Code" value={draft.billedToPostal} onChange={(billedToPostal) => updateDraft({ billedToPostal })} />
-                      <button
-                        type="button"
-                        onClick={() => updateDraft({ showShippingExtraFields: !draft.showShippingExtraFields })}
-                        className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]"
-                      >
-                        <CirclePlus className="h-4 w-4" />
-                        {draft.showShippingExtraFields ? 'Hide Extra Fields' : 'Add More Fields'}
-                      </button>
-                      {draft.showShippingExtraFields ? <Field label="State" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} /> : null}
-                    </div>
-                  </SectionCard>
+                <div className="space-y-4">
+                  <div className="grid gap-4 xl:grid-cols-3">
+                    <SectionCard title="Shipped From">
+                      <div className="space-y-3">
+                        <Field label="Business / Freelancer Name" value={draft.businessName} onChange={(businessName) => updateDraft({ businessName })} />
+                        <Field label="Country" value={draft.businessCountry} onChange={(businessCountry) => updateDraft({ businessCountry })} />
+                        <Field label="Address" value={draft.businessAddress} onChange={(businessAddress) => updateDraft({ businessAddress })} />
+                        <Field label="City" value={draft.businessCity} onChange={(businessCity) => updateDraft({ businessCity })} />
+                        <Field label="Postal Code" value={draft.businessPostal} onChange={(businessPostal) => updateDraft({ businessPostal })} />
+                      </div>
+                    </SectionCard>
+                    <SectionCard title="Shipped To">
+                      <div className="space-y-3">
+                        <Field label="Client Business Name" value={draft.billedToCompany} onChange={(billedToCompany) => updateDraft({ billedToCompany })} />
+                        <Field label="Country" value={draft.billedToCountry} onChange={(billedToCountry) => updateDraft({ billedToCountry })} />
+                        <Field label="Address" value={draft.billedToAddress} onChange={(billedToAddress) => updateDraft({ billedToAddress })} />
+                        <Field label="City" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} />
+                        <Field label="Postal Code" value={draft.billedToPostal} onChange={(billedToPostal) => updateDraft({ billedToPostal })} />
+                        <button
+                          type="button"
+                          onClick={toggleShippingExtraFields}
+                          className="flex items-center gap-2 text-sm font-semibold text-[#2E6EAB]"
+                        >
+                          <CirclePlus className="h-4 w-4" />
+                          {shippingExtraFieldsVisible ? 'Hide Extra Fields' : 'Add More Fields'}
+                        </button>
+                        {shippingExtraFieldsVisible ? (
+                          <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
+                            <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                              <div className="space-y-0.5">
+                                <h4 className="text-sm font-black tracking-[-0.02em] text-slate-900">Custom Fields</h4>
+                                <p className="text-xs leading-4 text-slate-500">Add labels such as Client ID, GST Number, PO Number, or Vehicle No.</p>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={addCustomField}
+                                className="inline-flex min-h-[36px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-xs font-bold text-slate-700 shadow-sm hover:bg-slate-50"
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add Field
+                              </button>
+                            </div>
+
+                            <div className="mt-2 space-y-1.5">
+                              {draft.customFields.length === 0 ? (
+                                <div className="rounded-xl border border-dashed border-slate-200 bg-white px-3 py-2.5 text-center">
+                                  <p className="text-sm font-semibold text-slate-700">No custom fields yet</p>
+                                  <p className="mt-1 text-xs text-slate-500">Add your first field to start capturing extra invoice details.</p>
+                                </div>
+                              ) : (
+                                draft.customFields.map((field) => (
+                                  <div key={field.id} className="grid gap-1.5 sm:grid-cols-[minmax(0,4fr)_minmax(0,5fr)_48px] sm:items-center">
+                                    <input
+                                      type="text"
+                                      value={field.label}
+                                      onChange={(event) => updateCustomField(field.id, { label: event.target.value })}
+                                      placeholder="Field label"
+                                      className="min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2E6EAB]"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={field.value}
+                                      onChange={(event) => updateCustomField(field.id, { value: event.target.value })}
+                                      placeholder="Field value"
+                                      className="min-h-[40px] rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 shadow-sm outline-none focus:border-[#2E6EAB]"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeCustomField(field.id)}
+                                      className="inline-flex min-h-[40px] items-center justify-center rounded-xl border border-slate-200 bg-white px-0 text-slate-400 shadow-sm hover:bg-red-50 hover:text-red-500"
+                                      aria-label="Delete custom field"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </button>
+                                  </div>
+                                ))
+                              )}
+                            </div>
+                          </div>
+                        ) : null}
+                      </div>
+                    </SectionCard>
+                  </div>
                 </div>
               ) : null}
             </section>
@@ -958,7 +1219,7 @@ export default function CreateInvoicePage() {
             <div className="flex flex-col justify-between gap-3 border-t border-slate-200 pt-4 sm:flex-row">
               <button onClick={() => window.location.assign('#/dashboard')} className="inline-flex min-h-[46px] items-center justify-center rounded-xl border border-slate-200 bg-white px-6 text-sm font-bold text-slate-600 shadow-sm">Cancel</button>
                 <div className="flex items-stretch rounded-xl bg-[#2E6EAB] shadow-[0_12px_24px_rgba(46,110,171,0.22)]">
-                <button onClick={() => navigate('/create-invoice/bank-details')} className="inline-flex min-h-[50px] items-center justify-center px-8 text-sm font-bold text-white">Save & Continue</button>
+                <button onClick={() => void handleSaveAndContinue()} className="inline-flex min-h-[50px] items-center justify-center px-8 text-sm font-bold text-white">Save & Continue</button>
                 <button className="border-l border-[#5D8CC0] px-4 text-white"><ChevronDown className="h-4 w-4" /></button>
               </div>
             </div>

@@ -123,6 +123,7 @@ export interface InvoiceRecord {
   clientId: string;
   clientName: string;
   businessName: string;
+  logoData: string;
   billedToCompany: string;
   billedToPhone: string;
   billedToAddress: string;
@@ -154,6 +155,7 @@ export interface InvoiceRecord {
   accountType: string;
   upiId: string;
   qrImageName: string;
+  qrImageData: string;
   paymentNotes: string;
   status: 'Draft' | 'Completed';
   ownerUserId?: string | null;

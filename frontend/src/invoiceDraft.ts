@@ -37,6 +37,7 @@ export type InvoiceDraft = {
   clientId: string;
   clientName: string;
   logoName: string;
+  logoData: string;
   businessName: string;
   businessAddress: string;
   businessCity: string;
@@ -67,6 +68,7 @@ export type InvoiceDraft = {
   accountType: string;
   upiId: string;
   qrImageName: string;
+  qrImageData: string;
   paymentNotes: string;
   draftVersion?: number;
 };
@@ -96,6 +98,7 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   clientId: '',
   clientName: '',
   logoName: '',
+  logoData: '',
   businessName: '',
   businessAddress: '',
   businessCity: '',
@@ -133,6 +136,7 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   accountType: 'Current Account',
   upiId: 'sakshi@upi',
   qrImageName: '',
+  qrImageData: '',
   paymentNotes: 'Kindly make payment within 15 days. Use the invoice number as your payment reference. UPI and bank transfer are both accepted.',
   draftVersion: DRAFT_VERSION,
 };
@@ -143,13 +147,15 @@ export function loadInvoiceDraft(): InvoiceDraft {
     if (!raw) return defaultInvoiceDraft;
     const parsed = JSON.parse(raw) as Partial<InvoiceDraft>;
     const isCurrentSchema = parsed.draftVersion === DRAFT_VERSION;
+    const extraFieldsEnabled = Boolean(parsed.showCustomFields || parsed.showShippingExtraFields || parsed.showExtraFields);
     const draft: InvoiceDraft = {
       ...defaultInvoiceDraft,
       ...parsed,
       showDueDate: isCurrentSchema ? parsed.showDueDate ?? defaultInvoiceDraft.showDueDate : false,
-      showCustomFields: isCurrentSchema ? parsed.showCustomFields ?? defaultInvoiceDraft.showCustomFields : false,
-      showExtraFields: isCurrentSchema ? parsed.showExtraFields ?? defaultInvoiceDraft.showExtraFields : false,
-      showShippingExtraFields: isCurrentSchema ? parsed.showShippingExtraFields ?? defaultInvoiceDraft.showShippingExtraFields : false,
+      showCustomFields: extraFieldsEnabled,
+      showExtraFields: extraFieldsEnabled,
+      showShippingExtraFields: extraFieldsEnabled,
+      logoData: typeof parsed.logoData === 'string' ? parsed.logoData : defaultInvoiceDraft.logoData,
       showTaxItemsSection: parsed.showTaxItemsSection ?? defaultInvoiceDraft.showTaxItemsSection,
       showTax: parsed.showTax ?? defaultInvoiceDraft.showTax,
       shippingEnabled: isCurrentSchema ? parsed.shippingEnabled ?? defaultInvoiceDraft.shippingEnabled : false,

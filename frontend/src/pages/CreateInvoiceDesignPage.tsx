@@ -21,6 +21,7 @@ export default function CreateInvoiceDesignPage() {
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const total = getInvoiceTotal(draft, draft.showTax);
+  const visibleCustomFields = draft.customFields.filter((field) => field.value.trim());
   const lineItemGridClass = draft.showTax
     ? 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.6fr_0.9fr]'
     : 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.9fr]';
@@ -174,8 +175,12 @@ export default function CreateInvoiceDesignPage() {
             <div ref={previewRef} className="quote-pdf-surface mx-auto w-full overflow-hidden bg-white">
             <div className="grid gap-8 bg-[#2E6EAB] px-8 py-8 text-white md:grid-cols-[1fr_1.15fr] md:px-12 md:py-10">
               <div>
-                <div className="mb-8 flex h-20 w-20 items-center justify-center rounded-xl border border-white/20 bg-white/5">
-                  <div className="text-5xl leading-none">INV</div>
+                <div className="mb-8 flex h-20 w-20 items-center justify-center overflow-hidden rounded-xl border border-white/20 bg-white/5">
+                  {draft.logoData ? (
+                    <img src={draft.logoData} alt="Business logo" className="h-full w-full object-contain p-2" />
+                  ) : (
+                    <div className="text-5xl leading-none">INV</div>
+                  )}
                 </div>
                 <h2 className="text-5xl font-light tracking-[-0.05em]">Invoice</h2>
                 {draft.showSubtitle && draft.subtitle ? <div className="mt-4 text-lg text-white/85">{draft.subtitle}</div> : null}
@@ -215,31 +220,14 @@ export default function CreateInvoiceDesignPage() {
                       <div className="mt-2 bg-[#F4F7FF] px-3 py-2 text-2xl text-[#6E89B4]">{value}</div>
                     </div>
                   ))}
+                  {visibleCustomFields.map((field) => (
+                    <div key={field.id}>
+                      <div className="text-lg font-black uppercase text-[#0F2F59]">{field.label || 'Custom Field'}</div>
+                      <div className="mt-2 bg-[#F4F7FF] px-3 py-2 text-2xl text-[#6E89B4]">{field.value || '-'}</div>
+                    </div>
+                  ))}
                 </div>
               </div>
-
-              {draft.customFields.length > 0 ? (
-                <div className="mt-8 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
-                  <div className="mb-4 flex items-center justify-between gap-3">
-                    <div>
-                      <div className="text-lg font-black text-[#0F2F59]">Additional Fields</div>
-                      <p className="mt-1 text-sm text-slate-500">Cleanly displayed invoice-specific details.</p>
-                    </div>
-                  </div>
-                  <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                    {draft.customFields.map((field) => (
-                      <div key={field.id} className="rounded-xl border border-slate-200 bg-white px-4 py-3 shadow-sm">
-                        <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400">
-                          {field.label || 'Custom Field'}
-                        </div>
-                        <div className="mt-1 text-sm font-semibold leading-6 text-slate-800">
-                          {field.value || '-'}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              ) : null}
 
               <div className="mt-10 border-t-4 border-slate-300 pt-8">
                 <div className={`grid ${lineItemGridClass} gap-4 px-1 pb-3 text-[15px] font-black uppercase text-[#0F2F59]`}>
@@ -264,15 +252,17 @@ export default function CreateInvoiceDesignPage() {
               <div className="bg-[#CFE7FB] px-8 py-8 md:px-10">
                 <div className="text-xl font-black uppercase text-[#0F2F59]">Notes:</div>
                 <div className="mt-4 bg-[#DCEEFF] px-4 py-5 text-xl leading-9 text-[#5D78A4]">{draft.notes}</div>
-                {draft.bankName || draft.upiId ? (
+                {draft.bankName || draft.upiId || draft.qrImageData ? (
                   <div className="mt-6">
                     <div className="text-lg font-black uppercase text-[#0F2F59]">Payment Details:</div>
                     <div className="mt-3 bg-[#DCEEFF] px-4 py-5 text-lg leading-8 text-[#5D78A4]">
-                      {draft.bankName ? <div>Bank: {draft.bankName}</div> : null}
-                      {draft.accountNumber ? <div>Account No: {draft.accountNumber}</div> : null}
-                      {draft.ifsc ? <div>IFSC: {draft.ifsc}</div> : null}
-                      {draft.upiId ? <div>UPI: {draft.upiId}</div> : null}
-                      {draft.paymentNotes ? <div className="mt-3">{draft.paymentNotes}</div> : null}
+                      <div>
+                        {draft.bankName ? <div>Bank: {draft.bankName}</div> : null}
+                        {draft.accountNumber ? <div>Account No: {draft.accountNumber}</div> : null}
+                        {draft.ifsc ? <div>IFSC: {draft.ifsc}</div> : null}
+                        {draft.upiId ? <div>UPI: {draft.upiId}</div> : null}
+                        {draft.paymentNotes ? <div className="mt-3">{draft.paymentNotes}</div> : null}
+                      </div>
                     </div>
                   </div>
                 ) : null}
@@ -281,6 +271,13 @@ export default function CreateInvoiceDesignPage() {
               <div className="bg-[#2E6EAB] px-8 py-8 text-white md:px-10">
                 <div className="text-right text-xl font-black uppercase">Total</div>
                 <div className="mt-5 bg-[#76A4D6]/70 px-5 py-4 text-right text-6xl font-semibold tracking-[-0.05em]">{formatInvoiceCurrency(total)}</div>
+                {draft.qrImageData ? (
+                  <div className="mt-8 flex justify-end">
+                    <div className="rounded-2xl bg-white p-3 shadow-lg">
+                      <img src={draft.qrImageData} alt="Payment QR code" className="h-36 w-36 object-contain" />
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </div>
 

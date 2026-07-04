@@ -1,5 +1,5 @@
 import React from 'react';
-import { BadgeIndianRupee, Building2, ChevronDown, ChevronLeft, ChevronRight, CirclePlus, Landmark, QrCode, ShieldCheck, WalletCards } from 'lucide-react';
+import { BadgeIndianRupee, Building2, ChevronDown, ChevronLeft, ChevronRight, CirclePlus, Landmark, QrCode, ShieldCheck, Trash2, WalletCards } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useInvoiceDraft } from '../invoiceDraft';
 
@@ -40,6 +40,21 @@ export default function CreateInvoiceBankDetailsPage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useInvoiceDraft();
   const updateDraft = (patch: Partial<typeof draft>) => setDraft((current) => ({ ...current, ...patch }));
+  const handleQrUpload = (file?: File | null) => {
+    if (!file) {
+      updateDraft({ qrImageName: '', qrImageData: '' });
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = () => {
+      updateDraft({
+        qrImageName: file.name,
+        qrImageData: typeof reader.result === 'string' ? reader.result : '',
+      });
+    };
+    reader.readAsDataURL(file);
+  };
 
   return (
     <div className="min-h-full bg-[#F8FAFF] px-3 py-4 md:px-5 md:py-6">
@@ -100,13 +115,31 @@ export default function CreateInvoiceBankDetailsPage() {
                   <div className="space-y-4">
                     <InputRow label="UPI ID" value={draft.upiId} onChange={(upiId) => updateDraft({ upiId })} />
                     <div className="rounded-2xl border border-dashed border-slate-300 bg-white px-5 py-8 text-center">
-                      <div className="mx-auto flex h-28 w-28 items-center justify-center rounded-2xl bg-slate-50 text-slate-300"><QrCode className="h-12 w-12" /></div>
+                      <div className="mx-auto flex h-28 w-28 items-center justify-center overflow-hidden rounded-2xl bg-slate-50 text-slate-300">
+                        {draft.qrImageData ? (
+                          <img src={draft.qrImageData} alt="QR code preview" className="h-full w-full object-contain" />
+                        ) : (
+                          <QrCode className="h-12 w-12" />
+                        )}
+                      </div>
                       <p className="mt-4 text-sm font-semibold text-slate-600">{draft.qrImageName || 'Upload QR Code'}</p>
                       <label className="mt-3 inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-[#2E6EAB] shadow-sm">
                         <CirclePlus className="h-4 w-4" />
                         Add QR Image
-                        <input type="file" accept="image/*" className="hidden" onChange={(e) => updateDraft({ qrImageName: e.target.files?.[0]?.name ?? '' })} />
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleQrUpload(e.target.files?.[0] ?? null)} />
                       </label>
+                      {draft.qrImageData ? (
+                        <div>
+                          <button
+                            type="button"
+                            onClick={() => handleQrUpload(null)}
+                            className="mt-3 inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-500 shadow-sm"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                            Remove QR Image
+                          </button>
+                        </div>
+                      ) : null}
                     </div>
                     <div className="rounded-2xl border border-slate-200 bg-white p-4">
                       <div className="flex items-start gap-3">

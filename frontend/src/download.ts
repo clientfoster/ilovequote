@@ -123,8 +123,8 @@ function getContentBounds(root: HTMLElement) {
   };
 }
 
-async function waitForCaptureAssets(element: HTMLElement) {
-  const imageElements = Array.from(element.querySelectorAll('img'));
+async function waitForImages(imageElements: HTMLImageElement[]) {
+  if (imageElements.length === 0) return;
 
   await Promise.all(
     imageElements.map(async (image) => {
@@ -148,6 +148,10 @@ async function waitForCaptureAssets(element: HTMLElement) {
       });
     }),
   );
+}
+
+async function waitForCaptureAssets(element: HTMLElement) {
+  await waitForImages(Array.from(element.querySelectorAll('img')));
 
   if (document.fonts?.ready) {
     try {
@@ -178,6 +182,15 @@ async function renderElementToCanvas(element: HTMLElement) {
   document.body.appendChild(sandbox);
 
   try {
+    await waitForImages(Array.from(clone.querySelectorAll('img')));
+    if (document.fonts?.ready) {
+      try {
+        await document.fonts.ready;
+      } catch {
+        // If font loading fails, continue with the best available rendering.
+      }
+    }
+
     const contentBounds = getContentBounds(clone);
     const captureWidth = Math.ceil(Math.max(
       CAPTURE_MAX_WIDTH_PX,
@@ -190,11 +203,16 @@ async function renderElementToCanvas(element: HTMLElement) {
       clone.offsetHeight,
       contentBounds.height,
     ));
+    const deviceScale = window.devicePixelRatio || 1;
+    const maxCanvasPixels = 16_000_000;
+    const boundedScale = Math.sqrt(maxCanvasPixels / Math.max(1, captureWidth * captureHeight));
+    const scale = Math.max(1, Math.min(2, deviceScale, boundedScale));
     return await html2canvas(clone, {
       backgroundColor: '#ffffff',
-      scale: 3,
+      scale,
       useCORS: true,
-      allowTaint: true,
+      allowTaint: false,
+      imageTimeout: 15_000,
       scrollX: 0,
       scrollY: 0,
       windowWidth: captureWidth,
