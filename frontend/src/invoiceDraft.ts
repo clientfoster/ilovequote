@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AUTH_STATE_EVENT, getScopedStorageKey, isAuthenticated } from './auth';
+import { AUTH_STATE_EVENT, getScopedStorageKey, getScopedStorageKeyForScope, isAuthenticated } from './auth';
 
 export type InvoiceLineItem = {
   id: string;
@@ -19,6 +19,14 @@ export type InvoiceExtraField = {
   id: string;
   label: string;
   value: string;
+};
+
+export type InvoiceAttachment = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  dataUrl: string;
 };
 
 export type InvoiceDraft = {
@@ -59,6 +67,9 @@ export type InvoiceDraft = {
   discountValue: number;
   discountType: '%' | 'Flat';
   notes: string;
+  attachments: InvoiceAttachment[];
+  signatureName: string;
+  signatureData: string;
   terms: InvoiceTerm[];
   accountHolderName: string;
   bankName: string;
@@ -78,6 +89,10 @@ const DRAFT_VERSION = 2;
 
 function getInvoiceDraftStorageKey() {
   return getScopedStorageKey(STORAGE_KEY);
+}
+
+function getGuestInvoiceDraftStorageKey() {
+  return getScopedStorageKeyForScope(STORAGE_KEY, 'guest');
 }
 
 const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
@@ -124,6 +139,9 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   discountValue: 10,
   discountType: '%',
   notes: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent ut nisl tempus massa blandit luctus.',
+  attachments: [],
+  signatureName: '',
+  signatureData: '',
   terms: [
     { id: makeId('term'), text: 'Please pay within 15 days from the date of invoice. overdue interest @ 14% will be charged on delayed payments.' },
     { id: makeId('term'), text: 'Please quote invoice number when remitting funds.' },
@@ -143,8 +161,15 @@ export const defaultInvoiceDraft: InvoiceDraft = {
 
 export function loadInvoiceDraft(): InvoiceDraft {
   try {
-    const raw = localStorage.getItem(getInvoiceDraftStorageKey()) || (isAuthenticated() ? localStorage.getItem(STORAGE_KEY) : null);
+    const currentScopedKey = getInvoiceDraftStorageKey();
+    const guestScopedKey = getGuestInvoiceDraftStorageKey();
+    const currentRaw = localStorage.getItem(currentScopedKey);
+    const guestRaw = currentRaw ? null : localStorage.getItem(guestScopedKey);
+    const legacyRaw = currentRaw || guestRaw ? null : localStorage.getItem(STORAGE_KEY);
+    const raw = currentRaw || guestRaw || legacyRaw;
     if (!raw) return defaultInvoiceDraft;
+
+    const sourceKey = currentRaw ? currentScopedKey : guestRaw ? guestScopedKey : legacyRaw ? STORAGE_KEY : currentScopedKey;
     const parsed = JSON.parse(raw) as Partial<InvoiceDraft>;
     const isCurrentSchema = parsed.draftVersion === DRAFT_VERSION;
     const extraFieldsEnabled = Boolean(parsed.showCustomFields || parsed.showShippingExtraFields || parsed.showExtraFields);
@@ -162,9 +187,22 @@ export function loadInvoiceDraft(): InvoiceDraft {
       lineItems: Array.isArray(parsed.lineItems) && parsed.lineItems.length > 0 ? parsed.lineItems : defaultInvoiceDraft.lineItems,
       terms: Array.isArray(parsed.terms) && parsed.terms.length > 0 ? parsed.terms : defaultInvoiceDraft.terms,
       customFields: Array.isArray(parsed.customFields) ? parsed.customFields : defaultInvoiceDraft.customFields,
+      attachments: Array.isArray(parsed.attachments)
+        ? parsed.attachments
+            .filter(Boolean)
+            .map((attachment) => ({
+              id: typeof attachment?.id === 'string' && attachment.id.trim() ? attachment.id : makeId('attachment'),
+              name: typeof attachment?.name === 'string' ? attachment.name : '',
+              type: typeof attachment?.type === 'string' ? attachment.type : '',
+              size: Number(attachment?.size ?? 0) || 0,
+              dataUrl: typeof attachment?.dataUrl === 'string' ? attachment.dataUrl : '',
+            }))
+        : defaultInvoiceDraft.attachments,
+      signatureName: typeof parsed.signatureName === 'string' ? parsed.signatureName : defaultInvoiceDraft.signatureName,
+      signatureData: typeof parsed.signatureData === 'string' ? parsed.signatureData : defaultInvoiceDraft.signatureData,
       draftVersion: DRAFT_VERSION,
     };
-    if (!localStorage.getItem(getInvoiceDraftStorageKey()) && isAuthenticated()) {
+    if (isAuthenticated() && sourceKey !== currentScopedKey) {
       saveInvoiceDraft(draft);
     }
     return draft;
@@ -236,4 +274,8 @@ export function makeInvoiceTerm(): InvoiceTerm {
 
 export function makeInvoiceExtraField(): InvoiceExtraField {
   return { id: makeId('field'), label: '', value: '' };
+}
+
+export function makeInvoiceAttachment(): InvoiceAttachment {
+  return { id: makeId('attachment'), name: '', type: '', size: 0, dataUrl: '' };
 }

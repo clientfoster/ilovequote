@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Mail, MoreHorizontal, ShieldCheck, X } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
-import { formatInvoiceCurrency, getInvoiceTotal, getLineItemAmount, useInvoiceDraft } from '../invoiceDraft';
+import { ChevronLeft, ChevronRight, Download, Mail, MoreHorizontal, ShieldCheck, Upload, X } from 'lucide-react';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { formatInvoiceCurrency, getInvoiceTotal, getLineItemAmount, saveInvoiceDraft, useInvoiceDraft } from '../invoiceDraft';
 import { createInvoice } from '../invoiceApi';
 import { AUTH_STATE_EVENT, isAuthenticated } from '../auth';
 import { downloadElementAsPdf } from '../download';
@@ -14,14 +14,18 @@ const steps = [
 
 export default function CreateInvoiceDesignPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [draft] = useInvoiceDraft();
   const [isDownloading, setIsDownloading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isAuthed, setIsAuthed] = useState(isAuthenticated());
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const autoSaveAfterLoginHandledRef = useRef(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const total = getInvoiceTotal(draft, draft.showTax);
   const visibleCustomFields = draft.customFields.filter((field) => field.value.trim());
+  const visibleAttachments = draft.attachments.filter((attachment) => attachment.name.trim());
+  const hasSignature = Boolean(draft.signatureData || draft.signatureName.trim());
   const lineItemGridClass = draft.showTax
     ? 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.6fr_0.9fr]'
     : 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.9fr]';
@@ -35,6 +39,27 @@ export default function CreateInvoiceDesignPage() {
       window.removeEventListener('storage', syncAuth);
     };
   }, []);
+
+  const buildAfterLoginReturnTo = () => {
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('afterLogin', 'saveInvoice');
+    const search = searchParams.toString();
+    return `${location.pathname}${search ? `?${search}` : ''}`;
+  };
+
+  useEffect(() => {
+    if (!isAuthed) {
+      autoSaveAfterLoginHandledRef.current = false;
+      return;
+    }
+
+    const afterLoginAction = new URLSearchParams(location.search).get('afterLogin');
+    if (afterLoginAction !== 'saveInvoice' || autoSaveAfterLoginHandledRef.current) return;
+
+    autoSaveAfterLoginHandledRef.current = true;
+    navigate(location.pathname, { replace: true });
+    void handleSaveInvoice();
+  }, [isAuthed, location.pathname, location.search, navigate]);
 
   const handleDownloadPdf = async () => {
     if (!previewRef.current || isDownloading) return;
@@ -53,6 +78,7 @@ export default function CreateInvoiceDesignPage() {
 
   const handleSaveInvoice = async () => {
     if (!isAuthed) {
+      saveInvoiceDraft(draft);
       setShowAuthPrompt(true);
       return;
     }
@@ -100,14 +126,20 @@ export default function CreateInvoiceDesignPage() {
             <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
               <button
                 type="button"
-                onClick={() => navigate('/login?mode=signup')}
+                onClick={() => {
+                  saveInvoiceDraft(draft);
+                  navigate(`/login?mode=signup&returnTo=${encodeURIComponent(buildAfterLoginReturnTo())}`);
+                }}
                 className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-[#2457F0] px-5 text-[15px] font-bold text-white shadow-[0_14px_28px_rgba(36,87,240,0.24)] transition hover:bg-[#1d4ed8]"
               >
                 Create Account
               </button>
               <button
                 type="button"
-                onClick={() => navigate('/login?mode=login')}
+                onClick={() => {
+                  saveInvoiceDraft(draft);
+                  navigate(`/login?mode=login&returnTo=${encodeURIComponent(buildAfterLoginReturnTo())}`);
+                }}
                 className="inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-[15px] font-bold text-slate-900 transition hover:bg-slate-50"
               >
                 Sign In
@@ -249,14 +281,43 @@ export default function CreateInvoiceDesignPage() {
             </div>
 
             <div className="grid md:grid-cols-[1.65fr_1fr]">
-              <div className="bg-[#CFE7FB] px-8 py-8 md:px-10">
-                <div className="text-xl font-black uppercase text-[#0F2F59]">Notes:</div>
-                <div className="mt-4 bg-[#DCEEFF] px-4 py-5 text-xl leading-9 text-[#5D78A4]">{draft.notes}</div>
+              <div className="bg-[#CFE7FB] px-8 py-6 md:px-10">
+                <div className="text-lg font-black uppercase text-[#0F2F59]">Notes:</div>
+                <div className="mt-3 whitespace-pre-line bg-[#DCEEFF] px-4 py-4 text-base leading-7 text-[#5D78A4]">{draft.notes}</div>
+                {visibleAttachments.length > 0 ? (
+                  <div className="mt-5">
+                    <div className="text-base font-black uppercase text-[#0F2F59]">Attachments:</div>
+                    <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                      {visibleAttachments.map((attachment) => (
+                        <div key={attachment.id} className="rounded-2xl bg-[#DCEEFF] px-4 py-3 text-[#5D78A4]">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl bg-white/80 text-[#2E6EAB] shadow-sm">
+                              {attachment.dataUrl ? (
+                                <img src={attachment.dataUrl} alt={attachment.name} className="h-full w-full object-cover" />
+                              ) : (
+                                <Upload className="h-4 w-4" />
+                              )}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate text-sm font-bold text-[#0F2F59]">{attachment.name}</div>
+                              <div className="text-xs leading-5 text-[#5D78A4]">{attachment.type || 'File attachment'}</div>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
                 {draft.bankName || draft.upiId || draft.qrImageData ? (
-                  <div className="mt-6">
-                    <div className="text-lg font-black uppercase text-[#0F2F59]">Payment Details:</div>
-                    <div className="mt-3 bg-[#DCEEFF] px-4 py-5 text-lg leading-8 text-[#5D78A4]">
-                      <div>
+                  <div className="mt-5">
+                    <div className="text-base font-black uppercase text-[#0F2F59]">Payment Details:</div>
+                    <div className="mt-3 flex flex-col gap-4 bg-[#DCEEFF] px-4 py-4 sm:flex-row sm:items-start">
+                      {draft.qrImageData ? (
+                        <div className="shrink-0 rounded-2xl bg-white p-3 shadow-sm">
+                          <img src={draft.qrImageData} alt="Payment QR code" className="h-28 w-28 object-contain" />
+                        </div>
+                      ) : null}
+                      <div className="text-base leading-7 text-[#5D78A4]">
                         {draft.bankName ? <div>Bank: {draft.bankName}</div> : null}
                         {draft.accountNumber ? <div>Account No: {draft.accountNumber}</div> : null}
                         {draft.ifsc ? <div>IFSC: {draft.ifsc}</div> : null}
@@ -268,14 +329,22 @@ export default function CreateInvoiceDesignPage() {
                 ) : null}
               </div>
 
-              <div className="bg-[#2E6EAB] px-8 py-8 text-white md:px-10">
-                <div className="text-right text-xl font-black uppercase">Total</div>
-                <div className="mt-5 bg-[#76A4D6]/70 px-5 py-4 text-right text-6xl font-semibold tracking-[-0.05em]">{formatInvoiceCurrency(total)}</div>
-                {draft.qrImageData ? (
-                  <div className="mt-8 flex justify-end">
-                    <div className="rounded-2xl bg-white p-3 shadow-lg">
-                      <img src={draft.qrImageData} alt="Payment QR code" className="h-36 w-36 object-contain" />
+              <div className="bg-[#2E6EAB] px-8 py-6 text-white md:px-10">
+                <div className="ml-auto w-full max-w-[260px]">
+                  <div className="text-right text-sm font-black uppercase tracking-[0.16em] text-white/90">Total</div>
+                  <div className="mt-3 rounded-xl bg-[#76A4D6]/70 px-5 py-3 text-right text-5xl font-semibold tracking-[-0.05em]">{formatInvoiceCurrency(total)}</div>
+                </div>
+                {hasSignature ? (
+                  <div className="mt-8 ml-auto w-full max-w-[300px] text-white">
+                    <div className="text-right text-base font-black uppercase tracking-[0.12em] text-white/90">Signature:</div>
+                    <div className="mt-4 flex w-full justify-end">
+                      {draft.signatureData ? (
+                        <img src={draft.signatureData} alt="Signature preview" className="max-h-20 w-auto max-w-[180px] object-contain" />
+                      ) : null}
                     </div>
+                    <div className="mt-2 text-right text-sm font-semibold text-white/90">
+                        {draft.signatureName || 'Authorized Signatory'}
+                      </div>
                   </div>
                 ) : null}
               </div>

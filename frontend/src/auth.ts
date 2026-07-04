@@ -79,6 +79,10 @@ export function getAuthScope() {
   return normalizeScope(localStorage.getItem(AUTH_STORAGE_KEY) || 'guest');
 }
 
+export function getScopedStorageKeyForScope(baseKey: string, scope: string) {
+  return `${baseKey}:${normalizeScope(scope)}`;
+}
+
 export function getStoredAuthUser() {
   if (typeof window === 'undefined') return null;
 
@@ -123,4 +127,29 @@ export function getDisplayAuthUser() {
 
 export function getScopedStorageKey(baseKey: string) {
   return `${baseKey}:${getAuthScope()}`;
+}
+
+export function resolveInternalReturnTo(value?: string | null) {
+  if (typeof window === 'undefined') return null;
+
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+
+  if (raw.startsWith('#/')) {
+    return raw.slice(1);
+  }
+
+  if (raw.startsWith('/') && !raw.startsWith('//')) {
+    return raw;
+  }
+
+  try {
+    const url = new URL(raw, window.location.origin);
+    if (url.origin !== window.location.origin) return null;
+
+    const resolved = `${url.pathname}${url.search}${url.hash}`;
+    return resolved.startsWith('/') ? resolved : `/${resolved}`;
+  } catch {
+    return null;
+  }
 }

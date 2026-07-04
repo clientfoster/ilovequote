@@ -12,8 +12,7 @@ import {
   Sparkles,
 } from 'lucide-react';
 import BrandMark from '../components/BrandMark';
-import { AuthUser } from '../auth';
-import { signIn } from '../auth';
+import { AuthUser, resolveInternalReturnTo, signIn } from '../auth';
 import { apiRequest } from '../api';
 import { isFirebasePhoneConfigured, requestPhoneOtp } from '../firebasePhoneAuth';
 import { signInWithSocialProvider, type SocialProviderName } from '../firebaseSocialAuth';
@@ -136,6 +135,10 @@ function SocialLoginButton({ label, icon, toneClassName, onClick }: SocialLoginB
 export default function LoginPage({ onLogin }: LoginPageProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const returnTo = useMemo(
+    () => resolveInternalReturnTo(new URLSearchParams(location.search).get('returnTo')),
+    [location.search],
+  );
   const [mode, setMode] = useState<FlowMode>(() => {
     const modeParam = new URLSearchParams(location.search).get('mode');
     return modeParam === 'login' ? 'login' : 'signup';
@@ -172,6 +175,11 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [loginPhoneConfirmation, setLoginPhoneConfirmation] = useState<ConfirmationResult | null>(null);
   const [resetPhoneConfirmation, setResetPhoneConfirmation] = useState<ConfirmationResult | null>(null);
   const [phoneBusy, setPhoneBusy] = useState(false);
+
+  const finishAuth = (user: AuthUser) => {
+    onLogin?.(user);
+    navigate(returnTo || '/dashboard', { replace: true });
+  };
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -303,8 +311,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         },
       );
       signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      finishAuth(result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create account');
     } finally {
@@ -330,8 +337,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         },
       );
       signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      finishAuth(result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign in');
     } finally {
@@ -400,8 +406,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           },
         );
         signIn(result.authToken, result.user);
-        onLogin?.(result.user);
-        navigate('/dashboard');
+        finishAuth(result.user);
         return;
       }
 
@@ -413,8 +418,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         },
       );
       signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      finishAuth(result.user);
     } catch (err) {
       setError(friendlyFirebasePhoneError(err));
     } finally {
@@ -600,8 +604,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       );
 
       signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      finishAuth(result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reset password');
     } finally {
@@ -650,8 +653,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         },
       );
       signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      finishAuth(result.user);
     } catch (err) {
       setError(friendlyFirebasePhoneError(err));
     } finally {

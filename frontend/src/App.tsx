@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { HashRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { Layers3, FolderGit2, QrCode } from 'lucide-react';
 
 // Shell & Pages Imports
@@ -26,13 +26,31 @@ import {
   getAuthToken,
   getStoredAuthUser,
   isAuthenticated,
+  resolveInternalReturnTo,
   setStoredAuthUser,
   signOut,
 } from './auth';
 import { apiUrl } from './api';
 
 function RequireAuth({ isAuthed, children }: { isAuthed: boolean; children: React.ReactElement }) {
-  return isAuthed ? children : <Navigate to="/login?mode=login" replace />;
+  const location = useLocation();
+  const returnTo = resolveInternalReturnTo(`${location.pathname}${location.search}`);
+  const loginUrl = returnTo ? `/login?mode=login&returnTo=${encodeURIComponent(returnTo)}` : '/login?mode=login';
+
+  return isAuthed ? children : <Navigate to={loginUrl} replace />;
+}
+
+function LoginRoute({
+  isAuthed,
+  onLogin,
+}: {
+  isAuthed: boolean;
+  onLogin: (user: AuthUser) => void;
+}) {
+  const location = useLocation();
+  const returnTo = resolveInternalReturnTo(new URLSearchParams(location.search).get('returnTo'));
+
+  return isAuthed ? <Navigate to={returnTo || '/dashboard'} replace /> : <LoginPage onLogin={onLogin} />;
 }
 
 export default function App() {
@@ -104,16 +122,13 @@ export default function App() {
         <Route
           path="/login"
           element={
-            isAuthed ? (
-              <Navigate to="/" replace />
-            ) : (
-              <LoginPage
-                onLogin={(user) => {
-                  setIsAuthed(true);
-                  setCurrentUser(user);
-                }}
-              />
-            )
+            <LoginRoute
+              isAuthed={isAuthed}
+              onLogin={(user) => {
+                setIsAuthed(true);
+                setCurrentUser(user);
+              }}
+            />
           }
         />
 

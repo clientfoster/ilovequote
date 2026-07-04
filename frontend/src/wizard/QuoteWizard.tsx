@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { useNavigate, useOutletContext } from 'react-router-dom';
+import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { ChevronLeft, ChevronRight, LoaderCircle, Moon, Save, ShieldCheck, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BusinessStep from '../modules/business-module/BusinessModule';
@@ -26,7 +26,7 @@ import {
   SETTINGS_STORAGE_KEY as SETTINGS_STORAGE_KEY_BASE,
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
-import { getScopedStorageKey, isAuthenticated } from '../auth';
+import { getScopedStorageKey, getScopedStorageKeyForScope, isAuthenticated } from '../auth';
 import { createQuote, updateQuote } from '../quoteApi';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
@@ -55,6 +55,35 @@ const normalizeClientDraft = (draft: Partial<ClientFormValues> | null | undefine
 };
 
 const makeQuoteId = () => `quote-${Date.now()}`;
+
+const WIZARD_STEP_STORAGE_KEY = 'ilovequote_quote_wizard_step';
+const GUEST_SCOPE = 'guest';
+
+function readScopedStorageEntry(baseKey: string) {
+  const currentKey = getScopedStorageKey(baseKey);
+  const guestKey = getScopedStorageKeyForScope(baseKey, GUEST_SCOPE);
+
+  const currentRaw = localStorage.getItem(currentKey);
+  if (currentRaw !== null) {
+    return { raw: currentRaw, sourceKey: currentKey };
+  }
+
+  const guestRaw = localStorage.getItem(guestKey);
+  if (guestRaw !== null) {
+    return { raw: guestRaw, sourceKey: guestKey };
+  }
+
+  const legacyRaw = localStorage.getItem(baseKey);
+  if (legacyRaw !== null) {
+    return { raw: legacyRaw, sourceKey: baseKey };
+  }
+
+  return { raw: null, sourceKey: currentKey };
+}
+
+function persistScopedStorageEntry(baseKey: string, raw: string) {
+  localStorage.setItem(getScopedStorageKey(baseKey), raw);
+}
 
 const buildQuotePayload = (
   businessDetails: BusinessFormValues,
@@ -94,6 +123,7 @@ const buildQuotePayload = (
 
 export default function QuoteWizard() {
   const navigate = useNavigate();
+  const location = useLocation();
   const BUSINESS_DRAFT_KEY = getScopedStorageKey(BUSINESS_DRAFT_KEY_BASE);
   const CLIENT_DRAFT_KEY = getScopedStorageKey(CLIENT_DRAFT_KEY_BASE);
   const CLIENT_LOGO_KEY = getScopedStorageKey(CLIENT_LOGO_KEY_BASE);
@@ -109,7 +139,15 @@ export default function QuoteWizard() {
   const onTriggerToast = outletContext?.onTriggerToast ?? (() => {});
   const setSaveStatus = outletContext?.setSaveStatus ?? (() => {});
 
-  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(1);
+  const [currentStep, setCurrentStep] = useState<1 | 2 | 3 | 4>(() => {
+    try {
+      const storedStep = window.sessionStorage.getItem(WIZARD_STEP_STORAGE_KEY);
+      const parsed = Number(storedStep);
+      return parsed === 1 || parsed === 2 || parsed === 3 || parsed === 4 ? (parsed as 1 | 2 | 3 | 4) : 1;
+    } catch {
+      return 1;
+    }
+  });
   const [businessData, setBusinessData] = useState<BusinessFormValues>(DEFAULT_BUSINESS_VALUES);
   const [clientData, setClientData] = useState<ClientFormValues>(DEFAULT_CLIENT_VALUES);
   const [itemsData, setItemsData] = useState<ItemQuoteItem[]>(INITIAL_ITEMS);
@@ -124,6 +162,7 @@ export default function QuoteWizard() {
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
   const [authPromptIntent, setAuthPromptIntent] = useState<'draft' | 'final' | null>(null);
   const quoteContainerRef = useRef<HTMLDivElement | null>(null);
+  const handledAfterLoginActionRef = useRef<string | null>(null);
 
   const {
     register: registerClient,
@@ -205,48 +244,62 @@ export default function QuoteWizard() {
         }
       }
 
-      const settingsRaw = localStorage.getItem(SETTINGS_STORAGE_KEY);
+      const settingsEntry = readScopedStorageEntry(SETTINGS_STORAGE_KEY_BASE);
+      const settingsRaw = settingsEntry.raw;
       const settings = settingsRaw ? JSON.parse(settingsRaw) : DEFAULT_SETTINGS;
       setTaxRate(settings.defaultGstPercent || 18);
       
       const initialTerms = settings.defaultTerms || DEFAULT_SETTINGS.defaultTerms;
       setTermsAndConditions(initialTerms);
 
-      const draftTerms = localStorage.getItem(TERMS_STORAGE_KEY);
+      const draftTermsEntry = readScopedStorageEntry('ilovequote_draft_terms_list');
+      const draftTerms = draftTermsEntry.raw;
       if (draftTerms) {
         setTermsList(JSON.parse(draftTerms));
       } else {
         setTermsList(parseTermsStringToList(initialTerms));
       }
 
-      const storedLogo = localStorage.getItem(CLIENT_LOGO_KEY);
-      if (storedLogo) setLogoUrl(storedLogo);
+      const storedLogoEntry = readScopedStorageEntry(CLIENT_LOGO_KEY_BASE);
+      if (storedLogoEntry.raw) setLogoUrl(storedLogoEntry.raw);
 
-      const businessDraft = localStorage.getItem(BUSINESS_DRAFT_KEY);
-      if (businessDraft) {
-        const parsed = JSON.parse(businessDraft);
+      const businessDraftEntry = readScopedStorageEntry(BUSINESS_DRAFT_KEY_BASE);
+      if (businessDraftEntry.raw) {
+        const parsed = JSON.parse(businessDraftEntry.raw);
         reset({ ...DEFAULT_BUSINESS_VALUES, ...parsed });
         setBusinessData({ ...DEFAULT_BUSINESS_VALUES, ...parsed });
+        if (isAuthenticated() && businessDraftEntry.sourceKey !== BUSINESS_DRAFT_KEY) {
+          persistScopedStorageEntry(BUSINESS_DRAFT_KEY_BASE, businessDraftEntry.raw);
+        }
       }
 
-      const clientDraft = localStorage.getItem(CLIENT_DRAFT_KEY);
-      if (clientDraft) {
-        const parsed = JSON.parse(clientDraft);
+      const clientDraftEntry = readScopedStorageEntry(CLIENT_DRAFT_KEY_BASE);
+      if (clientDraftEntry.raw) {
+        const parsed = JSON.parse(clientDraftEntry.raw);
         const normalizedClient = normalizeClientDraft(parsed);
         resetClient(normalizedClient);
         setClientData(normalizedClient);
+        if (isAuthenticated() && clientDraftEntry.sourceKey !== CLIENT_DRAFT_KEY) {
+          persistScopedStorageEntry(CLIENT_DRAFT_KEY_BASE, clientDraftEntry.raw);
+        }
       }
 
-      const itemsDraft = localStorage.getItem(ITEMS_DRAFT_KEY);
-      if (itemsDraft) {
-        const parsed = JSON.parse(itemsDraft);
+      const itemsDraftEntry = readScopedStorageEntry(ITEMS_DRAFT_KEY_BASE);
+      if (itemsDraftEntry.raw) {
+        const parsed = JSON.parse(itemsDraftEntry.raw);
         if (Array.isArray(parsed) && parsed.length > 0) setItemsData(parsed);
+        if (isAuthenticated() && itemsDraftEntry.sourceKey !== ITEMS_DRAFT_KEY) {
+          persistScopedStorageEntry(ITEMS_DRAFT_KEY_BASE, itemsDraftEntry.raw);
+        }
       }
 
-      const metaDraft = localStorage.getItem(ITEMS_META_KEY);
-      if (metaDraft) {
-        const parsed = JSON.parse(metaDraft);
+      const metaDraftEntry = readScopedStorageEntry(ITEMS_META_KEY_BASE);
+      if (metaDraftEntry.raw) {
+        const parsed = JSON.parse(metaDraftEntry.raw);
         setQuotationMeta({ ...DEFAULT_ITEM_META, ...parsed });
+        if (isAuthenticated() && metaDraftEntry.sourceKey !== ITEMS_META_KEY) {
+          persistScopedStorageEntry(ITEMS_META_KEY_BASE, metaDraftEntry.raw);
+        }
       }
 
       const storedEditingQuoteId = localStorage.getItem(EDITING_QUOTE_ID_KEY);
@@ -266,6 +319,14 @@ export default function QuoteWizard() {
       .join('\n');
     setTermsAndConditions(formattedTermsStr);
   }, [termsList]);
+
+  useEffect(() => {
+    try {
+      window.sessionStorage.setItem(WIZARD_STEP_STORAGE_KEY, String(currentStep));
+    } catch {
+      // Keep the wizard usable even if session storage is unavailable.
+    }
+  }, [currentStep]);
 
   useEffect(() => {
     setSaveState('saving');
@@ -311,6 +372,42 @@ export default function QuoteWizard() {
     }));
   }, [watchedBusinessValues.companyName, watchedBusinessValues.email, watchedClientValues.companyName, watchedClientValues.email]);
 
+  const persistDraftSnapshot = () => {
+    try {
+      localStorage.setItem(BUSINESS_DRAFT_KEY, JSON.stringify(watchedBusinessValues));
+      localStorage.setItem(CLIENT_DRAFT_KEY, JSON.stringify(watchedClientValues));
+      localStorage.setItem(ITEMS_DRAFT_KEY, JSON.stringify(itemsData));
+      localStorage.setItem(ITEMS_META_KEY, JSON.stringify(quotationMeta));
+      localStorage.setItem(TERMS_STORAGE_KEY, JSON.stringify(termsList));
+      if (logoUrl) {
+        localStorage.setItem(CLIENT_LOGO_KEY, logoUrl);
+      } else {
+        localStorage.removeItem(CLIENT_LOGO_KEY);
+      }
+      if (editingQuoteId) {
+        localStorage.setItem(EDITING_QUOTE_ID_KEY, editingQuoteId);
+      } else {
+        localStorage.removeItem(EDITING_QUOTE_ID_KEY);
+      }
+      window.sessionStorage.setItem(WIZARD_STEP_STORAGE_KEY, String(currentStep));
+    } catch {
+      // Keep navigation usable even when storage is near capacity.
+    }
+  };
+
+  const buildAfterLoginReturnTo = (action: 'saveDraft' | 'finalizeQuote') => {
+    const searchParams = new URLSearchParams(location.search);
+    searchParams.set('afterLogin', action);
+    const search = searchParams.toString();
+    return `${location.pathname}${search ? `?${search}` : ''}`;
+  };
+
+  const goToLogin = (mode: 'signup' | 'login') => {
+    const action = authPromptIntent === 'draft' ? 'saveDraft' : 'finalizeQuote';
+    persistDraftSnapshot();
+    navigate(`/login?mode=${mode}&returnTo=${encodeURIComponent(buildAfterLoginReturnTo(action))}`);
+  };
+
   const handleReset = () => {
     setBusinessData(DEFAULT_BUSINESS_VALUES);
     setClientData(DEFAULT_CLIENT_VALUES);
@@ -329,6 +426,7 @@ export default function QuoteWizard() {
     localStorage.removeItem(ITEMS_META_KEY);
     localStorage.removeItem(TERMS_STORAGE_KEY);
     localStorage.removeItem(EDITING_QUOTE_ID_KEY);
+    window.sessionStorage.removeItem(WIZARD_STEP_STORAGE_KEY);
     setEditingQuoteId(null);
     setSaveState('idle');
     onTriggerToast('Draft reset');
@@ -388,6 +486,7 @@ export default function QuoteWizard() {
   const handleSaveDraft = () => {
     if (isSavingDraft) return;
     if (!isAuthenticated()) {
+      persistDraftSnapshot();
       setAuthPromptIntent('draft');
       return;
     }
@@ -468,6 +567,7 @@ export default function QuoteWizard() {
     }
 
     if (!isAuthenticated()) {
+      persistDraftSnapshot();
       setAuthPromptIntent('final');
       return;
     }
@@ -486,6 +586,7 @@ export default function QuoteWizard() {
       localStorage.removeItem(ITEMS_DRAFT_KEY);
       localStorage.removeItem(ITEMS_META_KEY);
       localStorage.removeItem(TERMS_STORAGE_KEY);
+      window.sessionStorage.removeItem(WIZARD_STEP_STORAGE_KEY);
       setSaveState('saved');
       setSaveStatus('saved');
       onTriggerToast('Quote saved successfully');
@@ -497,6 +598,23 @@ export default function QuoteWizard() {
       setIsFinalizingQuote(false);
     }
   };
+
+  useEffect(() => {
+    const afterLoginAction = new URLSearchParams(location.search).get('afterLogin');
+    if (!afterLoginAction || !isAuthenticated() || handledAfterLoginActionRef.current === afterLoginAction) return;
+
+    handledAfterLoginActionRef.current = afterLoginAction;
+    navigate(location.pathname, { replace: true });
+
+    if (afterLoginAction === 'saveDraft') {
+      handleSaveDraft();
+      return;
+    }
+
+    if (afterLoginAction === 'finalizeQuote' && currentStep === 4) {
+      void handlePrimaryAction();
+    }
+  }, [currentStep, handlePrimaryAction, handleSaveDraft, location.pathname, location.search, navigate]);
 
   return (
     <div className="quote-wizard-shell min-h-dvh overflow-x-hidden bg-slate-50 text-slate-900">
@@ -545,14 +663,14 @@ export default function QuoteWizard() {
               <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() => navigate('/login?mode=signup')}
+                  onClick={() => goToLogin('signup')}
                   className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-[#2457F0] px-5 text-[15px] font-bold text-white shadow-[0_14px_28px_rgba(36,87,240,0.24)] transition hover:bg-[#1d4ed8]"
                 >
                   Create Account
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate('/login?mode=login')}
+                  onClick={() => goToLogin('login')}
                   className="inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-[15px] font-bold text-slate-900 transition hover:bg-slate-50"
                 >
                   Sign In
