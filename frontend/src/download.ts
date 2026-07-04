@@ -102,6 +102,27 @@ function normalizeScrollableRegions(root: HTMLElement) {
   }
 }
 
+function inlineComputedStyles(source: Element, target: HTMLElement) {
+  const computedStyle = window.getComputedStyle(source);
+
+  for (const propertyName of Array.from(computedStyle)) {
+    const value = computedStyle.getPropertyValue(propertyName);
+    if (value) {
+      target.style.setProperty(propertyName, value, computedStyle.getPropertyPriority(propertyName));
+    }
+  }
+
+  const sourceChildren = Array.from(source.children);
+  const targetChildren = Array.from(target.children);
+
+  sourceChildren.forEach((sourceChild, index) => {
+    const targetChild = targetChildren[index];
+    if (targetChild instanceof HTMLElement) {
+      inlineComputedStyles(sourceChild, targetChild);
+    }
+  });
+}
+
 function getContentBounds(root: HTMLElement) {
   const rootRect = root.getBoundingClientRect();
   const bounds = {
@@ -176,6 +197,7 @@ async function renderElementToCanvas(element: HTMLElement) {
   sandbox.style.overflow = 'visible';
 
   const clone = element.cloneNode(true) as HTMLElement;
+  inlineComputedStyles(element, clone);
   applyCaptureStyles(clone);
   normalizeScrollableRegions(clone);
   sandbox.appendChild(clone);
