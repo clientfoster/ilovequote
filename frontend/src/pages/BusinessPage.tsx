@@ -449,124 +449,88 @@ export default function BusinessPage() {
           </div>
         </section>
 
-        <section className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="flex flex-col gap-4 border-b border-slate-100 pb-4 md:flex-row md:items-center md:justify-between">
-            <div>
-              <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">Saved Businesses</h2>
-              <p className="mt-1 text-sm text-slate-500">
-                Search and manage the business details you want to reuse later.
-              </p>
+        <section className="rounded-[18px] border border-slate-200 bg-white shadow-sm">
+          <div className="flex flex-col gap-4 border-b border-slate-200 px-5 py-5 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#EEF3FF] text-[#2457F0]">
+                <Building2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">Saved Businesses</h2>
+                <p className="mt-1 text-sm text-slate-500">
+                  {savedBusinesses.length} business record{savedBusinesses.length === 1 ? '' : 's'} in your account
+                </p>
+              </div>
             </div>
-            <div className="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">
-              {filteredBusinesses.length} of {savedBusinesses.length}
-            </div>
-          </div>
 
-          <div className="mt-4">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+            <div className="flex items-center rounded-[12px] border border-slate-200 bg-white px-4 py-3 shadow-sm md:w-[420px]">
               <input
                 type="text"
                 value={searchQuery}
                 onChange={(event) => setSearchQuery(event.target.value)}
-                placeholder="Search by business name, email, phone, city or tax ID"
-                className="w-full rounded-2xl border border-slate-200 bg-slate-50/80 py-3 pl-10 pr-10 text-sm font-semibold text-slate-700 outline-none transition-colors focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-blue-100"
+                placeholder="Search businesses..."
+                className="w-full border-none bg-transparent text-[15px] font-medium text-slate-700 outline-none placeholder:text-slate-400"
               />
-              {searchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
-                  aria-label="Clear search"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              )}
+              <Search className="h-5 w-5 shrink-0 text-slate-700" />
             </div>
           </div>
 
-          <div className="mt-5">
-            {filteredBusinesses.length === 0 ? (
-              <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50/60 px-6 py-12 text-center">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-blue-50 text-[#2563EB]">
-                  <Building2 className="h-6 w-6" />
-                </div>
-                <h3 className="mt-4 text-sm font-black text-slate-900">No saved businesses yet</h3>
-                <p className="mx-auto mt-2 max-w-md text-xs font-medium leading-relaxed text-slate-500">
-                  {searchQuery
-                    ? 'No records match your search.'
-                    : 'Create your first business profile above and it will appear here for reuse later.'}
-                </p>
-              </div>
-            ) : (
-              <div className="grid gap-4 lg:grid-cols-2">
-                {filteredBusinesses.map((profile) => (
-                  <article
-                    key={buildBusinessProfileKey(profile)}
-                    className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <h3 className="truncate text-base font-black tracking-tight text-slate-900">
-                          {profile.companyName || 'Business Profile'}
-                        </h3>
-                        <p className="mt-1 text-xs font-medium leading-relaxed text-slate-500">
-                          {profile.email || 'Email not added'}
-                        </p>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-blue-50 px-3 py-1 text-[10px] font-black uppercase tracking-[0.2em] text-[#2563EB]">
-                        Invoice Ready
-                      </span>
-                    </div>
-
-                    <div className="mt-4 space-y-3 text-xs font-medium text-slate-600">
-                      <div className="flex items-start gap-2">
-                        <Phone className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                        <span>{profile.phone || 'Phone not added'}</span>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <MapPin className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
-                        <span className="leading-relaxed">{profile.address || 'Address not added'}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 grid grid-cols-1 gap-2 rounded-2xl bg-slate-50/80 p-4 text-xs font-semibold text-slate-700 sm:grid-cols-2">
-                      <div>
-                        <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                          Tax
-                        </span>
-                        <span className="mt-1 block">{formatTaxValue(profile)}</span>
-                      </div>
-                      <div>
-                        <span className="block text-[10px] font-black uppercase tracking-[0.2em] text-slate-400">
-                          Location
-                        </span>
-                        <span className="mt-1 block">{formatLocation(profile)}</span>
-                      </div>
-                    </div>
-
-                    <div className="mt-4 flex flex-wrap gap-2">
-                      <button
-                        type="button"
-                        onClick={() => handleLoadBusiness(profile)}
-                        className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2 text-xs font-bold text-slate-700 transition-colors hover:bg-slate-50"
-                      >
-                        <Edit3 className="h-4 w-4" />
-                        Edit
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => handleDeleteBusiness(profile)}
-                        className="inline-flex min-h-[40px] items-center gap-2 rounded-xl border border-red-200 bg-white px-3.5 py-2 text-xs font-bold text-red-600 transition-colors hover:bg-red-50"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                        Delete
-                      </button>
-                    </div>
-                  </article>
-                ))}
-              </div>
-            )}
+          <div className="overflow-x-auto">
+            <table className="min-w-[980px] w-full border-collapse text-left">
+              <thead className="bg-[#FBFCFF]">
+                <tr className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500">
+                  <th className="px-5 py-4">Business</th>
+                  <th className="px-5 py-4">Email</th>
+                  <th className="px-5 py-4">Phone</th>
+                  <th className="px-5 py-4">Address</th>
+                  <th className="px-5 py-4">Tax</th>
+                  <th className="px-5 py-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBusinesses.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="px-5 py-10 text-center text-sm text-slate-500">
+                      {searchQuery ? 'No businesses match your search.' : 'No businesses saved yet.'}
+                    </td>
+                  </tr>
+                ) : (
+                  filteredBusinesses.map((profile) => (
+                    <tr key={buildBusinessProfileKey(profile)} className="border-t border-slate-200/70 text-[14px]">
+                      <td className="px-5 py-4 font-semibold text-slate-900">
+                        {profile.companyName || '-'}
+                      </td>
+                      <td className="px-5 py-4 text-slate-700">{profile.email || '-'}</td>
+                      <td className="px-5 py-4 text-slate-700">{profile.phone || '-'}</td>
+                      <td className="px-5 py-4 text-slate-700">
+                        {[profile.address, profile.city, profile.country].filter(Boolean).join(', ') || '-'}
+                      </td>
+                      <td className="px-5 py-4 text-slate-700">{formatTaxValue(profile)}</td>
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleLoadBusiness(profile)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm"
+                            title="Edit business"
+                          >
+                            <Edit3 className="h-4 w-4" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteBusiness(profile)}
+                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-red-500 shadow-sm"
+                            title="Delete business"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
         </section>
       </div>
