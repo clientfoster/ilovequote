@@ -69,6 +69,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     location.pathname.startsWith('/create-invoice')
     || location.pathname === '/invoices'
     || location.pathname === '/clients'
+    || location.pathname === '/business'
     || location.pathname === '/invoice-help-support'
   );
 
@@ -76,7 +77,6 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4" />, requiresAuth: false },
     { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4" />, requiresAuth: true },
     { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4" />, requiresAuth: true },
-    { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" />, requiresAuth: true },
     { path: '/templates', label: 'Templates', icon: <Layers3 className="w-4 h-4" />, requiresAuth: true },
     { path: '/portfolio', label: 'My Portfolio', icon: <QrCode className="w-4 h-4" />, requiresAuth: true },
     { path: '/qr-codes', label: 'QR Portfolio', icon: <QrCode className="w-4 h-4" />, requiresAuth: true },

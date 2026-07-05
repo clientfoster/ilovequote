@@ -10,7 +10,6 @@ import {
   Trash2,
 } from 'lucide-react';
 import BusinessForm from '../modules/business-module/components/BusinessForm';
-import BusinessPreviewCard from '../modules/business-module/components/BusinessPreviewCard';
 import { getScopedStorageKey } from '../auth';
 import { BusinessFormValues } from '../types';
 import { DEFAULT_BUSINESS_VALUES, BUSINESS_DRAFT_KEY } from '../wizard/WizardState';
@@ -110,6 +109,9 @@ export default function BusinessPage() {
   });
 
   const currentValues = watch();
+  const previewAddress = [currentValues.address, currentValues.city, currentValues.state, currentValues.zipCode, currentValues.country]
+    .filter(Boolean)
+    .join(', ');
 
   useEffect(() => {
     const loadState = () => {
@@ -218,10 +220,10 @@ export default function BusinessPage() {
                 Business Profiles
               </div>
               <div>
-                <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">Manage Multiple Businesses</h1>
+                <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">Invoice Business Profiles</h1>
                 <p className="mt-2 max-w-3xl text-[15px] leading-7 text-slate-500">
-                  Add and store multiple business records here. Saved profiles are imported automatically into the invoice
-                  <span className="font-semibold text-slate-700"> Search Business</span> dropdown.
+                  Add and store multiple business records here for invoices. Saved profiles are imported automatically
+                  into the invoice <span className="font-semibold text-slate-700">Search Business</span> dropdown.
                 </p>
               </div>
             </div>
@@ -283,15 +285,46 @@ export default function BusinessPage() {
               <div className="flex items-center justify-between gap-3 border-b border-slate-100 pb-4">
                 <div>
                   <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">Live Preview</h2>
-                  <p className="mt-1 text-sm text-slate-500">What the selected or current business looks like.</p>
+                  <p className="mt-1 text-sm text-slate-500">What the selected or current business will fill in the invoice Billed By section.</p>
                 </div>
                 <div className="rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#2457F0]">
                   {activeProfileKey === 'manual' ? 'Draft' : 'Selected'}
                 </div>
               </div>
 
-              <div className="mt-5">
-                <BusinessPreviewCard formData={currentValues} />
+              <div className="mt-5 rounded-[18px] border border-slate-200 bg-[#F8FAFC] p-5">
+                <div className="flex items-start justify-between gap-4 border-b border-slate-200 pb-4">
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Business Name</p>
+                    <p className="mt-1 break-words text-[20px] font-black tracking-tight text-slate-900">
+                      {currentValues.companyName || 'Your Business'}
+                    </p>
+                    {currentValues.tagline ? <p className="mt-2 text-sm text-slate-500">{currentValues.tagline}</p> : null}
+                  </div>
+                </div>
+
+                <div className="mt-4 grid gap-3 text-sm text-slate-700 sm:grid-cols-2">
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Email</p>
+                    <p className="mt-1 break-all font-semibold">{currentValues.email || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Phone No</p>
+                    <p className="mt-1 break-words font-semibold">{currentValues.phone || '-'}</p>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Address</p>
+                    <p className="mt-1 whitespace-pre-line font-semibold">{previewAddress || '-'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tax Type</p>
+                    <p className="mt-1 font-semibold">{currentValues.taxType || 'GSTIN'}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400">Tax ID</p>
+                    <p className="mt-1 break-all font-semibold">{currentValues.taxId || '-'}</p>
+                  </div>
+                </div>
               </div>
             </section>
 
