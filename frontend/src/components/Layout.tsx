@@ -88,6 +88,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     { path: '/create-invoice', label: 'New Invoice', icon: <Receipt className="w-4 h-4" />, requiresAuth: true },
     { path: '/invoices', label: 'My Invoices', icon: <FileText className="w-4 h-4" />, requiresAuth: true },
     { path: '/clients', label: 'Customers', icon: <Users className="w-4 h-4" />, requiresAuth: true },
+    { path: '/business', label: 'My Business', icon: <Building2 className="w-4 h-4" />, requiresAuth: true },
     { path: '/invoice-help-support', label: 'Help & Support', icon: <HelpCircle className="w-4 h-4" />, requiresAuth: false },
   ];
 
