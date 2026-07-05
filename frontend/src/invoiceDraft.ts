@@ -97,12 +97,26 @@ function getGuestInvoiceDraftStorageKey() {
 
 const makeId = (prefix: string) => `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
 
+function getLocalIsoDate(date = new Date()) {
+  const localTime = date.getTime() - date.getTimezoneOffset() * 60_000;
+  return new Date(localTime).toISOString().slice(0, 10);
+}
+
+function addDaysToIsoDate(isoDate: string, days: number) {
+  const next = new Date(`${isoDate}T00:00:00`);
+  next.setDate(next.getDate() + days);
+  return getLocalIsoDate(next);
+}
+
+const todayIsoDate = getLocalIsoDate();
+const defaultDueDate = addDaysToIsoDate(todayIsoDate, 14);
+
 export const defaultInvoiceDraft: InvoiceDraft = {
   invoiceNumber: 'INV00234',
   subtitle: '',
   showSubtitle: false,
-  invoiceDate: '2024-01-17',
-  dueDate: '2024-01-31',
+  invoiceDate: todayIsoDate,
+  dueDate: defaultDueDate,
   showDueDate: false,
   showCustomFields: false,
   customFields: [],
@@ -173,9 +187,17 @@ export function loadInvoiceDraft(): InvoiceDraft {
     const parsed = JSON.parse(raw) as Partial<InvoiceDraft>;
     const isCurrentSchema = parsed.draftVersion === DRAFT_VERSION;
     const extraFieldsEnabled = Boolean(parsed.showCustomFields || parsed.showShippingExtraFields || parsed.showExtraFields);
+    const isLegacySeed = !isCurrentSchema
+      && parsed.invoiceNumber === 'INV00234'
+      && parsed.invoiceDate === '2024-01-17'
+      && parsed.dueDate === '2024-01-31';
+    const invoiceDate = isLegacySeed ? todayIsoDate : (parsed.invoiceDate || defaultInvoiceDraft.invoiceDate);
+    const dueDate = isLegacySeed ? defaultDueDate : (parsed.dueDate || addDaysToIsoDate(invoiceDate, 14));
     const draft: InvoiceDraft = {
       ...defaultInvoiceDraft,
       ...parsed,
+      invoiceDate,
+      dueDate,
       showDueDate: isCurrentSchema ? parsed.showDueDate ?? defaultInvoiceDraft.showDueDate : false,
       showCustomFields: extraFieldsEnabled,
       showExtraFields: extraFieldsEnabled,

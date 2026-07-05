@@ -11,6 +11,7 @@ import {
   Plus,
   ReceiptText,
   Search,
+  X,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -27,6 +28,7 @@ import {
   makeInvoiceExtraField,
   makeInvoiceLineItem,
   makeInvoiceTerm,
+  type InvoiceAttachment,
   type InvoiceDraft,
   useInvoiceDraft,
 } from '../invoiceDraft';
@@ -68,6 +70,7 @@ function Field({
   type = 'text',
   icon,
   required = true,
+  inputRef,
 }: {
   label: string;
   value: string;
@@ -75,6 +78,7 @@ function Field({
   type?: string;
   icon?: React.ReactNode;
   required?: boolean;
+  inputRef?: React.Ref<HTMLInputElement>;
 }) {
   return (
     <label className="space-y-2">
@@ -84,6 +88,7 @@ function Field({
       </span>
       <div className="flex min-h-[46px] items-center rounded-xl border border-slate-200 bg-white px-4 shadow-sm">
         <input
+          ref={inputRef}
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
@@ -351,6 +356,32 @@ function buildClientProfileOption(
   } satisfies ProfileOption;
 }
 
+function readFileAsDataUrl(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+    reader.onerror = () => reject(new Error(`Could not read ${file.name}`));
+    reader.readAsDataURL(file);
+  });
+}
+
+function formatAttachmentSize(size: number) {
+  if (!size) return '0 B';
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(size < 10 * 1024 ? 1 : 0)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(size < 10 * 1024 * 1024 ? 1 : 0)} MB`;
+}
+
+function buildAttachmentEntry(file: File, dataUrl: string): InvoiceAttachment {
+  return {
+    id: `attachment-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    name: file.name,
+    type: file.type,
+    size: file.size,
+    dataUrl: file.type.startsWith('image/') ? dataUrl : '',
+  };
+}
+
 export default function CreateInvoicePage() {
   const navigate = useNavigate();
   const [draft, setDraft] = useInvoiceDraft();
@@ -361,7 +392,15 @@ export default function CreateInvoicePage() {
   const [clientProfiles, setClientProfiles] = useState<ProfileOption[]>([]);
   const [selectedBusinessProfileId, setSelectedBusinessProfileId] = useState('manual');
   const [selectedClientProfileId, setSelectedClientProfileId] = useState('manual');
+  const [showNotesEditor, setShowNotesEditor] = useState(false);
+  const [showAttachmentsEditor, setShowAttachmentsEditor] = useState(false);
+  const [showSignatureEditor, setShowSignatureEditor] = useState(false);
   const currencyMenuRef = useRef<HTMLDivElement | null>(null);
+  const notesTextareaRef = useRef<HTMLTextAreaElement | null>(null);
+  const attachmentInputRef = useRef<HTMLInputElement | null>(null);
+  const signatureInputRef = useRef<HTMLInputElement | null>(null);
+  const signatureNameRef = useRef<HTMLInputElement | null>(null);
+  const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   const updateDraft = (patch: Partial<InvoiceDraft>) => setDraft((current) => ({ ...current, ...patch }));
   const subtotal = getSubTotal(draft.lineItems);
@@ -390,6 +429,75 @@ export default function CreateInvoicePage() {
       });
     };
     reader.readAsDataURL(file);
+  };
+  const removeLogo = () => {
+    updateDraft({
+      logoName: '',
+      logoData: '',
+    });
+    if (logoInputRef.current) {
+      logoInputRef.current.value = '';
+    }
+  };
+  const openNotesEditor = () => {
+    setShowNotesEditor(true);
+    setTimeout(() => notesTextareaRef.current?.focus(), 0);
+  };
+  const openAttachmentsEditor = () => {
+    setShowAttachmentsEditor(true);
+    attachmentInputRef.current?.click();
+  };
+  const handleAttachmentFiles = async (files?: FileList | null) => {
+    if (!files || files.length === 0) return;
+
+    try {
+      const nextAttachments = await Promise.all(
+        Array.from(files).map(async (file) => {
+          const dataUrl = file.type.startsWith('image/') ? await readFileAsDataUrl(file) : '';
+          return buildAttachmentEntry(file, dataUrl);
+        }),
+      );
+
+      setDraft((current) => ({
+        ...current,
+        attachments: [...current.attachments, ...nextAttachments],
+      }));
+      setShowAttachmentsEditor(true);
+    } catch (error) {
+      console.error('Failed to read attachment file', error);
+      window.alert('Could not add attachment. Please try again.');
+    }
+  };
+  const removeAttachment = (attachmentId: string) => {
+    setDraft((current) => ({
+      ...current,
+      attachments: current.attachments.filter((attachment) => attachment.id !== attachmentId),
+    }));
+  };
+  const openSignatureEditor = () => {
+    setShowSignatureEditor(true);
+    signatureInputRef.current?.click();
+  };
+  const handleSignatureUpload = async (file?: File | null) => {
+    if (!file) return;
+
+    try {
+      const dataUrl = await readFileAsDataUrl(file);
+      updateDraft({
+        signatureData: dataUrl,
+      });
+      setShowSignatureEditor(true);
+      setTimeout(() => signatureNameRef.current?.focus(), 0);
+    } catch (error) {
+      console.error('Failed to read signature file', error);
+      window.alert('Could not add signature. Please try again.');
+    }
+  };
+  const clearSignature = () => {
+    updateDraft({
+      signatureName: '',
+      signatureData: '',
+    });
   };
   const updateCustomField = (id: string, patch: { label?: string; value?: string }) => {
     updateDraft({
@@ -880,27 +988,41 @@ export default function CreateInvoicePage() {
               </div>
 
               <div className="flex items-start justify-center lg:justify-end">
-                <label className="flex min-h-[104px] w-full max-w-[220px] cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[#B7D4F0] bg-[#F4FAFF] px-3 text-sm font-semibold text-[#5D78A4]">
+                <div className="relative w-full max-w-[220px]">
                   {draft.logoData ? (
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
-                      <div className="flex h-16 w-full items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 shadow-sm">
-                        <img src={draft.logoData} alt="Business logo preview" className="max-h-full max-w-full object-contain" />
+                    <button
+                      type="button"
+                      onClick={removeLogo}
+                      className="absolute right-2 top-2 z-10 inline-flex h-8 w-8 items-center justify-center rounded-full border border-red-100 bg-white text-red-500 shadow-sm transition hover:bg-red-50 hover:text-red-600"
+                      aria-label="Remove logo"
+                      title="Remove logo"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  ) : null}
+                  <label className="flex min-h-[104px] w-full cursor-pointer items-center justify-center overflow-hidden rounded-2xl border border-dashed border-[#B7D4F0] bg-[#F4FAFF] px-3 text-sm font-semibold text-[#5D78A4]">
+                  {draft.logoData ? (
+                      <div className="flex h-full w-full flex-col items-center justify-center gap-2 text-center">
+                        <div className="flex h-16 w-full items-center justify-center overflow-hidden rounded-xl bg-white/80 p-2 shadow-sm">
+                          <img src={draft.logoData} alt="Business logo preview" className="max-h-full max-w-full object-contain" />
+                        </div>
+                        <span className="w-full truncate text-[11px] font-semibold text-slate-600">{draft.logoName}</span>
                       </div>
-                      <span className="w-full truncate text-[11px] font-semibold text-slate-600">{draft.logoName}</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-2 text-center">
-                      <ImagePlus className="h-5 w-5" />
-                      <span>{draft.logoName || 'Add Business Logo'}</span>
-                    </div>
-                  )}
-                  <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(event) => handleLogoUpload(event.target.files?.[0] ?? null)}
-                  />
-                </label>
+                    ) : (
+                      <div className="flex flex-col items-center gap-2 text-center">
+                        <ImagePlus className="h-5 w-5" />
+                        <span>{draft.logoName || 'Add Business Logo'}</span>
+                      </div>
+                    )}
+                    <input
+                      ref={logoInputRef}
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(event) => handleLogoUpload(event.target.files?.[0] ?? null)}
+                    />
+                  </label>
+                </div>
               </div>
 
             </div>
@@ -1066,57 +1188,56 @@ export default function CreateInvoicePage() {
             </section>
 
             <div className="space-y-3">
-              <label className="inline-flex items-center gap-3 text-sm font-bold text-[#2E6EAB]">
-                <input
-                  type="checkbox"
-                  checked={draft.showTaxItemsSection}
-                  onChange={(event) => updateDraft({ showTaxItemsSection: event.target.checked })}
-                  className="h-4 w-4 rounded border-slate-300 text-[#2E6EAB] focus:ring-[#2E6EAB]"
-                />
-                {draft.showTaxItemsSection ? 'Hide Tax & Items' : 'Show Tax & Items'}
-              </label>
+              <div className="flex flex-wrap items-center gap-3">
+                <label className="inline-flex items-center gap-3 text-sm font-bold text-[#2E6EAB]">
+                  <input
+                    type="checkbox"
+                    checked={draft.showTax}
+                    onChange={(event) => updateDraft({ showTax: event.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-[#2E6EAB] focus:ring-[#2E6EAB]"
+                  />
+                  {draft.showTax ? 'Hide Tax' : 'Show Tax'}
+                </label>
 
-              {draft.showTaxItemsSection ? (
-                <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
-                  <div className="flex flex-wrap gap-3">
-                    <button
-                      type="button"
-                      onClick={() => updateDraft({ showTax: !draft.showTax })}
-                      className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm"
-                    >
-                      Configure Tax
-                    </button>
-                    <div ref={currencyMenuRef} className="relative">
-                      <button
-                        type="button"
-                        onClick={() => setIsCurrencyMenuOpen((current) => !current)}
-                        className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm"
-                      >
-                        {draft.currency === 'INR (INR, Rs)' ? 'Choose currency' : draft.currency}
-                        <ChevronDown className="h-4 w-4 text-slate-400" />
-                      </button>
-                      {isCurrencyMenuOpen ? (
-                        <div className="absolute left-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                          {currencyOptions.map((option) => (
-                            <button
-                              key={option}
-                              type="button"
-                              onClick={() => {
-                                updateDraft({ currency: option });
-                                setIsCurrencyMenuOpen(false);
-                              }}
-                              className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
-                                draft.currency === option ? 'bg-[#EAF4FF] text-[#2E6EAB]' : 'text-slate-700 hover:bg-slate-50'
-                              }`}
-                            >
-                              <span>{option}</span>
-                              {draft.currency === option ? <span className="text-xs font-black">✓</span> : null}
-                            </button>
-                          ))}
-                        </div>
-                      ) : null}
+                <button
+                  type="button"
+                  onClick={() => updateDraft({ showTax: !draft.showTax })}
+                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm"
+                >
+                  Configure Tax
+                </button>
+                <div ref={currencyMenuRef} className="relative">
+                  <button
+                    type="button"
+                    onClick={() => setIsCurrencyMenuOpen((current) => !current)}
+                    className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm"
+                  >
+                    {draft.currency === 'INR (INR, Rs)' ? 'Choose currency' : draft.currency}
+                    <ChevronDown className="h-4 w-4 text-slate-400" />
+                  </button>
+                  {isCurrencyMenuOpen ? (
+                    <div className="absolute left-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                      {currencyOptions.map((option) => (
+                        <button
+                          key={option}
+                          type="button"
+                          onClick={() => {
+                            updateDraft({ currency: option });
+                            setIsCurrencyMenuOpen(false);
+                          }}
+                          className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
+                            draft.currency === option ? 'bg-[#EAF4FF] text-[#2E6EAB]' : 'text-slate-700 hover:bg-slate-50'
+                          }`}
+                        >
+                          <span>{option}</span>
+                          {draft.currency === option ? <span className="text-xs font-black">v</span> : null}
+                        </button>
+                      ))}
                     </div>
-                  </div>
+                  ) : null}
+                </div>
+              </div>
+
 
                   <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
                     <div className={`hidden md:grid ${lineItemGridClass} gap-3 bg-slate-50 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500`}>
@@ -1138,7 +1259,19 @@ export default function CreateInvoicePage() {
                               <input type="number" value={row.tax} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
                             ) : null}
                             <div className="flex items-center text-sm font-bold text-slate-900">{formatInvoiceCurrency(amount)}</div>
-                            <button onClick={() => setDraft((current) => ({ ...current, lineItems: current.lineItems.filter((item) => item.id !== row.id) }))} className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-red-500">
+                            <button
+                              type="button"
+                              disabled={draft.lineItems.length === 1}
+                              onClick={() => {
+                                if (draft.lineItems.length === 1) return;
+                                setDraft((current) => ({
+                                  ...current,
+                                  lineItems: current.lineItems.filter((item) => item.id !== row.id),
+                                }));
+                              }}
+                              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
+                              aria-label={draft.lineItems.length === 1 ? 'At least one item is required' : 'Delete line item'}
+                            >
                               <Trash2 className="h-4 w-4" />
                             </button>
                           </div>
@@ -1146,7 +1279,7 @@ export default function CreateInvoicePage() {
                       })}
                     </div>
                     <div className="grid gap-4 border-t border-slate-200 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-                      <button onClick={() => setDraft((current) => ({ ...current, lineItems: [...current.lineItems, makeInvoiceLineItem()] }))} className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-dashed border-[#B7D4F0] bg-[#EAF4FF] px-4 text-sm font-bold text-[#2E6EAB]">
+                      <button type="button" onClick={() => setDraft((current) => ({ ...current, lineItems: [...current.lineItems, makeInvoiceLineItem()] }))} className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-dashed border-[#B7D4F0] bg-[#EAF4FF] px-4 text-sm font-bold text-[#2E6EAB]">
                         <Plus className="h-4 w-4" />
                         Add Item
                       </button>
@@ -1167,22 +1300,198 @@ export default function CreateInvoicePage() {
                       </div>
                     </div>
                   </div>
-                </section>
-              ) : null}
-            </div>
+                </div>
 
             <div className="flex flex-wrap gap-3">
-              {[
-                { label: 'Add Notes', icon: <ReceiptText className="h-4 w-4" />, action: () => updateDraft({ notes: `${draft.notes}\nNew note` }) },
-                { label: 'Add Attachments', icon: <Upload className="h-4 w-4" />, action: () => updateDraft({ notes: `${draft.notes}\nAttachment added.` }) },
-                { label: 'Add Signature', icon: <Pencil className="h-4 w-4" />, action: () => updateDraft({ notes: `${draft.notes}\nSigned by authorised person.` }) },
-              ].map((action) => (
-                <button key={action.label} onClick={action.action} className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#2E6EAB] shadow-sm">
-                  {action.icon}
-                  {action.label}
-                </button>
-              ))}
+              <button
+                type="button"
+                onClick={() => (showNotesEditor ? setShowNotesEditor(false) : openNotesEditor())}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#2E6EAB] shadow-sm"
+              >
+                <ReceiptText className="h-4 w-4" />
+                {showNotesEditor ? 'Hide Notes' : 'Add Notes'}
+              </button>
+              <button
+                type="button"
+                onClick={() => (showAttachmentsEditor ? setShowAttachmentsEditor(false) : openAttachmentsEditor())}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#2E6EAB] shadow-sm"
+              >
+                <Upload className="h-4 w-4" />
+                {showAttachmentsEditor ? 'Hide Attachments' : 'Add Attachments'}
+              </button>
+              <button
+                type="button"
+                onClick={() => (showSignatureEditor ? setShowSignatureEditor(false) : openSignatureEditor())}
+                className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-[#2E6EAB] shadow-sm"
+              >
+                <Pencil className="h-4 w-4" />
+                {showSignatureEditor ? 'Hide Signature' : 'Add Signature'}
+              </button>
             </div>
+
+            <input
+              ref={attachmentInputRef}
+              type="file"
+              multiple
+              className="hidden"
+              onChange={(event) => {
+                void handleAttachmentFiles(event.target.files);
+                event.target.value = '';
+              }}
+            />
+            <input
+              ref={signatureInputRef}
+              type="file"
+              accept="image/*"
+              className="hidden"
+              onChange={(event) => {
+                void handleSignatureUpload(event.target.files?.[0] ?? null);
+                event.target.value = '';
+              }}
+            />
+
+            {showNotesEditor || showAttachmentsEditor || showSignatureEditor ? (
+              <div className="grid gap-4 lg:grid-cols-3">
+                {showNotesEditor ? (
+                  <SectionCard title="Notes" subtitle="(Optional)">
+                    <div className="space-y-3">
+                      <textarea
+                        ref={notesTextareaRef}
+                        value={draft.notes}
+                        onChange={(event) => updateDraft({ notes: event.target.value })}
+                        placeholder="Write the invoice notes that should appear in the PDF."
+                        className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm leading-7 text-slate-700 outline-none focus:border-[#2E6EAB]"
+                      />
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowNotesEditor(false)}
+                          className="text-sm font-bold text-slate-500 transition hover:text-slate-700"
+                        >
+                          Hide
+                        </button>
+                      </div>
+                    </div>
+                  </SectionCard>
+                ) : null}
+
+                {showAttachmentsEditor ? (
+                  <SectionCard title="Attachments" subtitle="(Optional)">
+                    <div className="space-y-3">
+                      <p className="text-sm leading-6 text-slate-500">
+                        Add supporting files such as receipts, reference docs, or images.
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => attachmentInputRef.current?.click()}
+                        className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-dashed border-[#B7D4F0] bg-[#EAF4FF] px-4 text-sm font-bold text-[#2E6EAB]"
+                      >
+                        <Upload className="h-4 w-4" />
+                        Add More Files
+                      </button>
+                      <div className="space-y-2">
+                        {draft.attachments.length > 0 ? (
+                          draft.attachments.map((attachment) => (
+                            <div key={attachment.id} className="flex items-center gap-3 rounded-xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm">
+                              <div className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-slate-50 text-slate-400">
+                                {attachment.dataUrl ? (
+                                  <img src={attachment.dataUrl} alt={attachment.name} className="h-full w-full object-cover" />
+                                ) : (
+                                  <Upload className="h-4 w-4" />
+                                )}
+                              </div>
+                              <div className="min-w-0 flex-1">
+                                <div className="truncate text-sm font-semibold text-slate-800">{attachment.name}</div>
+                                <div className="text-xs text-slate-500">{formatAttachmentSize(attachment.size)}</div>
+                              </div>
+                              <button
+                                type="button"
+                                onClick={() => removeAttachment(attachment.id)}
+                                className="inline-flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 transition hover:bg-red-50 hover:text-red-500"
+                                aria-label={`Remove ${attachment.name}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                          ))
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-5 text-center">
+                            <p className="text-sm font-semibold text-slate-700">No attachments yet</p>
+                            <p className="mt-1 text-xs text-slate-500">Use the button above to upload files for this invoice.</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowAttachmentsEditor(false)}
+                          className="text-sm font-bold text-slate-500 transition hover:text-slate-700"
+                        >
+                          Hide
+                        </button>
+                      </div>
+                    </div>
+                  </SectionCard>
+                ) : null}
+
+                {showSignatureEditor ? (
+                  <SectionCard title="Signature" subtitle="(Optional)">
+                    <div className="space-y-3">
+                      <Field
+                        label="Signer Name"
+                        value={draft.signatureName}
+                        required={false}
+                        inputRef={signatureNameRef}
+                        onChange={(signatureName) => updateDraft({ signatureName })}
+                      />
+                      <div className="rounded-xl border border-dashed border-slate-200 bg-slate-50/70 px-4 py-4">
+                        {draft.signatureData ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-center overflow-hidden rounded-lg bg-white p-3 shadow-sm">
+                              <img src={draft.signatureData} alt="Signature preview" className="max-h-28 max-w-full object-contain" />
+                            </div>
+                            <p className="text-center text-xs text-slate-500">Signature image uploaded</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-2 text-center text-slate-500">
+                            <ImagePlus className="h-5 w-5" />
+                            <p className="text-sm font-semibold">Upload a signature image</p>
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex flex-wrap gap-3">
+                        <button
+                          type="button"
+                          onClick={() => signatureInputRef.current?.click()}
+                          className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"
+                        >
+                          <Upload className="h-4 w-4" />
+                          {draft.signatureData ? 'Replace Signature' : 'Upload Signature'}
+                        </button>
+                        {draft.signatureData || draft.signatureName ? (
+                          <button
+                            type="button"
+                            onClick={clearSignature}
+                            className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"
+                          >
+                            Clear
+                          </button>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center justify-end">
+                        <button
+                          type="button"
+                          onClick={() => setShowSignatureEditor(false)}
+                          className="text-sm font-bold text-slate-500 transition hover:text-slate-700"
+                        >
+                          Hide
+                        </button>
+                      </div>
+                    </div>
+                  </SectionCard>
+                ) : null}
+              </div>
+            ) : null}
 
             <div className="grid gap-4 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.8fr)]">
               <SectionCard title="Terms and Conditions">
@@ -1223,9 +1532,10 @@ export default function CreateInvoicePage() {
                 <button className="border-l border-[#5D8CC0] px-4 text-white"><ChevronDown className="h-4 w-4" /></button>
               </div>
             </div>
-          </div>
-        </section>
-      </div>
+                </div>
+              </section>
+              </div>
     </div>
   );
 }
+

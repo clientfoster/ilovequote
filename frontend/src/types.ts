@@ -146,6 +146,15 @@ export interface InvoiceRecord {
   subtotal: number;
   totalAmount: number;
   notes: string;
+  attachments: Array<{
+    id: string;
+    name: string;
+    type: string;
+    size: number;
+    dataUrl: string;
+  }>;
+  signatureName: string;
+  signatureData: string;
   terms: Array<{ id: string; text: string }>;
   accountHolderName: string;
   bankName: string;

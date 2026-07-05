@@ -196,20 +196,20 @@ export default function DashboardPage() {
   })));
 
   return (
-    <div className="flex h-full flex-1 overflow-hidden bg-[#F8FAFC] p-4 md:p-6" id="dashboard-page-wrapper">
-      <div className="mx-auto flex h-full w-full max-w-[1400px] flex-col gap-5 overflow-hidden">
+    <div className="flex h-full flex-1 overflow-hidden bg-[#F8FAFC] px-3 py-4 sm:px-4 md:p-6" id="dashboard-page-wrapper">
+      <div className="mx-auto flex h-full w-full max-w-[1400px] flex-col gap-4 overflow-hidden md:gap-5">
         <div className="flex flex-col gap-2 pb-1">
           <div>
-            <h1 className="text-[24px] font-semibold tracking-[-0.03em] text-slate-900 md:text-[28px]">
+            <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-slate-900 sm:text-[24px] md:text-[28px]">
               Welcome back, {displayName}
             </h1>
-            <p className="mt-1 text-[13px] font-medium text-slate-500 md:text-[14px]">
+            <p className="mt-1 text-[13px] font-medium leading-5 text-slate-500 md:text-[14px]">
               Create, manage and share your price quotes in one place.
             </p>
           </div>
         </div>
 
-        <section className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <section className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
           {[
             { label: 'Total Quotes', value: totalQuotesCount.toString(), helper: 'All time quotes created', icon: FileText, wrap: 'bg-[#EEF2FF] text-[#2457F0]' },
             { label: 'Total Amount', value: formatMoney(totalVolume), helper: 'Across all quotes', icon: Star, wrap: 'bg-[#E8FAEF] text-[#22C55E]' },
@@ -218,14 +218,14 @@ export default function DashboardPage() {
           ].map((stat) => {
             const Icon = stat.icon;
             return (
-              <div key={stat.label} className="rounded-[14px] border border-slate-200 bg-white px-5 py-5 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
-                <div className="flex items-center gap-4">
-                  <div className={`flex h-[56px] w-[56px] items-center justify-center rounded-[14px] ${stat.wrap}`}>
-                    <Icon className="h-[28px] w-[28px] stroke-[1.9]" />
+              <div key={stat.label} className="rounded-[14px] border border-slate-200 bg-white px-4 py-4 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)] sm:px-5 sm:py-5">
+                <div className="flex items-center gap-3 sm:gap-4">
+                  <div className={`flex h-12 w-12 items-center justify-center rounded-[14px] sm:h-[56px] sm:w-[56px] ${stat.wrap}`}>
+                    <Icon className="h-5 w-5 stroke-[1.9] sm:h-[28px] sm:w-[28px]" />
                   </div>
                   <div className="min-w-0">
-                    <p className="text-[12px] font-semibold text-slate-700">{stat.label}</p>
-                    <p className="mt-1 text-[34px] font-bold leading-none tracking-tight text-slate-900">{stat.value}</p>
+                    <p className="text-[12px] font-semibold leading-tight text-slate-700">{stat.label}</p>
+                    <p className="mt-1 text-[28px] font-bold leading-none tracking-tight text-slate-900 sm:text-[34px]">{stat.value}</p>
                     <p className="mt-2 text-[12px] font-medium text-slate-500">{stat.helper}</p>
                   </div>
                 </div>
@@ -236,7 +236,7 @@ export default function DashboardPage() {
 
         <section className="grid min-h-0 flex-1 grid-cols-1 gap-5 overflow-hidden xl:grid-cols-[minmax(0,1fr)_270px]">
           <div className="min-h-0 rounded-[14px] border border-slate-200 bg-white shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
-            <div className="flex flex-col gap-4 px-4 py-5 md:flex-row md:items-center md:justify-between md:px-5">
+            <div className="flex flex-col gap-3 px-4 py-4 sm:gap-4 md:flex-row md:items-center md:justify-between md:px-5 md:py-5">
               <h2 className="text-[18px] font-semibold tracking-[-0.02em] text-slate-900 md:text-[20px]">My Quotes</h2>
 
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -270,7 +270,71 @@ export default function DashboardPage() {
 
             <div className="h-px bg-slate-200/70" />
 
-            <div className="overflow-hidden">
+            <div className="md:hidden">
+              {visibleQuotes.length === 0 ? (
+                <div className="px-4 py-10 text-center">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-slate-100 text-slate-400">
+                    <FileText className="h-6 w-6" />
+                  </div>
+                  <p className="mt-4 text-sm font-semibold text-slate-900">No quotes found for this account yet.</p>
+                  <p className="mt-1 text-sm leading-6 text-slate-500">Create a quote to see it appear here.</p>
+                </div>
+              ) : (
+                <div className="space-y-3 px-4 py-4">
+                  {visibleQuotes.map((quote) => (
+                    <article key={quote.id} className="rounded-[18px] border border-slate-200 bg-white p-4 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-xl ${quote.accent}`}>
+                            <FileText className="h-5 w-5" />
+                          </div>
+                          <div className="min-w-0">
+                            <p className="truncate text-sm font-semibold text-slate-900">{quote.title}</p>
+                            <p className="mt-1 text-[12px] text-slate-500">{quote.quoteNumber || quote.id}</p>
+                          </div>
+                        </div>
+                        <span className={`inline-flex shrink-0 items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${quote.statusLabel === 'Accepted' ? 'bg-[#E9FCEB] text-[#16A34A]' : 'bg-[#F3F4F6] text-[#475569]'}`}>
+                          {quote.statusLabel}
+                        </span>
+                      </div>
+
+                      <div className="mt-4 grid grid-cols-2 gap-3 text-sm">
+                        <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Client</p>
+                          <p className="mt-1 truncate font-medium text-slate-900">{quote.clientLabel}</p>
+                          <p className="mt-1 truncate text-[12px] text-slate-500">{quote.clientDetails?.email || ''}</p>
+                        </div>
+                        <div className="rounded-xl bg-slate-50 px-3 py-2.5">
+                          <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400">Amount</p>
+                          <p className="mt-1 font-semibold text-slate-900">{quote.amountLabel}</p>
+                          <p className="mt-1 text-[12px] text-slate-500">Created {quote.createdLabel}</p>
+                        </div>
+                      </div>
+
+                      <div className="mt-4 flex flex-wrap gap-2">
+                        {actionTiles.map((action) => {
+                          const Icon = action.icon;
+                          return (
+                            <button
+                              key={action.label}
+                              type="button"
+                              onClick={() => action.onClick(quote)}
+                              className="inline-flex min-h-[40px] flex-1 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3 text-[12px] font-semibold text-slate-700 shadow-sm"
+                              aria-label={action.ariaLabel(quote)}
+                            >
+                              <Icon className={`h-4 w-4 ${action.tone}`} />
+                              <span>{action.label === 'Copy' && copiedQuoteId === quote.id ? 'Copied' : action.label}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="hidden overflow-hidden md:block">
               <table className="min-w-[1100px] w-full border-collapse text-left">
                 <thead className="bg-[#FBFCFF]">
                   <tr className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500">
@@ -387,22 +451,22 @@ export default function DashboardPage() {
             </div>
           </div>
 
-          <aside className="space-y-5 xl:max-h-full xl:overflow-hidden">
-            <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
-              <h3 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">Quick Actions</h3>
-              <p className="mt-3 text-[14px] leading-6 text-slate-500">Create a quote or browse your saved work.</p>
-              <button type="button" onClick={() => navigate('/create-quote')} className="mt-6 inline-flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#2457F0] px-4 py-3 text-[15px] font-semibold text-white">
+          <aside className="space-y-4 xl:max-h-full xl:overflow-hidden">
+            <div className="rounded-[14px] border border-slate-200 bg-white p-4 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)] sm:p-5">
+              <h3 className="text-[18px] font-semibold tracking-[-0.02em] text-slate-900 sm:text-[20px]">Quick Actions</h3>
+              <p className="mt-2 text-[13px] leading-6 text-slate-500 sm:mt-3 sm:text-[14px]">Create a quote or browse your saved work.</p>
+              <button type="button" onClick={() => navigate('/create-quote')} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#2457F0] px-4 py-3 text-[14px] font-semibold text-white sm:mt-6 sm:text-[15px]">
                 <Plus className="h-4.5 w-4.5" />
                 New Quote
               </button>
-              <button type="button" onClick={() => navigate('/quotes')} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-[15px] font-semibold text-[#2457F0]">
+              <button type="button" onClick={() => navigate('/quotes')} className="mt-3 inline-flex w-full items-center justify-center gap-2 rounded-[12px] border border-slate-200 bg-white px-4 py-3 text-[14px] font-semibold text-[#2457F0] sm:text-[15px]">
                 <ArrowRight className="h-4.5 w-4.5" />
                 Open Quotes
               </button>
             </div>
 
-            <div className="rounded-[14px] border border-slate-200 bg-white p-5 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)]">
-              <h3 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">Recent Activity</h3>
+            <div className="rounded-[14px] border border-slate-200 bg-white p-4 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)] sm:p-5">
+              <h3 className="text-[18px] font-semibold tracking-[-0.02em] text-slate-900 sm:text-[20px]">Recent Activity</h3>
               <div className="mt-4 space-y-4">
                 {(activityFeed.length > 0 ? activityFeed : [
                   { icon: FileText, iconWrap: 'bg-slate-100 text-slate-500', title: 'No activity yet', subtitle: 'Create your first quote to see updates here', time: 'Just now' },

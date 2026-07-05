@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, Mail, MoreHorizontal, ShieldCheck, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, MoreHorizontal, ShieldCheck, Upload, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { formatInvoiceCurrency, getInvoiceTotal, getLineItemAmount, saveInvoiceDraft, useInvoiceDraft } from '../invoiceDraft';
 import { createInvoice } from '../invoiceApi';
@@ -179,10 +179,6 @@ export default function CreateInvoiceDesignPage() {
               <p className="mt-1 text-sm text-slate-500">Live preview using the details entered in the previous steps.</p>
             </div>
             <div className="flex flex-wrap gap-3">
-              <button className="inline-flex min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm">
-                <Mail className="h-4 w-4" />
-                Email Invoice
-              </button>
               <button
                 type="button"
                 onClick={handleSaveInvoice}
@@ -351,7 +347,7 @@ export default function CreateInvoiceDesignPage() {
             </div>
 
             <div className="border-t border-slate-200 bg-white px-6 py-6 text-center text-lg text-slate-500">
-              Powered by <span className="font-bold text-[#2E6EAB]">all</span> <span className="font-black text-slate-800">wave</span>
+              Powered by <span className="font-black text-[#2E6EAB]">iLoveQuote</span>
             </div>
             </div>
           </div>

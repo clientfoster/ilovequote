@@ -14,7 +14,7 @@ function loadLocalInvoices() {
   try {
     const raw = localStorage.getItem(INVOICE_STORAGE_KEY);
     const parsed = raw ? (JSON.parse(raw) as InvoiceRecord[]) : [];
-    return Array.isArray(parsed) ? parsed : [];
+    return Array.isArray(parsed) ? parsed.map((invoice) => normalizeLocalInvoice(invoice)) : [];
   } catch {
     return [];
   }
@@ -30,12 +30,68 @@ function shouldUseLocalFallback(error: unknown) {
   return message.includes('not found') || message.includes('failed to fetch') || message.includes('request failed');
 }
 
+function getLocalIsoDate(date = new Date()) {
+  const localTime = date.getTime() - date.getTimezoneOffset() * 60_000;
+  return new Date(localTime).toISOString().slice(0, 10);
+}
+
+function addDaysToIsoDate(isoDate: string, days: number) {
+  const next = new Date(`${isoDate}T00:00:00`);
+  next.setDate(next.getDate() + days);
+  return getLocalIsoDate(next);
+}
+
+function normalizeLocalLineItem(item: Partial<InvoiceRecord['lineItems'][number]> & { unitPrice?: number; gstRate?: number } = {}) {
+  const quantity = Math.max(0, Number(item.quantity ?? 0) || 0);
+  const rate = Math.max(0, Number(item.rate ?? item.unitPrice ?? 0) || 0);
+  const tax = Math.max(0, Number(item.tax ?? item.gstRate ?? 0) || 0);
+  const amount = Number((quantity * rate + (quantity * rate * tax) / 100).toFixed(2));
+
+  return {
+    id: String(item.id || `invoice_item-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`),
+    name: String(item.name || '').trim(),
+    description: String(item.description || '').trim(),
+    quantity,
+    rate,
+    tax,
+    amount,
+  };
+}
+
+function normalizeLocalInvoice(invoice: Partial<InvoiceRecord>) {
+  const rawLineItems = Array.isArray(invoice.lineItems) ? invoice.lineItems : [];
+  const lineItems = rawLineItems.map((item) => normalizeLocalLineItem(item as Partial<InvoiceRecord['lineItems'][number]>));
+  const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+  const grossTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
+  const discountValue = Math.max(0, Number((invoice as Record<string, unknown>).discountValue ?? 0) || 0);
+  const discountType = (invoice as Record<string, unknown>).discountType === 'Flat' ? 'Flat' : '%';
+  const discountAmount = discountType === '%' ? subtotal * (discountValue / 100) : discountValue;
+  const totalAmount = Number((grossTotal - discountAmount).toFixed(2));
+  const invoiceNumber = String(invoice.invoiceNumber || '').trim();
+  const invoiceDate = String(invoice.invoiceDate || '').trim();
+  const isLegacySeed = invoiceNumber === 'INV00234' && (invoiceDate === '' || invoiceDate === '2024-01-17');
+  const resolvedInvoiceDate = isLegacySeed ? getLocalIsoDate() : (invoiceDate || getLocalIsoDate());
+  const resolvedDueDate = invoice.showDueDate
+    ? String(invoice.dueDate || '').trim() || addDaysToIsoDate(resolvedInvoiceDate, 14)
+    : '';
+
+  return {
+    ...(invoice as InvoiceRecord),
+    id: invoice.id || `invoice-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    invoiceNumber: invoiceNumber || `INV-${getLocalIsoDate().replace(/-/g, '')}`,
+    invoiceDate: resolvedInvoiceDate,
+    dueDate: resolvedDueDate,
+    lineItems,
+    subtotal,
+    totalAmount,
+  } satisfies InvoiceRecord;
+}
+
 function buildLocalInvoice(invoice: Partial<InvoiceRecord>) {
   const now = new Date().toISOString();
   const user = getStoredAuthUser();
   return {
-    ...(invoice as InvoiceRecord),
-    id: invoice.id || `invoice-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    ...normalizeLocalInvoice(invoice),
     status: invoice.status || 'Draft',
     ownerUserId: invoice.ownerUserId || user?.id || null,
     createdAt: invoice.createdAt || now,

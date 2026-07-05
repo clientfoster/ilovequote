@@ -254,9 +254,9 @@ export async function downloadElementAsPdf(element: HTMLElement, fileName: strin
   const canvas = await renderElementToCanvas(element);
 
   const imgData = canvas.toDataURL('image/png');
-  const pdf = new jsPDF('p', 'pt', 'a4');
-  const pageWidth = pdf.internal.pageSize.getWidth();
-  const pageHeight = pdf.internal.pageSize.getHeight();
+  const basePdf = new jsPDF('p', 'pt', 'a4');
+  const pageWidth = basePdf.internal.pageSize.getWidth();
+  const pageHeight = basePdf.internal.pageSize.getHeight();
   const availableWidth = pageWidth - CAPTURE_MARGIN_PT * 2;
   const availableHeight = pageHeight - CAPTURE_MARGIN_PT * 2;
   const aspectRatio = canvas.width / canvas.height || 1;
@@ -269,8 +269,11 @@ export async function downloadElementAsPdf(element: HTMLElement, fileName: strin
     renderWidth = renderHeight * aspectRatio;
   }
 
-  const left = (pageWidth - renderWidth) / 2;
-  const top = (pageHeight - renderHeight) / 2;
+  const pdfWidth = renderWidth + CAPTURE_MARGIN_PT * 2;
+  const pdfHeight = renderHeight + CAPTURE_MARGIN_PT * 2;
+  const pdf = new jsPDF('p', 'pt', [pdfWidth, pdfHeight]);
+  const left = CAPTURE_MARGIN_PT;
+  const top = CAPTURE_MARGIN_PT;
 
   pdf.addImage(imgData, 'PNG', left, top, renderWidth, renderHeight, undefined, 'FAST');
 

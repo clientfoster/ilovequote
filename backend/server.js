@@ -697,9 +697,20 @@ function normalizeInvoiceLineItem(item = {}) {
   };
 }
 
+function normalizeInvoiceAttachment(attachment = {}) {
+  return {
+    id: String(attachment.id || `attachment_${randomUUID()}`).trim(),
+    name: String(attachment.name || '').trim(),
+    type: String(attachment.type || '').trim(),
+    size: Math.max(0, Number(attachment.size ?? 0) || 0),
+    dataUrl: String(attachment.dataUrl || '').trim(),
+  };
+}
+
 function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
   const now = new Date().toISOString();
   const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems.map(normalizeInvoiceLineItem) : [];
+  const attachments = Array.isArray(payload.attachments) ? payload.attachments.map(normalizeInvoiceAttachment) : [];
   const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
   const grossTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
   const discountValue = Math.max(0, Number(payload.discountValue ?? 0) || 0);
@@ -750,6 +761,9 @@ function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
     subtotal: Number(subtotal.toFixed(2)),
     totalAmount,
     notes: String(payload.notes || '').trim(),
+    attachments,
+    signatureName: String(payload.signatureName || '').trim(),
+    signatureData: String(payload.signatureData || '').trim(),
     terms: Array.isArray(payload.terms) ? payload.terms : [],
     accountHolderName: String(payload.accountHolderName || '').trim(),
     bankName: String(payload.bankName || '').trim(),
