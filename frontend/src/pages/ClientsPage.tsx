@@ -45,6 +45,48 @@ function CustomerField({
   );
 }
 
+function formatDate(value?: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
+}
+
+function CustomerActions({
+  customer,
+  onEdit,
+  onDelete,
+}: {
+  customer: Customer;
+  onEdit: (customer: Customer) => void;
+  onDelete: (customer: Customer) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onEdit(customer)}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+        title="Edit customer"
+      >
+        <Pencil className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onDelete(customer)}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-red-500 shadow-sm transition hover:bg-red-50"
+        title="Delete customer"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
+}
+
 export default function ClientsPage() {
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [query, setQuery] = useState('');
@@ -64,9 +106,13 @@ export default function ClientsPage() {
         customer.contactPerson,
         customer.email,
         customer.phone,
+        customer.billingAddress,
         customer.city,
         customer.country,
-      ].join(' ').toLowerCase().includes(needle),
+      ]
+        .join(' ')
+        .toLowerCase()
+        .includes(needle),
     );
   }, [customers, query]);
 
@@ -115,11 +161,25 @@ export default function ClientsPage() {
   return (
     <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-6 sm:px-6 lg:px-8">
       <div className="mx-auto w-full max-w-[1320px] space-y-6">
-        <div>
-          <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">Customers</h1>
-          <p className="mt-2 text-[15px] text-slate-500">
-            Save multiple customer records here, then fetch them directly while creating invoices.
-          </p>
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">Customers</h1>
+            <p className="mt-2 text-[15px] text-slate-500">
+              Save multiple customer records here, then fetch them directly while creating invoices.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2457F0] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1f49ce]"
+          >
+            <Plus className="h-4 w-4" />
+            Add New Customer
+          </button>
         </div>
 
         <section className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
@@ -192,7 +252,7 @@ export default function ClientsPage() {
               <input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search customers..."
                 className="w-full border-none bg-transparent text-[15px] font-medium text-slate-700 outline-none placeholder:text-slate-400"
               />
@@ -200,8 +260,63 @@ export default function ClientsPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
-            <table className="min-w-[980px] w-full border-collapse text-left">
+          <div className="md:hidden">
+            {filtered.length === 0 ? (
+              <div className="px-5 py-10 text-center text-sm text-slate-500">No customers saved yet.</div>
+            ) : (
+              <div className="space-y-3 p-4">
+                {filtered.map((customer) => {
+                  const initials = (customer.companyName || customer.contactPerson || 'C').trim().charAt(0).toUpperCase();
+                  return (
+                    <article key={customer.id} className="rounded-2xl border border-slate-200 bg-[#FBFCFF] p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FF] text-sm font-bold text-[#2457F0]">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate font-semibold text-slate-900">{customer.companyName || '-'}</div>
+                            <div className="mt-1 truncate text-xs text-slate-500">
+                              {[customer.contactPerson, customer.city, customer.country].filter(Boolean).join(', ') || 'No location added'}
+                            </div>
+                          </div>
+                        </div>
+                        <CustomerActions customer={customer} onEdit={startEdit} onDelete={handleDelete} />
+                      </div>
+
+                      <dl className="mt-4 grid gap-2 text-sm">
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Contact</dt>
+                          <dd className="truncate font-medium text-slate-700">{customer.contactPerson || '-'}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Email</dt>
+                          <dd className="truncate font-medium text-slate-700">{customer.email || '-'}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Phone</dt>
+                          <dd className="truncate font-medium text-slate-700">{customer.phone || '-'}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Address</dt>
+                          <dd className="truncate text-right font-medium text-slate-700">
+                            {[customer.billingAddress, customer.city, customer.country].filter(Boolean).join(', ') || '-'}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Added On</dt>
+                          <dd className="truncate font-medium text-slate-700">{formatDate(customer.updatedAt || customer.createdAt)}</dd>
+                        </div>
+                      </dl>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
+            <table className="min-w-[1120px] w-full border-collapse text-left">
               <thead className="bg-[#FBFCFF]">
                 <tr className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500">
                   <th className="px-5 py-4">Company</th>
@@ -209,46 +324,48 @@ export default function ClientsPage() {
                   <th className="px-5 py-4">Email</th>
                   <th className="px-5 py-4">Phone</th>
                   <th className="px-5 py-4">Address</th>
+                  <th className="px-5 py-4">Added On</th>
                   <th className="px-5 py-4">Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {filtered.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="px-5 py-10 text-center text-sm text-slate-500">
+                    <td colSpan={7} className="px-5 py-10 text-center text-sm text-slate-500">
                       No customers saved yet.
                     </td>
                   </tr>
                 ) : (
-                  filtered.map((customer) => (
-                    <tr key={customer.id} className="border-t border-slate-200/70 text-[14px]">
-                      <td className="px-5 py-4 font-semibold text-slate-900">{customer.companyName || '-'}</td>
-                      <td className="px-5 py-4 text-slate-700">{customer.contactPerson || '-'}</td>
-                      <td className="px-5 py-4 text-slate-700">{customer.email || '-'}</td>
-                      <td className="px-5 py-4 text-slate-700">{customer.phone || '-'}</td>
-                      <td className="px-5 py-4 text-slate-700">{[customer.billingAddress, customer.city, customer.country].filter(Boolean).join(', ') || '-'}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => startEdit(customer)}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm"
-                            title="Edit customer"
-                          >
-                            <Pencil className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(customer)}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-red-500 shadow-sm"
-                            title="Delete customer"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  filtered.map((customer) => {
+                    const initials = (customer.companyName || customer.contactPerson || 'C').trim().charAt(0).toUpperCase();
+                    return (
+                      <tr key={customer.id} className="border-t border-slate-200/70 text-[14px]">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#EEF3FF] text-sm font-bold text-[#2457F0]">
+                              {initials}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate font-semibold text-slate-900">{customer.companyName || '-'}</div>
+                              <div className="mt-1 truncate text-xs text-slate-500">
+                                {[customer.city, customer.country].filter(Boolean).join(', ') || 'No location added'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-slate-700">{customer.contactPerson || '-'}</td>
+                        <td className="px-5 py-4 text-slate-700">{customer.email || '-'}</td>
+                        <td className="px-5 py-4 text-slate-700">{customer.phone || '-'}</td>
+                        <td className="px-5 py-4 text-slate-700">
+                          {[customer.billingAddress, customer.city, customer.country].filter(Boolean).join(', ') || '-'}
+                        </td>
+                        <td className="px-5 py-4 text-slate-700">{formatDate(customer.updatedAt || customer.createdAt)}</td>
+                        <td className="px-5 py-4">
+                          <CustomerActions customer={customer} onEdit={startEdit} onDelete={handleDelete} />
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

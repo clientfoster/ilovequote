@@ -1,38 +1,41 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useOutletContext } from 'react-router-dom';
-import {
-  Building2,
-  CheckCircle2,
-  Edit3,
-  Mail,
-  MapPin,
-  Phone,
-  PlusCircle,
-  RotateCcw,
-  Save,
-  Search,
-  Sparkles,
-  Trash2,
-  X,
-} from 'lucide-react';
+import { Building2, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { getScopedStorageKey } from '../auth';
 import { BusinessFormValues } from '../types';
 import { BUSINESS_DRAFT_KEY, DEFAULT_BUSINESS_VALUES } from '../wizard/WizardState';
 
 const BUSINESS_LIBRARY_KEY = 'ilovequote_invoice_business_library';
 
-type OutletContext = {
-  onTriggerToast?: (message: string) => void;
+type BusinessRecord = BusinessFormValues & {
+  updatedAt?: string;
+};
+
+const emptyBusiness: BusinessFormValues = {
+  ...DEFAULT_BUSINESS_VALUES,
+  companyName: '',
+  tagline: '',
+  email: '',
+  phone: '',
+  website: '',
+  logo: '',
+  address: '',
+  city: '',
+  state: '',
+  zipCode: '',
+  country: DEFAULT_BUSINESS_VALUES.country || 'India',
+  taxType: 'GSTIN',
+  taxId: '',
+  socialLinks: [],
+  businessSlug: '',
 };
 
 function canUseLocalStorage() {
   return typeof window !== 'undefined' && typeof localStorage !== 'undefined';
 }
 
-function normalizeBusinessProfile(profile: Partial<BusinessFormValues> = {}): BusinessFormValues {
+function normalizeBusinessProfile(profile: Partial<BusinessRecord> = {}): BusinessRecord {
   return {
-    ...DEFAULT_BUSINESS_VALUES,
+    ...emptyBusiness,
     ...profile,
     companyName: profile.companyName || '',
     tagline: '',
@@ -44,15 +47,16 @@ function normalizeBusinessProfile(profile: Partial<BusinessFormValues> = {}): Bu
     city: profile.city || '',
     state: profile.state || '',
     zipCode: profile.zipCode || '',
-    country: profile.country || DEFAULT_BUSINESS_VALUES.country || '',
-    taxType: profile.taxType || DEFAULT_BUSINESS_VALUES.taxType,
+    country: profile.country || emptyBusiness.country || '',
+    taxType: profile.taxType || emptyBusiness.taxType,
     taxId: profile.taxId || '',
     socialLinks: [],
     businessSlug: '',
+    updatedAt: profile.updatedAt,
   };
 }
 
-function buildBusinessProfileKey(profile: Partial<BusinessFormValues>) {
+function buildBusinessKey(profile: Partial<BusinessRecord>) {
   return [
     profile.companyName,
     profile.email,
@@ -70,382 +74,341 @@ function buildBusinessProfileKey(profile: Partial<BusinessFormValues>) {
 }
 
 function loadBusinessLibrary() {
-  if (!canUseLocalStorage()) return [] as BusinessFormValues[];
+  if (!canUseLocalStorage()) return [] as BusinessRecord[];
 
   try {
     const raw = localStorage.getItem(getScopedStorageKey(BUSINESS_LIBRARY_KEY));
-    const parsed = raw ? (JSON.parse(raw) as Partial<BusinessFormValues>[]) : [];
-    return Array.isArray(parsed) ? parsed.map((profile) => normalizeBusinessProfile(profile)) : [];
+    const parsed = raw ? (JSON.parse(raw) as Partial<BusinessRecord>[]) : [];
+    return Array.isArray(parsed) ? parsed.map((record) => normalizeBusinessProfile(record)) : [];
   } catch {
     return [];
   }
 }
 
 function loadBusinessDraft() {
-  if (!canUseLocalStorage()) return DEFAULT_BUSINESS_VALUES;
+  if (!canUseLocalStorage()) return emptyBusiness;
 
   try {
     const raw = localStorage.getItem(getScopedStorageKey(BUSINESS_DRAFT_KEY));
-    if (!raw) return DEFAULT_BUSINESS_VALUES;
-    return normalizeBusinessProfile(JSON.parse(raw) as Partial<BusinessFormValues>);
+    if (!raw) return emptyBusiness;
+    return normalizeBusinessProfile(JSON.parse(raw) as Partial<BusinessRecord>);
   } catch {
-    return DEFAULT_BUSINESS_VALUES;
+    return emptyBusiness;
   }
 }
 
-function persistBusinessLibrary(profiles: BusinessFormValues[]) {
+function persistBusinessLibrary(records: BusinessRecord[]) {
   if (!canUseLocalStorage()) return;
-  localStorage.setItem(getScopedStorageKey(BUSINESS_LIBRARY_KEY), JSON.stringify(profiles));
+  localStorage.setItem(getScopedStorageKey(BUSINESS_LIBRARY_KEY), JSON.stringify(records));
 }
 
-function persistBusinessDraft(profile: BusinessFormValues) {
+function persistBusinessDraft(profile: BusinessRecord) {
   if (!canUseLocalStorage()) return;
   localStorage.setItem(getScopedStorageKey(BUSINESS_DRAFT_KEY), JSON.stringify(profile));
 }
 
-function formatTaxValue(profile: Partial<BusinessFormValues>) {
-  const taxId = profile.taxId?.trim();
-  if (!taxId) return 'Not added';
-  return `${profile.taxType || 'GSTIN'}: ${taxId}`;
+function formatDate(value?: string) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  }).format(date);
 }
 
-function formatLocation(profile: Partial<BusinessFormValues>) {
-  return [profile.city, profile.zipCode, profile.country].filter(Boolean).join(', ') || 'Not added';
+function BusinessField({
+  label,
+  value,
+  onChange,
+  type = 'text',
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="text-[13px] font-semibold text-slate-700">{label}</span>
+      <input
+        type={type}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-[#2457F0]"
+      />
+    </label>
+  );
+}
+
+function BusinessSelect({
+  label,
+  value,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="space-y-2">
+      <span className="text-[13px] font-semibold text-slate-700">{label}</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="min-h-[44px] w-full rounded-xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 outline-none transition focus:border-[#2457F0]"
+      >
+        <option value="GSTIN">GSTIN</option>
+        <option value="PAN">PAN</option>
+        <option value="VAT">VAT</option>
+        <option value="Other">Other</option>
+      </select>
+    </label>
+  );
+}
+
+function BusinessActions({
+  business,
+  onEdit,
+  onDelete,
+}: {
+  business: BusinessRecord;
+  onEdit: (business: BusinessRecord) => void;
+  onDelete: (business: BusinessRecord) => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        type="button"
+        onClick={() => onEdit(business)}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50"
+        title="Edit business"
+      >
+        <Pencil className="h-4 w-4" />
+      </button>
+      <button
+        type="button"
+        onClick={() => onDelete(business)}
+        className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-red-500 shadow-sm transition hover:bg-red-50"
+        title="Delete business"
+      >
+        <Trash2 className="h-4 w-4" />
+      </button>
+    </div>
+  );
 }
 
 export default function BusinessPage() {
-  const context = useOutletContext<OutletContext>();
-  const onTriggerToast = context?.onTriggerToast ?? (() => {});
-
-  const [savedBusinesses, setSavedBusinesses] = useState<BusinessFormValues[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [editingProfileKey, setEditingProfileKey] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState('');
-  const [hasHydrated, setHasHydrated] = useState(false);
-
-  const {
-    register,
-    handleSubmit,
-    watch,
-    reset,
-    formState: { errors, isSubmitting },
-  } = useForm<BusinessFormValues>({
-    defaultValues: loadBusinessDraft(),
-    mode: 'onChange',
-  });
-
-  const currentValues = watch();
+  const [businesses, setBusinesses] = useState<BusinessRecord[]>([]);
+  const [query, setQuery] = useState('');
+  const [editingBusinessKey, setEditingBusinessKey] = useState<string | null>(null);
+  const [form, setForm] = useState<BusinessRecord>(loadBusinessDraft());
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const loadState = () => {
-      const library = loadBusinessLibrary();
-      setSavedBusinesses(library);
+    const load = () => {
+      const savedBusinesses = loadBusinessLibrary();
+      setBusinesses(savedBusinesses);
 
       const draft = loadBusinessDraft();
-      reset(draft);
-      setEditingProfileKey(draft.companyName ? buildBusinessProfileKey(draft) : null);
-      setHasHydrated(true);
+      setForm(draft);
+      setEditingBusinessKey(draft.companyName ? buildBusinessKey(draft) : null);
     };
 
-    loadState();
-
-    const handleStorage = () => loadState();
-    window.addEventListener('storage', handleStorage);
-    return () => window.removeEventListener('storage', handleStorage);
-  }, [reset]);
+    load();
+    window.addEventListener('storage', load);
+    return () => window.removeEventListener('storage', load);
+  }, []);
 
   useEffect(() => {
-    if (!hasHydrated) return;
-
-    const normalized = normalizeBusinessProfile(currentValues);
-    persistBusinessDraft(normalized);
-  }, [currentValues, hasHydrated]);
-
-  useEffect(() => {
-    if (!statusMessage) return undefined;
-    const timer = window.setTimeout(() => setStatusMessage(''), 3000);
-    return () => window.clearTimeout(timer);
-  }, [statusMessage]);
+    persistBusinessDraft(normalizeBusinessProfile(form));
+  }, [form]);
 
   const filteredBusinesses = useMemo(() => {
-    const needle = searchQuery.trim().toLowerCase();
-    return savedBusinesses.filter((profile) => {
+    const needle = query.trim().toLowerCase();
+    return businesses.filter((business) => {
       if (!needle) return true;
-      const haystack = [
-        profile.companyName,
-        profile.email,
-        profile.phone,
-        profile.address,
-        profile.city,
-        profile.country,
-        profile.taxId,
+      return [
+        business.companyName,
+        business.email,
+        business.phone,
+        business.address,
+        business.city,
+        business.country,
+        business.taxId,
+        business.taxType,
       ]
         .join(' ')
-        .toLowerCase();
-      return haystack.includes(needle);
+        .toLowerCase()
+        .includes(needle);
     });
-  }, [savedBusinesses, searchQuery]);
+  }, [businesses, query]);
 
-  const handleNewBusiness = () => {
-    reset(DEFAULT_BUSINESS_VALUES);
-    setEditingProfileKey(null);
-    persistBusinessDraft(DEFAULT_BUSINESS_VALUES);
-    setStatusMessage('Started a new business profile.');
+  const resetForm = () => {
+    setEditingBusinessKey(null);
+    setForm(emptyBusiness);
+    persistBusinessDraft(emptyBusiness);
   };
 
-  const handleSaveBusiness = (values: BusinessFormValues) => {
-    const normalized = normalizeBusinessProfile(values);
-    const profileKey = buildBusinessProfileKey(normalized);
-    const existingLibrary = loadBusinessLibrary();
-    const nextLibrary = [normalized, ...existingLibrary.filter((entry) => {
-      const existingKey = buildBusinessProfileKey(entry);
-      return existingKey !== profileKey && existingKey !== editingProfileKey;
-    })];
+  const handleSubmit = async () => {
+    if (!form.companyName.trim()) return;
 
-    persistBusinessLibrary(nextLibrary);
-    persistBusinessDraft(normalized);
-    setSavedBusinesses(nextLibrary);
-    setEditingProfileKey(profileKey);
-    setStatusMessage(`${normalized.companyName || 'Business profile'} saved for invoice use.`);
-    onTriggerToast(`${normalized.companyName || 'Business profile'} saved.`);
-  };
+    try {
+      setIsSaving(true);
+      const normalized = normalizeBusinessProfile({
+        ...form,
+        updatedAt: new Date().toISOString(),
+      });
+      const nextKey = buildBusinessKey(normalized);
+      const nextBusinesses = [
+        normalized,
+        ...businesses.filter((item) => buildBusinessKey(item) !== editingBusinessKey && buildBusinessKey(item) !== nextKey),
+      ];
 
-  const handleLoadBusiness = (profile: BusinessFormValues) => {
-    const normalized = normalizeBusinessProfile(profile);
-    reset(normalized);
-    persistBusinessDraft(normalized);
-    setEditingProfileKey(buildBusinessProfileKey(normalized));
-    setStatusMessage(`Loaded ${normalized.companyName || 'business profile'} into the editor.`);
-    onTriggerToast(`Loaded ${normalized.companyName || 'business profile'}.`);
-  };
-
-  const handleDeleteBusiness = (profile: BusinessFormValues) => {
-    const profileKey = buildBusinessProfileKey(profile);
-    if (!window.confirm(`Delete ${profile.companyName || 'this business profile'}?`)) return;
-
-    const nextLibrary = loadBusinessLibrary().filter((entry) => buildBusinessProfileKey(entry) !== profileKey);
-    persistBusinessLibrary(nextLibrary);
-    setSavedBusinesses(nextLibrary);
-
-    if (editingProfileKey === profileKey) {
-      reset(DEFAULT_BUSINESS_VALUES);
-      setEditingProfileKey(null);
-      persistBusinessDraft(DEFAULT_BUSINESS_VALUES);
+      setBusinesses(nextBusinesses);
+      persistBusinessLibrary(nextBusinesses);
+      persistBusinessDraft(normalized);
+      setForm(normalized);
+      setEditingBusinessKey(nextKey);
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not save business profile.');
+    } finally {
+      setIsSaving(false);
     }
+  };
 
-    setStatusMessage('Business profile deleted.');
-    onTriggerToast('Business profile deleted.');
+  const startEdit = (business: BusinessRecord) => {
+    setEditingBusinessKey(buildBusinessKey(business));
+    setForm(normalizeBusinessProfile(business));
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDelete = async (business: BusinessRecord) => {
+    if (!window.confirm(`Delete ${business.companyName || 'this business'}?`)) return;
+
+    try {
+      const key = buildBusinessKey(business);
+      const next = businesses.filter((item) => buildBusinessKey(item) !== key);
+      setBusinesses(next);
+      persistBusinessLibrary(next);
+      if (editingBusinessKey === key) resetForm();
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : 'Could not delete business.');
+    }
   };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-6 sm:px-6 lg:px-8">
-      <div className="mx-auto w-full max-w-[1440px] space-y-6">
-        <section className="rounded-[18px] border border-slate-200 bg-white px-5 py-5 shadow-sm md:px-6 md:py-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 rounded-full bg-blue-50 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.18em] text-[#2457F0]">
-                <Sparkles className="h-3.5 w-3.5" />
-                Invoice Business Profiles
-              </div>
-              <div>
-                <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">My Business</h1>
-                <p className="mt-2 max-w-3xl text-[15px] leading-7 text-slate-500">
-                  Save your own business details here. These profiles are used later in the invoice
-                  <span className="font-semibold text-slate-700"> Billed By</span> section.
-                </p>
-              </div>
-            </div>
-
-            {statusMessage ? (
-              <div className="inline-flex items-center gap-2 rounded-2xl border border-emerald-100 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
-                <CheckCircle2 className="h-4 w-4" />
-                {statusMessage}
-              </div>
-            ) : null}
+      <div className="mx-auto w-full max-w-[1320px] space-y-6">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">Business List</h1>
+            <p className="mt-2 text-[15px] text-slate-500">
+              Save multiple business profiles here, then fetch them directly while creating invoices.
+            </p>
           </div>
-        </section>
+
+          <button
+            type="button"
+            onClick={() => {
+              resetForm();
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+            className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2457F0] px-5 text-sm font-bold text-white shadow-sm transition hover:bg-[#1f49ce]"
+          >
+            <Plus className="h-4 w-4" />
+            Add New Business
+          </button>
+        </div>
 
         <section className="rounded-[18px] border border-slate-200 bg-white p-5 shadow-sm md:p-6">
-          <div className="flex flex-col gap-3 border-b border-slate-100 pb-5 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 md:flex-row md:items-center md:justify-between">
             <div>
               <h2 className="text-[22px] font-bold tracking-[-0.03em] text-slate-900">
-                {editingProfileKey ? 'Edit Business Details' : 'Create Business Details'}
+                {editingBusinessKey ? 'Edit Business' : 'Create Business'}
               </h2>
               <p className="mt-1 text-sm text-slate-500">
-                Keep only the invoice-ready fields your Billed By section needs.
+                Invoice-ready details saved here will be available in the business flow.
               </p>
             </div>
-
-            <div className="flex flex-wrap gap-3">
+            {editingBusinessKey ? (
               <button
                 type="button"
-                onClick={handleNewBusiness}
-                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-bold text-slate-700 shadow-sm"
+                onClick={resetForm}
+                className="inline-flex min-h-[42px] items-center justify-center rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm"
               >
-                <PlusCircle className="h-4 w-4" />
-                New Business
+                Cancel Edit
               </button>
-              <button
-                type="button"
-                onClick={handleSubmit(handleSaveBusiness)}
-                disabled={isSubmitting}
-                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#2457F0] px-5 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
-              >
-                <Save className="h-4 w-4" />
-                {isSubmitting ? 'Saving...' : 'Save Business'}
-              </button>
-            </div>
+            ) : null}
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">
-                Business Name <span className="text-red-500">*</span>
-              </label>
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                  <Building2 className="h-4 w-4" />
-                </span>
-                <input
-                  type="text"
-                  placeholder="Enter business name"
-                  {...register('companyName', {
-                    required: 'Business name is required.',
-                  })}
-                  className={`w-full rounded-xl border bg-white py-3 pl-10 pr-4 text-sm font-semibold text-slate-800 outline-none transition-colors focus:ring-4 focus:ring-blue-100 ${
-                    errors.companyName
-                      ? 'border-red-400 focus:border-red-500'
-                      : 'border-slate-200 focus:border-[#2563EB]'
-                  }`}
-                />
-              </div>
-              {errors.companyName && (
-                <p className="text-xs font-bold text-red-600">{errors.companyName.message}</p>
-              )}
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">Email</label>
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                  <Mail className="h-4 w-4" />
-                </span>
-                <input
-                  type="email"
-                  placeholder="name@company.com"
-                  {...register('email')}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm font-semibold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">Phone No</label>
-              <div className="relative">
-                <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-slate-400">
-                  <Phone className="h-4 w-4" />
-                </span>
-                <input
-                  type="tel"
-                  placeholder="+91 98765 43210"
-                  {...register('phone')}
-                  className="w-full rounded-xl border border-slate-200 bg-white py-3 pl-10 pr-4 text-sm font-semibold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-
-            <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">Address</label>
-              <div className="relative">
-                <span className="pointer-events-none absolute left-3 top-3 text-slate-400">
-                  <MapPin className="h-4 w-4" />
-                </span>
-                <textarea
-                  placeholder="Street, area, building, landmark"
-                  rows={3}
-                  {...register('address')}
-                  className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 pl-10 text-sm font-semibold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">Tax Type</label>
-              <select
-                {...register('taxType')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
-              >
-                <option value="GSTIN">GSTIN</option>
-                <option value="PAN">PAN</option>
-                <option value="VAT">VAT</option>
-                <option value="Other">Other</option>
-              </select>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">Tax ID</label>
-              <input
-                type="text"
-                placeholder="Enter tax number"
-                {...register('taxId')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">Postal</label>
-              <input
-                type="text"
-                placeholder="560001"
-                {...register('zipCode')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">City</label>
-              <input
-                type="text"
-                placeholder="City"
-                {...register('city')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
-              />
-            </div>
-
-            <div className="space-y-1.5 md:col-span-2">
-              <label className="text-xs font-bold uppercase tracking-wider text-slate-700">Country</label>
-              <input
-                type="text"
-                placeholder="India"
-                {...register('country')}
-                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-semibold text-slate-800 outline-none transition-colors focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
-              />
-            </div>
+          <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            <BusinessField
+              label="Business Name"
+              value={form.companyName}
+              onChange={(companyName) => setForm((current) => ({ ...current, companyName }))}
+            />
+            <BusinessField
+              label="Email"
+              type="email"
+              value={form.email}
+              onChange={(email) => setForm((current) => ({ ...current, email }))}
+            />
+            <BusinessField
+              label="Phone No"
+              value={form.phone}
+              onChange={(phone) => setForm((current) => ({ ...current, phone }))}
+            />
+            <BusinessField
+              label="Address"
+              value={form.address}
+              onChange={(address) => setForm((current) => ({ ...current, address }))}
+            />
+            <BusinessSelect
+              label="Tax Type"
+              value={form.taxType}
+              onChange={(taxType) => setForm((current) => ({ ...current, taxType }))}
+            />
+            <BusinessField
+              label="Tax ID"
+              value={form.taxId}
+              onChange={(taxId) => setForm((current) => ({ ...current, taxId }))}
+            />
+            <BusinessField
+              label="Postal Code"
+              value={form.zipCode}
+              onChange={(zipCode) => setForm((current) => ({ ...current, zipCode }))}
+            />
+            <BusinessField
+              label="City"
+              value={form.city}
+              onChange={(city) => setForm((current) => ({ ...current, city }))}
+            />
+            <BusinessField
+              label="Country"
+              value={form.country}
+              onChange={(country) => setForm((current) => ({ ...current, country }))}
+            />
           </div>
 
-          <div className="mt-6 flex flex-col gap-3 border-t border-slate-100 pt-5 sm:flex-row sm:items-center sm:justify-between">
-            <p className="text-xs font-medium leading-relaxed text-slate-500">
-              These details are saved for reuse in the invoice Billed By section.
-            </p>
-
-            <div className="flex flex-col gap-2 sm:flex-row">
-              <button
-                type="button"
-                onClick={handleNewBusiness}
-                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-bold text-slate-700 transition-colors hover:bg-slate-50"
-              >
-                <RotateCcw className="h-4 w-4" />
-                Clear Form
-              </button>
-              <button
-                type="button"
-                onClick={handleSubmit(handleSaveBusiness)}
-                className="inline-flex min-h-[44px] items-center justify-center gap-2 rounded-xl bg-[#2563EB] px-5 py-2.5 text-sm font-bold text-white shadow-sm transition-colors hover:bg-blue-700"
-              >
-                <Save className="h-4 w-4" />
-                Save Business
-              </button>
-            </div>
+          <div className="mt-5 flex flex-wrap gap-3">
+            <button
+              type="button"
+              onClick={handleSubmit}
+              disabled={isSaving}
+              className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl bg-[#2457F0] px-5 text-sm font-bold text-white shadow-sm disabled:cursor-not-allowed disabled:opacity-70"
+            >
+              <Plus className="h-4 w-4" />
+              {isSaving ? 'Saving...' : editingBusinessKey ? 'Update Business' : 'Save Business'}
+            </button>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="inline-flex min-h-[46px] items-center justify-center rounded-xl border border-slate-200 bg-white px-5 text-sm font-semibold text-slate-700 shadow-sm"
+            >
+              Clear Form
+            </button>
           </div>
         </section>
 
@@ -458,16 +421,16 @@ export default function BusinessPage() {
               <div>
                 <h2 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">Saved Businesses</h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  {savedBusinesses.length} business record{savedBusinesses.length === 1 ? '' : 's'} in your account
+                  {businesses.length} business record{businesses.length === 1 ? '' : 's'} in your account
                 </p>
               </div>
             </div>
 
-            <div className="flex items-center rounded-[12px] border border-slate-200 bg-white px-4 py-3 shadow-sm md:w-[420px]">
+            <div className="flex items-center rounded-[12px] border border-slate-200 bg-white px-4 py-3 shadow-sm md:w-[380px]">
               <input
                 type="text"
-                value={searchQuery}
-                onChange={(event) => setSearchQuery(event.target.value)}
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search businesses..."
                 className="w-full border-none bg-transparent text-[15px] font-medium text-slate-700 outline-none placeholder:text-slate-400"
               />
@@ -475,7 +438,58 @@ export default function BusinessPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          <div className="md:hidden">
+            {filteredBusinesses.length === 0 ? (
+              <div className="px-5 py-10 text-center text-sm text-slate-500">No businesses saved yet.</div>
+            ) : (
+              <div className="space-y-3 p-4">
+                {filteredBusinesses.map((business) => {
+                  const initials = (business.companyName || 'B').trim().charAt(0).toUpperCase();
+                  return (
+                    <article key={buildBusinessKey(business)} className="rounded-2xl border border-slate-200 bg-[#FBFCFF] p-4 shadow-sm">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex min-w-0 items-start gap-3">
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#EEF3FF] text-sm font-bold text-[#2457F0]">
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="truncate font-semibold text-slate-900">{business.companyName || '-'}</div>
+                            <div className="mt-1 truncate text-xs text-slate-500">
+                              {[business.city, business.country].filter(Boolean).join(', ') || 'No location added'}
+                            </div>
+                          </div>
+                        </div>
+                        <BusinessActions business={business} onEdit={startEdit} onDelete={handleDelete} />
+                      </div>
+
+                      <dl className="mt-4 grid gap-2 text-sm">
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Email</dt>
+                          <dd className="truncate font-medium text-slate-700">{business.email || '-'}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Phone</dt>
+                          <dd className="truncate font-medium text-slate-700">{business.phone || '-'}</dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Address</dt>
+                          <dd className="truncate text-right font-medium text-slate-700">
+                            {[business.address, business.zipCode].filter(Boolean).join(', ') || '-'}
+                          </dd>
+                        </div>
+                        <div className="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                          <dt className="text-slate-500">Added On</dt>
+                          <dd className="truncate font-medium text-slate-700">{formatDate(business.updatedAt)}</dd>
+                        </div>
+                      </dl>
+                    </article>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+
+          <div className="hidden overflow-x-auto md:block">
             <table className="min-w-[980px] w-full border-collapse text-left">
               <thead className="bg-[#FBFCFF]">
                 <tr className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500">
@@ -483,7 +497,7 @@ export default function BusinessPage() {
                   <th className="px-5 py-4">Email</th>
                   <th className="px-5 py-4">Phone</th>
                   <th className="px-5 py-4">Address</th>
-                  <th className="px-5 py-4">Tax</th>
+                  <th className="px-5 py-4">Added On</th>
                   <th className="px-5 py-4">Actions</th>
                 </tr>
               </thead>
@@ -491,43 +505,39 @@ export default function BusinessPage() {
                 {filteredBusinesses.length === 0 ? (
                   <tr>
                     <td colSpan={6} className="px-5 py-10 text-center text-sm text-slate-500">
-                      {searchQuery ? 'No businesses match your search.' : 'No businesses saved yet.'}
+                      No businesses saved yet.
                     </td>
                   </tr>
                 ) : (
-                  filteredBusinesses.map((profile) => (
-                    <tr key={buildBusinessProfileKey(profile)} className="border-t border-slate-200/70 text-[14px]">
-                      <td className="px-5 py-4 font-semibold text-slate-900">
-                        {profile.companyName || '-'}
-                      </td>
-                      <td className="px-5 py-4 text-slate-700">{profile.email || '-'}</td>
-                      <td className="px-5 py-4 text-slate-700">{profile.phone || '-'}</td>
-                      <td className="px-5 py-4 text-slate-700">
-                        {[profile.address, profile.city, profile.country].filter(Boolean).join(', ') || '-'}
-                      </td>
-                      <td className="px-5 py-4 text-slate-700">{formatTaxValue(profile)}</td>
-                      <td className="px-5 py-4">
-                        <div className="flex items-center gap-2">
-                          <button
-                            type="button"
-                            onClick={() => handleLoadBusiness(profile)}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm"
-                            title="Edit business"
-                          >
-                            <Edit3 className="h-4 w-4" />
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => handleDeleteBusiness(profile)}
-                            className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 bg-white text-red-500 shadow-sm"
-                            title="Delete business"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))
+                  filteredBusinesses.map((business) => {
+                    const initials = (business.companyName || 'B').trim().charAt(0).toUpperCase();
+                    return (
+                      <tr key={buildBusinessKey(business)} className="border-t border-slate-200/70 text-[14px]">
+                        <td className="px-5 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[12px] bg-[#EEF3FF] text-sm font-bold text-[#2457F0]">
+                              {initials}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate font-semibold text-slate-900">{business.companyName || '-'}</div>
+                              <div className="mt-1 truncate text-xs text-slate-500">
+                                {[business.city, business.country].filter(Boolean).join(', ') || 'No location added'}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-5 py-4 text-slate-700">{business.email || '-'}</td>
+                        <td className="px-5 py-4 text-slate-700">{business.phone || '-'}</td>
+                        <td className="px-5 py-4 text-slate-700">
+                          {[business.address, business.zipCode].filter(Boolean).join(', ') || '-'}
+                        </td>
+                        <td className="px-5 py-4 text-slate-700">{formatDate(business.updatedAt)}</td>
+                        <td className="px-5 py-4">
+                          <BusinessActions business={business} onEdit={startEdit} onDelete={handleDelete} />
+                        </td>
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>
