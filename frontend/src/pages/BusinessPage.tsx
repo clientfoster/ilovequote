@@ -240,6 +240,42 @@ function AvatarBadge({ label }: { label: string }) {
   );
 }
 
+function DetailAvatar({ label }: { label: string }) {
+  return (
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] bg-[#0F2A66] text-[13px] font-bold text-white shadow-sm">
+      {getInitials(label)}
+    </div>
+  );
+}
+
+function DetailItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0">
+      <div className="mt-0.5 shrink-0 text-[#6B7280]">{icon}</div>
+      <div className="min-w-0">
+        <div className="text-[12px] font-semibold text-[#6B7280]">{label}</div>
+        <div className="mt-1 break-words text-[14px] font-medium text-[#111827]">{value || '-'}</div>
+      </div>
+    </div>
+  );
+}
+
+function DetailPanel({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <div className="overflow-hidden rounded-[12px] border border-[#E5E7EB] bg-white shadow-sm">{children}</div>;
+}
+
 function ActionIcon({
   icon,
   label,
@@ -804,49 +840,55 @@ export default function BusinessPage() {
             <p className="mt-1 text-[14px] text-[#6B7280]">Enter the business details that will be used later in invoices and lists.</p>
           </div>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <SectionCard title="Business Information" description="Core details for the business profile.">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Business Name" value={form.companyName} onChange={(companyName) => setForm((current) => ({ ...current, companyName }))} placeholder="Enter business name" />
-                <Field label="Contact Person" value={form.contactPerson || ''} onChange={(contactPerson) => setForm((current) => ({ ...current, contactPerson }))} placeholder="Enter contact person" />
-              </div>
-            </SectionCard>
+          <div className="mt-6 space-y-4">
+            <Field
+              label="Business Name"
+              value={form.companyName}
+              onChange={(companyName) => setForm((current) => ({ ...current, companyName }))}
+              placeholder="Enter business name"
+            />
 
-            <SectionCard title="Contact Information" description="How people can reach this business.">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Email" type="email" value={form.email} onChange={(email) => setForm((current) => ({ ...current, email }))} placeholder="Enter email" />
-                <Field label="Phone" value={form.phone} onChange={(phone) => setForm((current) => ({ ...current, phone }))} placeholder="Enter phone number" />
-              </div>
-            </SectionCard>
+            <Field
+              label="Contact Person"
+              value={form.contactPerson || ''}
+              onChange={(contactPerson) => setForm((current) => ({ ...current, contactPerson }))}
+              placeholder="Enter contact person"
+            />
 
-            <SectionCard title="Address" description="Address details shown in the business profile.">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <Field label="Address" value={form.address} onChange={(address) => setForm((current) => ({ ...current, address }))} placeholder="Enter address" />
-                </div>
-                <Field label="City" value={form.city} onChange={(city) => setForm((current) => ({ ...current, city }))} placeholder="Enter city" />
-                <Field label="State" value={form.state} onChange={(state) => setForm((current) => ({ ...current, state }))} placeholder="Enter state" />
-                <Field label="Postal Code" value={form.zipCode} onChange={(zipCode) => setForm((current) => ({ ...current, zipCode }))} placeholder="Enter postal code" />
-                <Field label="Country" value={form.country} onChange={(country) => setForm((current) => ({ ...current, country }))} placeholder="Enter country" />
-              </div>
-            </SectionCard>
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="Email" type="email" value={form.email} onChange={(email) => setForm((current) => ({ ...current, email }))} placeholder="Enter email" />
+              <Field label="Phone" value={form.phone} onChange={(phone) => setForm((current) => ({ ...current, phone }))} placeholder="Enter phone number" />
+            </div>
 
-            <SectionCard title="Tax Details" description="Tax information used for invoice formatting.">
-              <div className="grid gap-4 md:grid-cols-2">
-                <SelectField
-                  label="Tax Type"
-                  value={form.taxType}
-                  onChange={(taxType) => setForm((current) => ({ ...current, taxType: taxType as BusinessFormValues['taxType'] }))}
-                  options={[
-                    { value: 'GSTIN', label: 'GSTIN' },
-                    { value: 'PAN', label: 'PAN' },
-                    { value: 'VAT', label: 'VAT' },
-                    { value: 'Other', label: 'Other' },
-                  ]}
-                />
-                <Field label="Tax ID" value={form.taxId} onChange={(taxId) => setForm((current) => ({ ...current, taxId }))} placeholder="Enter tax ID" />
-              </div>
-            </SectionCard>
+            <Field
+              label="Address"
+              value={form.address}
+              onChange={(address) => setForm((current) => ({ ...current, address }))}
+              placeholder="Enter address"
+            />
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <SelectField
+                label="Tax Type"
+                value={form.taxType}
+                onChange={(taxType) => setForm((current) => ({ ...current, taxType: taxType as BusinessFormValues['taxType'] }))}
+                options={[
+                  { value: 'GSTIN', label: 'GSTIN' },
+                  { value: 'PAN', label: 'PAN' },
+                  { value: 'VAT', label: 'VAT' },
+                  { value: 'Other', label: 'Other' },
+                ]}
+              />
+              <Field label="Tax ID" value={form.taxId} onChange={(taxId) => setForm((current) => ({ ...current, taxId }))} placeholder="Enter tax ID" />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <Field label="City" value={form.city} onChange={(city) => setForm((current) => ({ ...current, city }))} placeholder="Enter city" />
+              <Field label="Postal Code" value={form.zipCode} onChange={(zipCode) => setForm((current) => ({ ...current, zipCode }))} placeholder="Enter postal code" />
+            </div>
+
+            <Field label="State" value={form.state} onChange={(state) => setForm((current) => ({ ...current, state }))} placeholder="Enter state" />
+            <Field label="Country" value={form.country} onChange={(country) => setForm((current) => ({ ...current, country }))} placeholder="Enter country" />
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -892,65 +934,50 @@ export default function BusinessPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Business List
           </button>
-
-          <div className="inline-flex h-[42px] items-center rounded-[8px] border border-[#E5E7EB] bg-white px-4 text-[13px] font-semibold text-[#6B7280] shadow-sm">
-            Business Details
-          </div>
         </div>
 
         <div className="mt-6 rounded-[12px] border border-[#E5E7EB] bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
-              <AvatarBadge label={business.companyName || 'Business'} />
-              <div>
-                <h2 className="text-[20px] font-semibold tracking-[-0.03em] text-[#111827]">{business.companyName || '-'}</h2>
-                <p className="mt-1 text-[14px] text-[#6B7280]">{business.contactPerson || 'No contact person added'}</p>
+              <DetailAvatar label={business.companyName || 'Business'} />
+              <div className="min-w-0">
+                <h2 className="truncate text-[20px] font-semibold tracking-[-0.03em] text-[#111827]">
+                  {business.companyName || '-'}
+                </h2>
+                <p className="mt-1 truncate text-[14px] text-[#6B7280]">{business.contactPerson || 'No contact person added'}</p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#D1FAE5] bg-[#ECFDF5] px-3 py-1 text-[12px] font-semibold text-[#16A34A]">
-              <CalendarDays className="h-3.5 w-3.5" />
-              Created {formatDate(business.createdAt || business.updatedAt)}
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#BBF7D0] bg-[#DCFCE7] px-3 py-1 text-[12px] font-semibold text-[#16A34A]">
+              Active
             </div>
           </div>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <SectionCard title="Business Information" description="Overview of this business profile.">
-              <div className="grid gap-3 md:grid-cols-2">
-                {detailRow('Business Name', business.companyName)}
-                {detailRow('Contact Person', business.contactPerson || '')}
-              </div>
-            </SectionCard>
+            <DetailPanel>
+              <DetailItem icon={<User className="h-4 w-4" />} label="Contact Person" value={business.contactPerson || ''} />
+              <DetailItem icon={<Mail className="h-4 w-4" />} label="Email" value={business.email || ''} />
+              <DetailItem icon={<Phone className="h-4 w-4" />} label="Phone" value={business.phone || ''} />
+              <DetailItem
+                icon={<MapPin className="h-4 w-4" />}
+                label="Address"
+                value={[business.address, business.city, business.state, business.country].filter(Boolean).join(', ') || ''}
+              />
+            </DetailPanel>
 
-            <SectionCard title="Contact Information" description="Phone and email details.">
-              <div className="grid gap-3 md:grid-cols-2">
-                {detailRow('Email', business.email || '')}
-                {detailRow('Phone', business.phone || '')}
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Address" description="Location details for the business.">
-              <div className="grid gap-3 md:grid-cols-2">
-                {detailRow('Address', business.address || '')}
-                {detailRow('City', business.city || '')}
-                {detailRow('State', business.state || '')}
-                {detailRow('Postal Code', business.zipCode || '')}
-                {detailRow('Country', business.country || '')}
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Tax Details" description="Tax IDs and classification.">
-              <div className="grid gap-3 md:grid-cols-2">
-                {detailRow('Tax Type', business.taxType || '')}
-                {detailRow('Tax ID', business.taxId || '')}
-              </div>
-            </SectionCard>
+            <DetailPanel>
+              <DetailItem icon={<Shield className="h-4 w-4" />} label="Tax Type" value={business.taxType || ''} />
+              <DetailItem icon={<Shield className="h-4 w-4" />} label="Tax ID" value={business.taxId || ''} />
+              <DetailItem icon={<MapPin className="h-4 w-4" />} label="Country" value={business.country || ''} />
+              <DetailItem icon={<MapPin className="h-4 w-4" />} label="City" value={business.city || ''} />
+              <DetailItem icon={<MapPin className="h-4 w-4" />} label="Postal Code" value={business.zipCode || ''} />
+            </DetailPanel>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => openEditForm(business)}
-              className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[8px] bg-[#2563EB] px-5 text-[14px] font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
+              className="inline-flex h-[46px] items-center justify-center gap-2 rounded-[10px] border border-[#C7D2FE] bg-white px-5 text-[14px] font-semibold text-[#2563EB] shadow-sm transition hover:bg-blue-50"
             >
               <Pencil className="h-4 w-4" />
               Edit Business
@@ -958,7 +985,7 @@ export default function BusinessPage() {
             <button
               type="button"
               onClick={() => handleDelete(business)}
-              className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[8px] border border-[#E5E7EB] bg-white px-5 text-[14px] font-semibold text-[#EF4444] shadow-sm transition hover:bg-red-50"
+              className="inline-flex h-[46px] items-center justify-center gap-2 rounded-[10px] border border-[#FECACA] bg-white px-5 text-[14px] font-semibold text-[#EF4444] shadow-sm transition hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
               Delete Business

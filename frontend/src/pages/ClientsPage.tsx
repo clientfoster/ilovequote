@@ -146,6 +146,42 @@ function AvatarBadge({ label }: { label: string }) {
   );
 }
 
+function DetailAvatar({ label }: { label: string }) {
+  return (
+    <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[12px] bg-[#0F2A66] text-[13px] font-bold text-white shadow-sm">
+      {getInitials(label)}
+    </div>
+  );
+}
+
+function DetailItem({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: string;
+}) {
+  return (
+    <div className="flex items-start gap-3 border-b border-slate-100 px-4 py-4 last:border-b-0">
+      <div className="mt-0.5 shrink-0 text-[#6B7280]">{icon}</div>
+      <div className="min-w-0">
+        <div className="text-[12px] font-semibold text-[#6B7280]">{label}</div>
+        <div className="mt-1 break-words text-[14px] font-medium text-[#111827]">{value || '-'}</div>
+      </div>
+    </div>
+  );
+}
+
+function DetailPanel({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <div className="overflow-hidden rounded-[12px] border border-[#E5E7EB] bg-white shadow-sm">{children}</div>;
+}
+
 function ActionIcon({
   icon,
   label,
@@ -684,34 +720,34 @@ export default function ClientsPage() {
             <p className="mt-1 text-[14px] text-[#6B7280]">Enter the customer details that will be used later in invoices and lists.</p>
           </div>
 
-          <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <SectionCard title="Customer Information" description="Core profile details for this customer.">
-              <div className="grid gap-4 md:grid-cols-2">
-                <Field label="Company Name" value={form.companyName} onChange={(companyName) => setForm((current) => ({ ...current, companyName }))} placeholder="Enter company name" />
-                <Field label="Contact Person" value={form.contactPerson} onChange={(contactPerson) => setForm((current) => ({ ...current, contactPerson }))} placeholder="Enter contact person" />
-              </div>
-            </SectionCard>
+          <div className="mt-6 space-y-6">
+            <div className="space-y-4">
+              <Field
+                label="Company Name"
+                value={form.companyName}
+                onChange={(companyName) => setForm((current) => ({ ...current, companyName }))}
+                placeholder="Enter company name"
+              />
 
-            <SectionCard title="Contact Information" description="How people can reach the customer.">
+              <Field
+                label="Contact Person"
+                value={form.contactPerson}
+                onChange={(contactPerson) => setForm((current) => ({ ...current, contactPerson }))}
+                placeholder="Enter contact person"
+              />
+
               <div className="grid gap-4 md:grid-cols-2">
                 <Field label="Email" type="email" value={form.email} onChange={(email) => setForm((current) => ({ ...current, email }))} placeholder="Enter email" />
                 <Field label="Phone" value={form.phone} onChange={(phone) => setForm((current) => ({ ...current, phone }))} placeholder="Enter phone number" />
               </div>
-            </SectionCard>
 
-            <SectionCard title="Address" description="Address details shown in the customer profile.">
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="md:col-span-2">
-                  <Field label="Billing Address" value={form.billingAddress} onChange={(billingAddress) => setForm((current) => ({ ...current, billingAddress }))} placeholder="Enter billing address" />
-                </div>
-                <Field label="City" value={form.city} onChange={(city) => setForm((current) => ({ ...current, city }))} placeholder="Enter city" />
-                <Field label="State" value={form.state} onChange={(state) => setForm((current) => ({ ...current, state }))} placeholder="Enter state" />
-                <Field label="Postal Code" value={form.zipCode} onChange={(zipCode) => setForm((current) => ({ ...current, zipCode }))} placeholder="Enter postal code" />
-                <Field label="Country" value={form.country} onChange={(country) => setForm((current) => ({ ...current, country }))} placeholder="Enter country" />
-              </div>
-            </SectionCard>
+              <Field
+                label="Billing Address"
+                value={form.billingAddress}
+                onChange={(billingAddress) => setForm((current) => ({ ...current, billingAddress }))}
+                placeholder="Enter billing address"
+              />
 
-            <SectionCard title="Tax Details" description="Tax IDs and billing references.">
               <div className="grid gap-4 md:grid-cols-2">
                 <SelectField
                   label="Tax ID Type"
@@ -725,12 +761,21 @@ export default function ClientsPage() {
                   ]}
                 />
                 <Field label="Tax ID" value={form.taxId} onChange={(taxId) => setForm((current) => ({ ...current, taxId }))} placeholder="Enter tax ID" />
+              </div>
+
+              <div className="grid gap-4 md:grid-cols-2">
+                <Field label="City" value={form.city} onChange={(city) => setForm((current) => ({ ...current, city }))} placeholder="Enter city" />
+                <Field label="Postal Code" value={form.zipCode} onChange={(zipCode) => setForm((current) => ({ ...current, zipCode }))} placeholder="Enter postal code" />
+              </div>
+
+              <Field label="State" value={form.state} onChange={(state) => setForm((current) => ({ ...current, state }))} placeholder="Enter state" />
+              <Field label="Country" value={form.country} onChange={(country) => setForm((current) => ({ ...current, country }))} placeholder="Enter country" />
+
+              <div className="grid gap-4 md:grid-cols-2">
                 <Field label="PO Number" value={form.poNumber} onChange={(poNumber) => setForm((current) => ({ ...current, poNumber }))} placeholder="Enter PO number" />
                 <Field label="Website" value={form.website} onChange={(website) => setForm((current) => ({ ...current, website }))} placeholder="Enter website" />
               </div>
-            </SectionCard>
 
-            <SectionCard title="Notes" description="Optional internal notes for this customer.">
               <label className="space-y-2">
                 <span className="block text-[13px] font-semibold text-slate-700">Notes</span>
                 <textarea
@@ -740,7 +785,7 @@ export default function ClientsPage() {
                   className="min-h-[120px] w-full rounded-[10px] border border-[#E5E7EB] bg-white px-3.5 py-3 text-[14px] text-slate-700 outline-none transition focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100"
                 />
               </label>
-            </SectionCard>
+            </div>
           </div>
 
           <div className="mt-6 flex flex-wrap gap-3">
@@ -786,73 +831,50 @@ export default function ClientsPage() {
             <ArrowLeft className="h-4 w-4" />
             Back to Customer List
           </button>
-
-          <div className="inline-flex h-[42px] items-center rounded-[8px] border border-[#E5E7EB] bg-white px-4 text-[13px] font-semibold text-[#6B7280] shadow-sm">
-            Customer Details
-          </div>
         </div>
 
         <div className="mt-6 rounded-[12px] border border-[#E5E7EB] bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-4 border-b border-slate-100 pb-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
-              <AvatarBadge label={customerDisplayLabel(customer)} />
-              <div>
-                <h2 className="text-[20px] font-semibold tracking-[-0.03em] text-[#111827]">{customerDisplayLabel(customer)}</h2>
-                <p className="mt-1 text-[14px] text-[#6B7280]">{customer.contactPerson || 'No contact person added'}</p>
+              <DetailAvatar label={customerDisplayLabel(customer)} />
+              <div className="min-w-0">
+                <h2 className="truncate text-[20px] font-semibold tracking-[-0.03em] text-[#111827]">
+                  {customerDisplayLabel(customer)}
+                </h2>
+                <p className="mt-1 truncate text-[14px] text-[#6B7280]">{customer.contactPerson || 'No contact person added'}</p>
               </div>
             </div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-[#DBEAFE] bg-[#EFF6FF] px-3 py-1 text-[12px] font-semibold text-[#2563EB]">
-              <CalendarDays className="h-3.5 w-3.5" />
-              Created {formatDate(customer.createdAt || customer.updatedAt)}
+            <div className="inline-flex items-center gap-2 rounded-full border border-[#BBF7D0] bg-[#DCFCE7] px-3 py-1 text-[12px] font-semibold text-[#16A34A]">
+              Active
             </div>
           </div>
 
           <div className="mt-6 grid gap-4 lg:grid-cols-2">
-            <SectionCard title="Customer Information" description="Overview of this customer profile.">
-              <div className="grid gap-3 md:grid-cols-2">
-                {detailRow('Company Name', customer.companyName)}
-                {detailRow('Contact Person', customer.contactPerson)}
-              </div>
-            </SectionCard>
+            <DetailPanel>
+              <DetailItem icon={<User className="h-4 w-4" />} label="Contact Person" value={customer.contactPerson || ''} />
+              <DetailItem icon={<Mail className="h-4 w-4" />} label="Email" value={customer.email || ''} />
+              <DetailItem icon={<Phone className="h-4 w-4" />} label="Phone" value={customer.phone || ''} />
+              <DetailItem
+                icon={<MapPin className="h-4 w-4" />}
+                label="Address"
+                value={[customer.billingAddress, customer.city, customer.state, customer.country].filter(Boolean).join(', ') || ''}
+              />
+            </DetailPanel>
 
-            <SectionCard title="Contact Information" description="Phone and email details.">
-              <div className="grid gap-3 md:grid-cols-2">
-                {detailRow('Email', customer.email || '')}
-                {detailRow('Phone', customer.phone || '')}
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Address" description="Location details for the customer.">
-              <div className="grid gap-3 md:grid-cols-2">
-                {detailRow('Billing Address', customer.billingAddress || '')}
-                {detailRow('City', customer.city || '')}
-                {detailRow('State', customer.state || '')}
-                {detailRow('Postal Code', customer.zipCode || '')}
-                {detailRow('Country', customer.country || '')}
-              </div>
-            </SectionCard>
-
-            <SectionCard title="Tax Details" description="Tax IDs and billing references.">
-              <div className="grid gap-3 md:grid-cols-2">
-                {detailRow('Tax ID Type', customer.taxIdType || '')}
-                {detailRow('Tax ID', customer.taxId || '')}
-                {detailRow('PO Number', customer.poNumber || '')}
-                {detailRow('Website', customer.website || '')}
-              </div>
-            </SectionCard>
-
-            <div className="lg:col-span-2">
-              <SectionCard title="Notes" description="Optional internal notes.">
-                {detailRow('Notes', customer.notes || '')}
-              </SectionCard>
-            </div>
+            <DetailPanel>
+              <DetailItem icon={<Shield className="h-4 w-4" />} label="Tax ID Type" value={customer.taxIdType || ''} />
+              <DetailItem icon={<Shield className="h-4 w-4" />} label="Tax ID" value={customer.taxId || ''} />
+              <DetailItem icon={<MapPin className="h-4 w-4" />} label="Country" value={customer.country || ''} />
+              <DetailItem icon={<MapPin className="h-4 w-4" />} label="City" value={customer.city || ''} />
+              <DetailItem icon={<MapPin className="h-4 w-4" />} label="Postal Code" value={customer.zipCode || ''} />
+            </DetailPanel>
           </div>
 
-          <div className="mt-6 flex flex-wrap gap-3">
+          <div className="mt-6 grid gap-3 sm:grid-cols-2">
             <button
               type="button"
               onClick={() => openEditForm(customer)}
-              className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[8px] bg-[#2563EB] px-5 text-[14px] font-semibold text-white shadow-sm transition hover:bg-[#1d4ed8]"
+              className="inline-flex h-[46px] items-center justify-center gap-2 rounded-[10px] border border-[#C7D2FE] bg-white px-5 text-[14px] font-semibold text-[#2563EB] shadow-sm transition hover:bg-blue-50"
             >
               <Pencil className="h-4 w-4" />
               Edit Customer
@@ -860,7 +882,7 @@ export default function ClientsPage() {
             <button
               type="button"
               onClick={() => handleDelete(customer)}
-              className="inline-flex h-[42px] items-center justify-center gap-2 rounded-[8px] border border-[#E5E7EB] bg-white px-5 text-[14px] font-semibold text-[#EF4444] shadow-sm transition hover:bg-red-50"
+              className="inline-flex h-[46px] items-center justify-center gap-2 rounded-[10px] border border-[#FECACA] bg-white px-5 text-[14px] font-semibold text-[#EF4444] shadow-sm transition hover:bg-red-50"
             >
               <Trash2 className="h-4 w-4" />
               Delete Customer
