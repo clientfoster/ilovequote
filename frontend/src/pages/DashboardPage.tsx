@@ -196,8 +196,8 @@ export default function DashboardPage() {
   })));
 
   return (
-    <div className="flex h-full flex-1 overflow-hidden bg-[#F8FAFC] px-3 py-4 sm:px-4 md:p-6" id="dashboard-page-wrapper">
-      <div className="mx-auto flex h-full w-full max-w-[1400px] flex-col gap-4 overflow-hidden md:gap-5">
+    <div className="flex h-full flex-1 overflow-hidden bg-[#F8FAFC] px-3 py-4 sm:px-4 md:px-4 md:py-5" id="dashboard-page-wrapper">
+      <div className="mx-auto flex h-full w-full max-w-[1560px] flex-col gap-4 overflow-hidden md:gap-4.5">
         <div className="flex flex-col gap-2 pb-1">
           <div>
             <h1 className="text-[22px] font-semibold tracking-[-0.03em] text-slate-900 sm:text-[24px] md:text-[28px]">

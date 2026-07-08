@@ -27,7 +27,7 @@ export default function QRPortfolioPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-6 sm:px-6 lg:px-8">
+    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-5 sm:px-6 lg:px-5">
       <div className="mx-auto w-full max-w-[1280px] space-y-6">
         <div>
           <h1 className="text-[28px] font-extrabold tracking-tight text-slate-900">QR Portfolio</h1>

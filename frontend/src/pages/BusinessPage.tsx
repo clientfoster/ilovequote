@@ -997,7 +997,7 @@ export default function BusinessPage() {
   };
 
   return (
-    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-4 sm:px-6 lg:px-8 lg:py-6">
+    <div className="flex-1 overflow-y-auto bg-[#F8FAFC] px-4 py-4 sm:px-6 lg:px-5 lg:py-5">
       <div className="mx-auto w-full max-w-[1440px]">
         <div className="rounded-[12px] border border-[#E5E7EB] bg-white shadow-sm transition-shadow">
           {viewMode === 'form'

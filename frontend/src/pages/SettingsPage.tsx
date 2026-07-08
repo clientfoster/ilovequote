@@ -210,7 +210,7 @@ export default function SettingsPage() {
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#F8FAFC]">
-      <div className="px-4 py-6 sm:px-6 lg:px-8 xl:px-10">
+      <div className="px-4 py-5 sm:px-6 lg:px-5 xl:px-6">
         <div className="mx-auto max-w-[1460px]">
           <div className="flex items-start justify-between gap-6">
             <div>

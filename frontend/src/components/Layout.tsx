@@ -35,7 +35,7 @@ type NavItem = {
 
 const DESKTOP_EXPANDED_WIDTH = 248;
 const DESKTOP_COLLAPSED_WIDTH = 80;
-const HEADER_HEIGHT = 61;
+const HEADER_HEIGHT = 56;
 
 export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   const navigate = useNavigate();
@@ -148,7 +148,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     location.pathname === path || (path === '/create-invoice' && location.pathname.startsWith('/create-invoice'));
 
   const renderNavList = (expanded: boolean, mobile = false) => (
-    <nav className={`flex-1 ${expanded ? 'space-y-2.5' : 'space-y-2'} overflow-y-auto px-3 py-3`}>
+    <nav className={`flex-1 ${expanded ? 'space-y-1.5' : 'space-y-1.5'} overflow-y-auto px-2.5 py-2.5`}>
       {visibleNavItems.map((item) => {
         const Icon = item.icon;
         const isActive = isPathActive(item.path);
@@ -162,14 +162,14 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 setIsMobileMenuOpen(false);
               }
             }}
-            className={`group flex w-full items-center ${expanded ? 'justify-start gap-3.5 px-4' : 'justify-center px-0'} min-h-[50px] rounded-[18px] text-sm font-semibold transition-all duration-300 ${
+            className={`group flex w-full items-center ${expanded ? 'justify-start gap-3 px-3.5' : 'justify-center px-0'} min-h-[42px] rounded-[16px] text-sm font-semibold transition-all duration-300 ${
               isActive
                 ? 'bg-[#EEF4FF] text-[#1D4ED8] shadow-[0_10px_24px_rgba(37,99,235,0.08)]'
                 : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
             }`}
           >
-            <Icon className={`h-6 w-6 shrink-0 ${isActive ? 'text-[#1D4ED8]' : 'text-slate-400 group-hover:text-slate-700'}`} />
-            {expanded ? <span className="truncate text-[15px]">{item.label}</span> : null}
+            <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#1D4ED8]' : 'text-slate-400 group-hover:text-slate-700'}`} />
+            {expanded ? <span className="truncate text-[14px]">{item.label}</span> : null}
           </NavLink>
         );
       })}
@@ -186,12 +186,12 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
       ) : null}
 
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[#E5E7EB] bg-white/95 backdrop-blur">
-        <div className="flex h-[61px] items-center justify-between px-4 lg:px-4">
+        <div className="flex h-[56px] items-center justify-between px-4 lg:px-4">
           <div className="flex items-center gap-3">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="inline-flex h-10 w-10 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
+              className="inline-flex h-9 w-9 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
               aria-label="Open menu"
             >
               <Menu className="h-5 w-5" />
@@ -199,7 +199,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
             <button
               type="button"
               onClick={() => setIsDesktopSidebarExpanded((current) => !current)}
-              className="hidden h-10 w-10 items-center justify-center rounded-[18px] border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:inline-flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:inline-flex"
               aria-label={isDesktopSidebarExpanded ? 'Collapse sidebar' : 'Expand sidebar'}
             >
               {isDesktopSidebarExpanded ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -212,8 +212,8 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
           <div className="flex items-center gap-2 lg:gap-4">
             {isAuthed ? (
               <>
-                <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
-                  <button type="button" className="flex h-9 w-9 items-center justify-center rounded-full bg-[#1D4ED8] text-[12px] font-semibold text-white shadow-sm">
+                <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-sm">
+                  <button type="button" className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1D4ED8] text-[12px] font-semibold text-white shadow-sm">
                     {initials}
                   </button>
                   <div className="hidden flex-col items-start leading-tight sm:flex">
@@ -224,7 +224,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="inline-flex items-center gap-2 rounded-[18px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                 >
                   <LogOut className="h-4 w-4" />
                   Logout
@@ -234,14 +234,14 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
               <div className="flex items-center gap-2">
                 <Link
                   to="/login?mode=login"
-                  className="inline-flex items-center gap-2 rounded-[18px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                 >
                   <LogIn className="h-4 w-4" />
                   Login
                 </Link>
                 <Link
                   to="/login?mode=signup"
-                  className="inline-flex items-center gap-2 rounded-[18px] bg-[#1D4ED8] px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-blue-800"
+                  className="inline-flex items-center gap-2 rounded-[16px] bg-[#1D4ED8] px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-blue-800"
                 >
                   <UserPlus className="h-4 w-4" />
                   Sign Up
@@ -253,11 +253,11 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
       </header>
 
       <aside
-        className="fixed bottom-0 left-0 top-[61px] z-40 hidden border-r border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)] transition-[width] duration-300 ease-out lg:flex lg:flex-col"
+        className="fixed bottom-0 left-0 top-[56px] z-40 hidden border-r border-slate-200 bg-white shadow-[0_24px_60px_rgba(15,23,42,0.08)] transition-[width] duration-300 ease-out lg:flex lg:flex-col"
         style={{ width: desktopSidebarWidth }}
       >
         <div className="flex h-full flex-col">
-          <div className={`flex items-center ${isDesktopSidebarExpanded ? 'justify-between px-5' : 'justify-center px-2'} border-b border-slate-100 py-4`}>
+          <div className={`flex items-center ${isDesktopSidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'} border-b border-slate-100 py-3`}>
             {isDesktopSidebarExpanded ? (
               <Link to="/dashboard" className="flex items-center gap-1.5 overflow-hidden">
                 <BrandMark size="sm" />
@@ -269,7 +269,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
               <button
                 type="button"
                 onClick={() => setIsDesktopSidebarExpanded(false)}
-                className="inline-flex h-9 w-9 items-center justify-center rounded-[18px] text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-[16px] text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
                 aria-label="Close sidebar"
               >
                 <X className="h-6 w-6" />
@@ -277,29 +277,29 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
             ) : null}
           </div>
 
-          <div className="px-3 py-4">
+          <div className="px-2.5 py-3">
             <button
               type="button"
               onClick={handlePrimaryAction}
               className={`inline-flex w-full items-center justify-center gap-3 rounded-[22px] bg-[#1D4ED8] font-bold text-white shadow-[0_18px_34px_rgba(29,78,216,0.24)] transition-all duration-300 hover:bg-blue-800 ${
-                isDesktopSidebarExpanded ? 'min-h-[54px] px-5 text-[15px]' : 'mx-auto h-[64px] w-[64px] rounded-[22px] px-0'
+                isDesktopSidebarExpanded ? 'min-h-[48px] px-4 text-[14px]' : 'mx-auto h-[56px] w-[56px] rounded-[20px] px-0'
               }`}
               id="btn-sidebar-primary"
               title={primaryActionLabel}
             >
-              <PlusCircle className={`${isDesktopSidebarExpanded ? 'h-5 w-5' : 'h-7 w-7'}`} />
+              <PlusCircle className={`${isDesktopSidebarExpanded ? 'h-5 w-5' : 'h-6 w-6'}`} />
               {isDesktopSidebarExpanded ? <span>{primaryActionLabel}</span> : null}
             </button>
           </div>
 
           {renderNavList(isDesktopSidebarExpanded)}
 
-          <div className="mt-auto border-t border-slate-100 px-3 py-4">
+          <div className="mt-auto border-t border-slate-100 px-2.5 py-3">
             {isDesktopSidebarExpanded ? (
                 <button
                   type="button"
                   onClick={() => setIsDesktopSidebarExpanded(false)}
-                  className="inline-flex min-h-[48px] w-full items-center justify-center gap-3 rounded-[18px] border border-slate-200 bg-white px-4 text-[15px] font-semibold text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700"
+                  className="inline-flex min-h-[42px] w-full items-center justify-center gap-3 rounded-[16px] border border-slate-200 bg-white px-4 text-[14px] font-semibold text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700"
                 >
                   <span className="text-lg leading-none">‹</span>
                   Collapse
@@ -309,7 +309,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 <button
                   type="button"
                   onClick={() => setIsDesktopSidebarExpanded(true)}
-                  className="inline-flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700"
+                  className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700"
                   aria-label="Expand sidebar"
                 >
                   <span className="text-2xl leading-none">›</span>
@@ -396,7 +396,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
         className="min-h-screen overflow-x-hidden bg-[#F8FAFC] lg:ml-[var(--sidebar-width)] lg:transition-[margin-left] lg:duration-300 lg:ease-out"
         style={mainContentStyle}
       >
-        <div className="min-h-[calc(100vh-61px)] overflow-y-auto lg:transition-all lg:duration-300 lg:ease-out" style={{ marginLeft: 0 }}>
+        <div className="min-h-[calc(100vh-56px)] overflow-y-auto lg:transition-all lg:duration-300 lg:ease-out" style={{ marginLeft: 0 }}>
           <div className="lg:hidden" style={{ paddingTop: 0 }} />
           <Outlet context={{ onTriggerToast: triggerToast, setSaveStatus }} />
         </div>

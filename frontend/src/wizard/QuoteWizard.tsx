@@ -686,7 +686,7 @@ export default function QuoteWizard() {
       </AnimatePresence>
 
       <header className="no-print sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:relative md:z-30">
-        <div className="mx-auto hidden max-w-[1560px] items-center justify-between gap-4 px-4 py-2.5 md:flex md:px-5 md:py-3">
+        <div className="mx-auto hidden max-w-[1680px] items-center justify-between gap-4 px-4 py-2 md:flex md:px-4 md:py-2.5">
           <div className="flex min-w-0 items-center gap-4">
             <BrandMark />
             <div className="h-8 w-px bg-slate-200" />
@@ -762,7 +762,7 @@ export default function QuoteWizard() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1560px] px-4 pt-2 pb-28 md:px-5 md:pt-3 md:pb-16">
+      <div className="mx-auto max-w-[1680px] px-4 pt-2 pb-28 md:px-4 md:pt-2.5 md:pb-16">
         <div className="no-print md:sticky md:top-3 z-20">
           <StepWizard currentStep={currentStep} onStepClick={(step) => setCurrentStep(step as 1 | 2 | 3 | 4)} />
         </div>
