@@ -89,15 +89,11 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     { path: '/help-support', label: 'Help & Support', icon: HelpCircle, requiresAuth: false },
   ];
 
-  const invoiceNavItems: NavItem[] = [
-    { path: '/create-invoice', label: 'New Invoice', icon: Receipt, requiresAuth: true },
-    { path: '/invoices', label: 'My Invoices', icon: FileText, requiresAuth: true },
-    { path: '/clients', label: 'Customers', icon: Users, requiresAuth: true },
-    { path: '/business', label: 'My Business', icon: Building2, requiresAuth: true },
-    { path: '/invoice-help-support', label: 'Help & Support', icon: HelpCircle, requiresAuth: false },
-  ];
-
-  const navItems = isInvoiceModuleRoute ? invoiceNavItems : quoteNavItems;
+  const navItems = quoteNavItems.map((item) =>
+    item.path === '/help-support' && isInvoiceModuleRoute
+      ? { ...item, path: '/invoice-help-support' }
+      : item,
+  );
   const visibleNavItems = navItems.filter((item) => isAuthed || !item.requiresAuth);
   const primaryActionLabel = isInvoiceModuleRoute ? 'New Invoice' : 'New Quote';
   const primaryActionTarget = isInvoiceModuleRoute ? '/create-invoice' : '/create-quote';
@@ -152,7 +148,10 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   );
 
   const isPathActive = (path: string) =>
-    location.pathname === path || (path === '/create-invoice' && location.pathname.startsWith('/create-invoice'));
+    location.pathname === path
+    || (path === '/create-invoice' && location.pathname.startsWith('/create-invoice'))
+    || (path === '/help-support' && location.pathname === '/invoice-help-support')
+    || (path === '/invoice-help-support' && location.pathname === '/help-support');
 
   const renderNavList = (expanded: boolean, mobile = false) => (
     <nav className={`flex-1 ${expanded ? 'space-y-1.5' : 'space-y-1.5'} overflow-y-auto px-2.5 py-2.5`}>
