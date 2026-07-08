@@ -21,6 +21,7 @@ import { Quote } from '../types';
 import { getDisplayAuthUser } from '../auth';
 import { deleteQuote, fetchUserQuotes } from '../quoteApi';
 import { buildPdfDownloadUrl, buildPdfUrl, buildShareUrl } from '../url';
+import { clearQuoteDraftStorage } from '../wizard/WizardState';
 
 type DashboardQuote = Quote & {
   title: string;
@@ -455,7 +456,7 @@ export default function DashboardPage() {
             <div className="rounded-[14px] border border-slate-200 bg-white p-4 shadow-[0_1px_0_rgba(15,23,42,0.02),0_8px_20px_rgba(15,23,42,0.03)] sm:p-5">
               <h3 className="text-[18px] font-semibold tracking-[-0.02em] text-slate-900 sm:text-[20px]">Quick Actions</h3>
               <p className="mt-2 text-[13px] leading-6 text-slate-500 sm:mt-3 sm:text-[14px]">Create a quote or browse your saved work.</p>
-              <button type="button" onClick={() => navigate('/create-quote')} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#2457F0] px-4 py-3 text-[14px] font-semibold text-white sm:mt-6 sm:text-[15px]">
+              <button type="button" onClick={handleCreateQuote} className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-[12px] bg-[#2457F0] px-4 py-3 text-[14px] font-semibold text-white sm:mt-6 sm:text-[15px]">
                 <Plus className="h-4.5 w-4.5" />
                 New Quote
               </button>
@@ -502,3 +503,7 @@ export default function DashboardPage() {
     </div>
   );
 }
+  const handleCreateQuote = () => {
+    clearQuoteDraftStorage();
+    navigate('/create-quote');
+  };

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Sparkles, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { clearQuoteDraftStorage } from '../wizard/WizardState';
 
 interface PlaceholderPageProps {
   title: string;
@@ -10,6 +11,10 @@ interface PlaceholderPageProps {
 
 export default function PlaceholderPage({ title, description, icon }: PlaceholderPageProps) {
   const navigate = useNavigate();
+  const handleCreateQuote = () => {
+    clearQuoteDraftStorage();
+    navigate('/create-quote');
+  };
 
   return (
     <div className="flex-1 overflow-y-auto bg-[#F8FAFC] flex flex-col justify-center items-center p-6 md:p-12" id={`placeholder-${title.toLowerCase().replace(/\s+/g, '-')}`}>
@@ -33,7 +38,7 @@ export default function PlaceholderPage({ title, description, icon }: Placeholde
 
         <div className="flex flex-col sm:flex-row gap-3 w-full">
           <button
-            onClick={() => navigate('/create-quote')}
+            onClick={handleCreateQuote}
             className="flex-1 py-3 px-4 bg-[#1D4ED8] hover:bg-blue-800 text-white rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-md shadow-blue-100"
           >
             Create Quote

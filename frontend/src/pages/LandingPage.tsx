@@ -25,6 +25,8 @@ import {
 } from 'lucide-react';
 import BrandMark from '../components/BrandMark';
 import { AuthUser, getDisplayAuthUser } from '../auth';
+import { clearInvoiceDraftStorage } from '../invoiceDraft';
+import { clearQuoteDraftStorage } from '../wizard/WizardState';
 
 type ToolCard = {
   title: string;
@@ -195,6 +197,16 @@ export default function LandingPage({ isAuthed = false, userName, onLogout }: La
     });
   };
 
+  const openCreateRoute = (route: string) => {
+    if (route === '/create-quote') {
+      clearQuoteDraftStorage();
+    }
+    if (route === '/create-invoice') {
+      clearInvoiceDraftStorage();
+    }
+    navigate(route);
+  };
+
   return (
     <div className="min-h-screen bg-[#FAFCFF] text-slate-900">
       <div className="mx-auto max-w-[1552px] px-3 py-3 md:px-4 md:py-4">
@@ -209,7 +221,7 @@ export default function LandingPage({ isAuthed = false, userName, onLogout }: La
                 <button
                   key={item}
                   type="button"
-                  onClick={() => navigate(index === 0 ? '/create-quote' : index === 1 ? '/create-invoice' : '/login?mode=signup')}
+                  onClick={() => openCreateRoute(index === 0 ? '/create-quote' : index === 1 ? '/create-invoice' : '/login?mode=signup')}
                   className="text-[15px] font-semibold text-slate-900 transition hover:text-[#2457F0]"
                 >
                   {item}
@@ -284,7 +296,7 @@ export default function LandingPage({ isAuthed = false, userName, onLogout }: La
                     type="button"
                     onClick={() => {
                       setMobileMenuOpen(false);
-                      navigate(index === 0 ? '/create-quote' : index === 1 ? '/create-invoice' : '/login?mode=signup');
+                      openCreateRoute(index === 0 ? '/create-quote' : index === 1 ? '/create-invoice' : '/login?mode=signup');
                     }}
                     className="inline-flex h-11 items-center justify-center rounded-2xl border border-slate-200 bg-white px-3 text-[13px] font-semibold text-slate-900"
                   >
@@ -384,7 +396,7 @@ export default function LandingPage({ isAuthed = false, userName, onLogout }: La
                   <p className="mt-3 whitespace-pre-line text-[13px] leading-6 text-slate-700 sm:mt-4 sm:text-[15px] sm:leading-8">{card.description}</p>
                   <button
                     type="button"
-                    onClick={() => navigate(card.route)}
+                    onClick={() => openCreateRoute(card.route)}
                     className={`mt-5 inline-flex items-center gap-2 text-[14px] font-bold sm:mt-6 sm:text-[15px] ${card.accent}`}
                   >
                     Open Tool
@@ -468,7 +480,7 @@ export default function LandingPage({ isAuthed = false, userName, onLogout }: La
 
                 <button
                   type="button"
-                  onClick={() => navigate('/create-quote')}
+                  onClick={() => openCreateRoute('/create-quote')}
                   className="inline-flex min-h-[56px] items-center gap-3 rounded-2xl bg-white px-8 text-[16px] font-bold text-[#2563EB] shadow-[0_10px_24px_rgba(15,23,42,0.16)]"
                 >
                   Create Your First Document
