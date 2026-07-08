@@ -10,6 +10,7 @@ import ClientsPage from './pages/ClientsPage';
 import BusinessPage from './pages/BusinessPage';
 import ItemsPage from './pages/ItemsPage';
 import HelpSupportPage from './pages/HelpSupportPage';
+import DashboardPage from './pages/DashboardPage';
 import QuotesPage from './pages/QuotesPage';
 import InvoicesPage from './pages/InvoicesPage';
 import PortfolioPage from './pages/PortfolioPage';
@@ -146,7 +147,7 @@ export default function App() {
             />
           }
         >
-          <Route path="/dashboard" element={<Navigate to="/" replace />} />
+          <Route path="/dashboard" element={<RequireAuth isAuthed={isAuthed}><DashboardPage /></RequireAuth>} />
           <Route path="/create-quote" element={<CreateQuotePage />} />
           <Route path="/create-invoice" element={<CreateInvoicePage />} />
           <Route path="/create-invoice/bank-details" element={<CreateInvoiceBankDetailsPage />} />
