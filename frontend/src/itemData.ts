@@ -7,8 +7,8 @@ export const INITIAL_META: ItemQuotationMeta = {
   clientEmail: '',
   businessName: '',
   businessEmail: '',
-  date: new Date().toISOString().split('T')[0],
-  validUntil: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+  date: '',
+  validUntil: '',
   currency: '\u20B9',
 };
 

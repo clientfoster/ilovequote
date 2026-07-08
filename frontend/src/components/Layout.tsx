@@ -19,6 +19,8 @@ import {
 } from 'lucide-react';
 import BrandMark from './BrandMark';
 import { getDisplayAuthUser, signOut } from '../auth';
+import { clearInvoiceDraftStorage } from '../invoiceDraft';
+import { clearQuoteDraftStorage } from '../wizard/WizardState';
 
 interface LayoutProps {
   isAuthed: boolean;
@@ -128,6 +130,11 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   }, [isMobileMenuOpen]);
 
   const handlePrimaryAction = () => {
+    if (isInvoiceModuleRoute) {
+      clearInvoiceDraftStorage();
+    } else {
+      clearQuoteDraftStorage();
+    }
     if (primaryActionStorageKey) {
       localStorage.removeItem(primaryActionStorageKey);
     }

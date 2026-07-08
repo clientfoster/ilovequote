@@ -1,5 +1,6 @@
 import { INITIAL_ITEMS } from '../itemData';
 import { calculateQuotationTotals } from '../itemUtils';
+import { getScopedStorageKey, getScopedStorageKeyForScope } from '../auth';
 import {
   AppSettings,
   BusinessFormValues,
@@ -90,12 +91,8 @@ export const DEFAULT_ITEM_META: ItemQuotationMeta = {
   clientEmail: '',
   businessName: '',
   businessEmail: '',
-  date: new Date().toISOString().split('T')[0],
-  validUntil: (() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 30);
-    return d.toISOString().split('T')[0];
-  })(),
+  date: '',
+  validUntil: '',
   currency: '₹',
 };
 
@@ -109,11 +106,27 @@ export function createDefaultWizardState(): WizardState {
     quotationMeta: DEFAULT_ITEM_META,
     logoUrl: null,
     taxRate: DEFAULT_SETTINGS.defaultGstPercent,
-    termsAndConditions: DEFAULT_SETTINGS.defaultTerms,
+    termsAndConditions: '',
     editingQuoteId: null,
   };
 }
 
 export function syncWizardTotals(items: ItemQuoteItem[]) {
   return calculateQuotationTotals(items);
+}
+
+export function clearQuoteDraftStorage() {
+  [
+    BUSINESS_DRAFT_KEY,
+    CLIENT_DRAFT_KEY,
+    CLIENT_LOGO_KEY,
+    ITEMS_DRAFT_KEY,
+    ITEMS_META_KEY,
+    EDITING_QUOTE_ID_KEY,
+    'ilovequote_draft_terms_list',
+  ].forEach((baseKey) => {
+    localStorage.removeItem(baseKey);
+    localStorage.removeItem(getScopedStorageKey(baseKey));
+    localStorage.removeItem(getScopedStorageKeyForScope(baseKey, 'guest'));
+  });
 }

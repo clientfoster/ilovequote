@@ -108,15 +108,12 @@ function addDaysToIsoDate(isoDate: string, days: number) {
   return getLocalIsoDate(next);
 }
 
-const todayIsoDate = getLocalIsoDate();
-const defaultDueDate = addDaysToIsoDate(todayIsoDate, 14);
-
 export const defaultInvoiceDraft: InvoiceDraft = {
-  invoiceNumber: 'INV00234',
+  invoiceNumber: '',
   subtitle: '',
   showSubtitle: false,
-  invoiceDate: todayIsoDate,
-  dueDate: defaultDueDate,
+  invoiceDate: '',
+  dueDate: '',
   showDueDate: false,
   showCustomFields: false,
   customFields: [],
@@ -148,26 +145,23 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   lineItems: [
     { id: makeId('item'), name: '', description: '', quantity: 1, rate: 0, tax: 0 },
   ],
-  discountValue: 10,
+  discountValue: 0,
   discountType: '%',
   notes: '',
   attachments: [],
   signatureName: '',
   signatureData: '',
-  terms: [
-    { id: makeId('term'), text: 'Please pay within 15 days from the date of invoice. overdue interest @ 14% will be charged on delayed payments.' },
-    { id: makeId('term'), text: 'Please quote invoice number when remitting funds.' },
-  ],
-  accountHolderName: 'Sakshi Enterprises',
-  bankName: 'HDFC Bank',
-  accountNumber: 'XXXXXX452178',
-  ifsc: 'HDFC0001245',
-  branchName: 'Surat Main Branch',
-  accountType: 'Current Account',
-  upiId: 'sakshi@upi',
+  terms: [],
+  accountHolderName: '',
+  bankName: '',
+  accountNumber: '',
+  ifsc: '',
+  branchName: '',
+  accountType: '',
+  upiId: '',
   qrImageName: '',
   qrImageData: '',
-  paymentNotes: 'Kindly make payment within 15 days. Use the invoice number as your payment reference. UPI and bank transfer are both accepted.',
+  paymentNotes: '',
   draftVersion: DRAFT_VERSION,
 };
 
@@ -198,8 +192,8 @@ export function loadInvoiceDraft(): InvoiceDraft {
     const hasLegacyNotesSeed =
       typeof parsed.notes === 'string'
       && parsed.notes.trim() === 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent ut nisl tempus massa blandit luctus.';
-    const invoiceDate = isLegacySeed ? todayIsoDate : (parsed.invoiceDate || defaultInvoiceDraft.invoiceDate);
-    const dueDate = isLegacySeed ? defaultDueDate : (parsed.dueDate || addDaysToIsoDate(invoiceDate, 14));
+    const invoiceDate = isLegacySeed ? defaultInvoiceDraft.invoiceDate : (parsed.invoiceDate || defaultInvoiceDraft.invoiceDate);
+    const dueDate = isLegacySeed ? defaultInvoiceDraft.dueDate : (parsed.dueDate || defaultInvoiceDraft.dueDate);
     const draft: InvoiceDraft = {
       ...defaultInvoiceDraft,
       ...parsed,
@@ -246,6 +240,12 @@ export function loadInvoiceDraft(): InvoiceDraft {
 
 export function saveInvoiceDraft(draft: InvoiceDraft) {
   localStorage.setItem(getInvoiceDraftStorageKey(), JSON.stringify(draft));
+}
+
+export function clearInvoiceDraftStorage() {
+  localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(getInvoiceDraftStorageKey());
+  localStorage.removeItem(getGuestInvoiceDraftStorageKey());
 }
 
 export function useInvoiceDraft() {

@@ -154,7 +154,7 @@ export default function QuoteWizard() {
   const [quotationMeta, setQuotationMeta] = useState<ItemQuotationMeta>(DEFAULT_ITEM_META);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState(18);
-  const [termsAndConditions, setTermsAndConditions] = useState(DEFAULT_SETTINGS.defaultTerms);
+  const [termsAndConditions, setTermsAndConditions] = useState('');
   const [termsList, setTermsList] = useState<TermItem[]>([]);
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('saved');
   const [isSavingDraft, setIsSavingDraft] = useState(false);
@@ -248,8 +248,8 @@ export default function QuoteWizard() {
       const settingsRaw = settingsEntry.raw;
       const settings = settingsRaw ? JSON.parse(settingsRaw) : DEFAULT_SETTINGS;
       setTaxRate(settings.defaultGstPercent || 18);
-      
-      const initialTerms = settings.defaultTerms || DEFAULT_SETTINGS.defaultTerms;
+
+      const initialTerms = '';
       setTermsAndConditions(initialTerms);
 
       const draftTermsEntry = readScopedStorageEntry('ilovequote_draft_terms_list');
@@ -415,8 +415,8 @@ export default function QuoteWizard() {
     setQuotationMeta(DEFAULT_ITEM_META);
     setLogoUrl(null);
     setTaxRate(DEFAULT_SETTINGS.defaultGstPercent);
-    setTermsAndConditions(DEFAULT_SETTINGS.defaultTerms);
-    setTermsList(parseTermsStringToList(DEFAULT_SETTINGS.defaultTerms));
+    setTermsAndConditions('');
+    setTermsList([]);
     reset(DEFAULT_BUSINESS_VALUES);
     resetClient(DEFAULT_CLIENT_VALUES);
     localStorage.removeItem(BUSINESS_DRAFT_KEY);
