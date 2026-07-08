@@ -36,8 +36,8 @@ export default function BusinessStep({
   showFooterNavigation = true,
 }: BusinessStepProps) {
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-12 gap-4 md:gap-8 items-start">
-      <div className="lg:col-span-2 xl:col-span-7 space-y-4 md:space-y-6">
+    <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-5 items-start">
+      <div className="lg:col-span-8 xl:col-span-8 space-y-4 md:space-y-5">
         <BusinessForm
           register={register}
           control={control}
@@ -47,7 +47,7 @@ export default function BusinessStep({
         />
 
         {showFooterNavigation && (
-          <div className="pt-6 border-t border-slate-250 hidden md:flex items-center justify-between gap-4">
+          <div className="pt-4 border-t border-slate-250 hidden md:flex items-center justify-between gap-4">
             <button
               type="button"
               onClick={onBack}
@@ -69,9 +69,9 @@ export default function BusinessStep({
         )}
       </div>
 
-      <div className="lg:col-span-1 xl:col-span-5 lg:sticky lg:top-6 space-y-4">
-        <div className="bg-white rounded-xl border border-slate-200/80 p-4 md:p-5 shadow-xs flex flex-col" id="wizard-step-middle">
-          <div className="flex items-center justify-between mb-3.5 pl-1 flex-wrap gap-2">
+      <div className="lg:col-span-4 xl:col-span-4 lg:sticky lg:top-[86px] space-y-4">
+        <div className="bg-white rounded-[18px] border border-slate-200/80 p-4 shadow-xs flex flex-col" id="wizard-step-middle">
+          <div className="flex items-center justify-between mb-3 pl-1 flex-wrap gap-2">
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block">
               Live Preview Board
             </span>
@@ -86,10 +86,10 @@ export default function BusinessStep({
             </button>
           </div>
 
-          <div className="space-y-4">
+          <div className="space-y-3">
             <BusinessPreviewCard formData={businessValues} />
             {(clientValues.companyName || clientValues.billingAddress || clientValues.email) && (
-              <div className="bg-slate-50 border border-slate-100 rounded-xl p-4 text-xs font-semibold text-slate-700 space-y-1.5 break-words">
+              <div className="bg-slate-50 border border-slate-100 rounded-[16px] p-3.5 text-xs font-semibold text-slate-700 space-y-1.5 break-words">
                 <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Billing Target Client:</span>
                 <p className="text-slate-900 font-extrabold">{clientValues.companyName}</p>
                 {clientValues.billingAddress && (
@@ -141,7 +141,7 @@ export default function BusinessStep({
           </div>
         </div>
 
-        <div className="hidden lg:block bg-white rounded-2xl border border-slate-200/80 p-5 shadow-xs items-center text-center">
+        <div className="hidden lg:block bg-white rounded-[18px] border border-slate-200/80 p-4 shadow-xs items-center text-center">
           <span className="text-[9px] font-black text-slate-400 uppercase tracking-widest block mb-3.5">
             QR Live Smart Mockup
           </span>

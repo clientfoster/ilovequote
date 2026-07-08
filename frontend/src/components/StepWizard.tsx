@@ -16,8 +16,8 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
   ];
 
   return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 md:px-6 md:py-5 shadow-sm mb-6 overflow-hidden" id="wizard-container">
-      <div className="hidden md:flex items-center gap-3 xl:gap-5" id="wizard-desktop">
+    <div className="w-full rounded-[20px] border border-slate-200 bg-white px-4 py-3 md:px-5 md:py-3.5 shadow-sm mb-4 overflow-hidden" id="wizard-container">
+      <div className="hidden md:flex items-center gap-2.5 xl:gap-4" id="wizard-desktop">
         {steps.map((step, index) => {
           const isCompleted = step.status === 'completed';
           const isCurrent = step.status === 'current';
@@ -31,10 +31,10 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
                 type="button"
                 onClick={() => onStepClick?.(step.id)}
                 disabled={!isClickable}
-                className="flex min-w-0 flex-1 items-center gap-3 text-left focus:outline-none disabled:cursor-default"
+                className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus:outline-none disabled:cursor-default"
               >
                 <span
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300 ${
+                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-[13px] font-bold transition-all duration-300 ${
                     isCompleted
                       ? 'border-emerald-500 bg-white text-emerald-600 shadow-sm shadow-emerald-100'
                       : isCurrent
@@ -47,7 +47,7 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
 
                 <span className="min-w-0">
                   <span
-                    className={`block text-[17px] font-semibold leading-none ${
+                      className={`block text-[15px] font-semibold leading-none ${
                       isCompleted
                         ? 'text-emerald-500'
                         : isCurrent
