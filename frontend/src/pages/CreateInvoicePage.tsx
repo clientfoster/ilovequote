@@ -36,9 +36,9 @@ import { BUSINESS_DRAFT_KEY, CLIENT_DRAFT_KEY } from '../wizard/WizardState';
 import type { BusinessFormValues, ClientFormValues, Customer, Quote } from '../types';
 
 const steps = [
-  { number: '1', label: 'Invoice Details', active: true },
-  { number: '2', label: 'Your Bank Details', active: false, optional: true },
-  { number: '3', label: 'Select Design & Colors', active: false, subtitle: '(Download or Email Invoice)' },
+  { number: '1', label: 'Invoice Details', active: true, path: '/create-invoice' },
+  { number: '2', label: 'Your Bank Details', active: false, optional: true, path: '/create-invoice/bank-details' },
+  { number: '3', label: 'Select Design & Colors', active: false, subtitle: '(Download or Email Invoice)', path: '/create-invoice/design' },
 ];
 
 const currencyOptions = ['INR (INR, Rs)', 'USD (USD, $)', 'EUR (EUR, €)', 'GBP (GBP, £)'];
@@ -392,6 +392,7 @@ export default function CreateInvoicePage() {
   const [clientProfiles, setClientProfiles] = useState<ProfileOption[]>([]);
   const [selectedBusinessProfileId, setSelectedBusinessProfileId] = useState('manual');
   const [selectedClientProfileId, setSelectedClientProfileId] = useState('manual');
+  const [isMobileStepsOpen, setIsMobileStepsOpen] = useState(false);
   const [showNotesEditor, setShowNotesEditor] = useState(false);
   const [showAttachmentsEditor, setShowAttachmentsEditor] = useState(false);
   const [showSignatureEditor, setShowSignatureEditor] = useState(false);
@@ -900,8 +901,54 @@ export default function CreateInvoicePage() {
   return (
     <div className="min-h-full bg-[#F8FAFF] px-3 py-4 md:px-5 md:py-6">
       <div className="mx-auto max-w-[1380px] space-y-4 md:space-y-5">
-        <section className="rounded-2xl border border-slate-200 bg-white/95 px-4 py-4 shadow-sm md:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-center">
+        <section className="rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 shadow-sm md:px-6 md:py-4">
+          <div className="md:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileStepsOpen((current) => !current)}
+              className="flex w-full items-center gap-3"
+              aria-expanded={isMobileStepsOpen}
+              aria-label="Toggle invoice steps"
+            >
+              {steps.filter((step) => step.active).map((step) => (
+                <React.Fragment key={step.number}>
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-black ${step.active ? 'border-[#2E6EAB] bg-[#2E6EAB] text-white' : 'border-slate-300 bg-white text-slate-700'}`}>
+                    {step.number}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-bold text-slate-900">{step.label}</div>
+                    {'optional' in step && step.optional ? <div className="text-[11px] font-medium text-slate-400 sm:hidden">Optional</div> : null}
+                    {'subtitle' in step && step.subtitle ? <div className="hidden text-[11px] font-medium text-slate-400 sm:block">{step.subtitle}</div> : null}
+                  </div>
+                  <ChevronDown className={`ml-auto h-4 w-4 text-slate-400 transition-transform duration-200 ${isMobileStepsOpen ? 'rotate-180' : ''}`} />
+                </React.Fragment>
+              ))}
+            </button>
+            {isMobileStepsOpen ? (
+              <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                {steps.map((step) => (
+                  <button
+                    key={step.number}
+                    type="button"
+                    onClick={() => {
+                      setIsMobileStepsOpen(false);
+                      navigate(step.path);
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left ${step.active ? 'bg-[#EEF4FF]' : 'bg-transparent'}`}
+                  >
+                    <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${step.active ? 'border-[#2E6EAB] bg-[#2E6EAB] text-white' : 'border-slate-300 bg-white text-slate-700'}`}>
+                      {step.number}
+                    </div>
+                    <div className="min-w-0">
+                      <div className={`text-[13px] font-bold ${step.active ? 'text-[#1D4ED8]' : 'text-slate-700'}`}>{step.label}</div>
+                      {'optional' in step && step.optional ? <div className="text-[10px] font-medium text-slate-400">Optional</div> : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="hidden flex-col gap-4 md:flex lg:flex-row lg:items-center lg:justify-center">
             {steps.map((step, index) => (
               <React.Fragment key={step.number}>
                 <div className="flex items-start gap-3">
@@ -922,8 +969,8 @@ export default function CreateInvoicePage() {
 
         <section className="rounded-[28px] border border-slate-200 bg-white px-4 py-5 shadow-sm md:px-8 md:py-7">
           <div className="space-y-5">
-            <div className="text-center">
-              <h1 className="text-4xl font-black tracking-[-0.04em] text-slate-900">Invoice</h1>
+            <div className="pt-1 text-center md:pt-0">
+              <h1 className="text-[3rem] font-black leading-none tracking-[-0.04em] text-slate-900 md:text-4xl">Invoice</h1>
               <button
                 type="button"
                 onClick={() => updateDraft({ showSubtitle: !draft.showSubtitle })}
@@ -947,17 +994,19 @@ export default function CreateInvoicePage() {
             <div className="grid gap-5 lg:grid-cols-[minmax(0,1.45fr)_200px] xl:grid-cols-[minmax(0,1.7fr)_220px] lg:items-start">
               <div className="space-y-5">
                 <div className="grid gap-4 md:grid-cols-2">
-                  <div>
+                  <div className="md:max-w-[420px]">
                     <Field label="Invoice No" value={draft.invoiceNumber} onChange={(invoiceNumber) => updateDraft({ invoiceNumber })} />
                     <p className="mt-2 text-sm font-semibold text-slate-400">Latest Invoice No: A00005 (Jan 17, 2024)</p>
                   </div>
-                  <Field
-                    label="Invoice Date"
-                    value={draft.invoiceDate}
-                    type="date"
-                    onChange={(invoiceDate) => updateDraft({ invoiceDate })}
-                    icon={<CalendarDays className="h-4 w-4 text-slate-400" />}
-                  />
+                  <div className="md:max-w-[420px]">
+                    <Field
+                      label="Invoice Date"
+                      value={draft.invoiceDate}
+                      type="date"
+                      onChange={(invoiceDate) => updateDraft({ invoiceDate })}
+                      icon={<CalendarDays className="h-4 w-4 text-slate-400" />}
+                    />
+                  </div>
                 </div>
                 <div className="space-y-1.5 pt-0.5">
                   <button
@@ -1027,7 +1076,7 @@ export default function CreateInvoicePage() {
 
             </div>
 
-            <div className="grid gap-4 xl:grid-cols-2">
+            <div className="grid gap-4 lg:grid-cols-2">
               <SectionCard title="Billed By" subtitle="(Your Details)">
                 <div className="space-y-4">
                   {isAuthed ? (
@@ -1101,7 +1150,7 @@ export default function CreateInvoicePage() {
               </label>
               {draft.shippingEnabled ? (
                 <div className="space-y-4">
-                  <div className="grid gap-4 xl:grid-cols-3">
+                  <div className="grid gap-4 lg:grid-cols-3">
                     <SectionCard title="Shipped From">
                       <div className="space-y-3">
                         <Field label="Business / Freelancer Name" value={draft.businessName} onChange={(businessName) => updateDraft({ businessName })} />
@@ -1250,13 +1299,41 @@ export default function CreateInvoicePage() {
                           <div key={row.id} className={`grid gap-3 px-4 py-4 ${lineItemGridClass} md:items-center`}>
                             <div className="text-sm font-bold text-slate-900">{index + 1}</div>
                             <div className="grid gap-2">
-                              <input value={row.name} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, name: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none" />
-                              <input value={row.description} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, description: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-500 outline-none" />
+                              <input
+                                value={row.name}
+                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, name: e.target.value } : item) }))}
+                                placeholder="Enter item name"
+                                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none placeholder:font-semibold placeholder:text-slate-400"
+                              />
+                              <input
+                                value={row.description}
+                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, description: e.target.value } : item) }))}
+                                placeholder="Enter description"
+                                className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600 outline-none placeholder:text-slate-400"
+                              />
                             </div>
-                            <input type="number" value={row.quantity} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, quantity: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                            <input type="number" value={row.rate} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, rate: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                            <input
+                              type="number"
+                              value={row.quantity || ''}
+                              onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, quantity: Number(e.target.value) || 0 } : item) }))}
+                              placeholder="Qty"
+                              className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
+                            />
+                            <input
+                              type="number"
+                              value={row.rate || ''}
+                              onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, rate: Number(e.target.value) || 0 } : item) }))}
+                              placeholder="Enter rate"
+                              className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
+                            />
                             {draft.showTax ? (
-                              <input type="number" value={row.tax} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                              <input
+                                type="number"
+                                value={row.tax || ''}
+                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))}
+                                placeholder="Tax %"
+                                className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
+                              />
                             ) : null}
                             <div className="flex items-center text-sm font-bold text-slate-900">{formatInvoiceCurrency(amount)}</div>
                             <button
@@ -1359,7 +1436,7 @@ export default function CreateInvoicePage() {
                         ref={notesTextareaRef}
                         value={draft.notes}
                         onChange={(event) => updateDraft({ notes: event.target.value })}
-                        placeholder="Write the invoice notes that should appear in the PDF."
+                        placeholder="Enter notes"
                         className="min-h-[140px] w-full rounded-xl border border-slate-200 bg-slate-50/70 px-4 py-3 text-sm leading-7 text-slate-700 outline-none focus:border-[#2E6EAB]"
                       />
                       <div className="flex items-center justify-end">

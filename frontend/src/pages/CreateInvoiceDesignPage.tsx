@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight, Download, MoreHorizontal, ShieldCheck, Upload, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Download, MoreHorizontal, ShieldCheck, Upload, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { formatInvoiceCurrency, getInvoiceTotal, getLineItemAmount, saveInvoiceDraft, useInvoiceDraft } from '../invoiceDraft';
 import { createInvoice } from '../invoiceApi';
@@ -7,9 +7,9 @@ import { AUTH_STATE_EVENT, isAuthenticated } from '../auth';
 import { downloadElementAsPdf } from '../download';
 
 const steps = [
-  { number: '1', label: 'Invoice Details', active: false },
-  { number: '2', label: 'Your Bank Details', active: false, optional: true },
-  { number: '3', label: 'Select Design & Colors', active: true, subtitle: '(Download or Email Invoice)' },
+  { number: '1', label: 'Invoice Details', active: false, path: '/create-invoice' },
+  { number: '2', label: 'Your Bank Details', active: false, optional: true, path: '/create-invoice/bank-details' },
+  { number: '3', label: 'Select Design & Colors', active: true, subtitle: '(Download or Email Invoice)', path: '/create-invoice/design' },
 ];
 
 export default function CreateInvoiceDesignPage() {
@@ -20,6 +20,7 @@ export default function CreateInvoiceDesignPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [isAuthed, setIsAuthed] = useState(isAuthenticated());
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [isMobileStepsOpen, setIsMobileStepsOpen] = useState(false);
   const autoSaveAfterLoginHandledRef = useRef(false);
   const previewRef = useRef<HTMLDivElement | null>(null);
   const total = getInvoiceTotal(draft, draft.showTax);
@@ -154,8 +155,50 @@ export default function CreateInvoiceDesignPage() {
       ) : null}
 
       <div className="mx-auto max-w-[1380px] space-y-4">
-        <section className="rounded-2xl border border-slate-200 bg-white/95 px-4 py-4 shadow-sm md:px-6">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-center">
+        <section className="rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 shadow-sm md:px-6 md:py-4">
+          <div className="md:hidden">
+            <button
+              type="button"
+              onClick={() => setIsMobileStepsOpen((current) => !current)}
+              className="flex w-full items-center gap-3"
+              aria-expanded={isMobileStepsOpen}
+              aria-label="Toggle invoice steps"
+            >
+              {steps.filter((step) => step.active).map((step) => (
+                <React.Fragment key={step.number}>
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-black ${step.active ? 'border-[#2E6EAB] bg-[#2E6EAB] text-white' : 'border-slate-300 bg-white text-slate-700'}`}>{step.number}</div>
+                  <div className="min-w-0">
+                    <div className="text-[15px] font-bold text-slate-900">{step.label}</div>
+                    {'optional' in step && step.optional ? <div className="text-[11px] font-medium text-slate-400 sm:hidden">Optional</div> : null}
+                    {'subtitle' in step && step.subtitle ? <div className="hidden text-[11px] font-medium text-slate-400 sm:block">{step.subtitle}</div> : null}
+                  </div>
+                  <ChevronDown className={`ml-auto h-4 w-4 text-slate-400 transition-transform duration-200 ${isMobileStepsOpen ? 'rotate-180' : ''}`} />
+                </React.Fragment>
+              ))}
+            </button>
+            {isMobileStepsOpen ? (
+              <div className="mt-3 space-y-2 border-t border-slate-100 pt-3">
+                {steps.map((step) => (
+                  <button
+                    key={step.number}
+                    type="button"
+                    onClick={() => {
+                      setIsMobileStepsOpen(false);
+                      navigate(step.path);
+                    }}
+                    className={`flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left ${step.active ? 'bg-[#EEF4FF]' : 'bg-transparent'}`}
+                  >
+                    <div className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-black ${step.active ? 'border-[#2E6EAB] bg-[#2E6EAB] text-white' : 'border-slate-300 bg-white text-slate-700'}`}>{step.number}</div>
+                    <div className="min-w-0">
+                      <div className={`text-[13px] font-bold ${step.active ? 'text-[#1D4ED8]' : 'text-slate-700'}`}>{step.label}</div>
+                      {'optional' in step && step.optional ? <div className="text-[10px] font-medium text-slate-400">Optional</div> : null}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : null}
+          </div>
+          <div className="hidden flex-col gap-4 md:flex lg:flex-row lg:items-center lg:justify-center">
             {steps.map((step, index) => (
               <React.Fragment key={step.number}>
                 <div className="flex items-start gap-3">

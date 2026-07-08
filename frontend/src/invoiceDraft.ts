@@ -146,13 +146,11 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   shippingEnabled: false,
   currency: 'INR (INR, Rs)',
   lineItems: [
-    { id: makeId('item'), name: 'Item 1', description: 'Description', quantity: 1, rate: 100, tax: 0 },
-    { id: makeId('item'), name: 'Item 2', description: 'Description', quantity: 1, rate: 50, tax: 0 },
-    { id: makeId('item'), name: 'Item 3', description: 'Description', quantity: 1, rate: 75, tax: 0 },
+    { id: makeId('item'), name: '', description: '', quantity: 1, rate: 0, tax: 0 },
   ],
   discountValue: 10,
   discountType: '%',
-  notes: 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent ut nisl tempus massa blandit luctus.',
+  notes: '',
   attachments: [],
   signatureName: '',
   signatureData: '',
@@ -191,6 +189,15 @@ export function loadInvoiceDraft(): InvoiceDraft {
       && parsed.invoiceNumber === 'INV00234'
       && parsed.invoiceDate === '2024-01-17'
       && parsed.dueDate === '2024-01-31';
+    const hasLegacyDemoItems =
+      Array.isArray(parsed.lineItems)
+      && parsed.lineItems.length === 3
+      && parsed.lineItems.every((item, index) =>
+        item?.name === `Item ${index + 1}` && item?.description === 'Description',
+      );
+    const hasLegacyNotesSeed =
+      typeof parsed.notes === 'string'
+      && parsed.notes.trim() === 'Lorem ipsum dolor sit amet, consectetur adipiscing elit. Praesent ut nisl tempus massa blandit luctus.';
     const invoiceDate = isLegacySeed ? todayIsoDate : (parsed.invoiceDate || defaultInvoiceDraft.invoiceDate);
     const dueDate = isLegacySeed ? defaultDueDate : (parsed.dueDate || addDaysToIsoDate(invoiceDate, 14));
     const draft: InvoiceDraft = {
@@ -205,8 +212,12 @@ export function loadInvoiceDraft(): InvoiceDraft {
       logoData: typeof parsed.logoData === 'string' ? parsed.logoData : defaultInvoiceDraft.logoData,
       showTaxItemsSection: parsed.showTaxItemsSection ?? defaultInvoiceDraft.showTaxItemsSection,
       showTax: parsed.showTax ?? defaultInvoiceDraft.showTax,
+      notes: hasLegacyNotesSeed ? defaultInvoiceDraft.notes : (typeof parsed.notes === 'string' ? parsed.notes : defaultInvoiceDraft.notes),
       shippingEnabled: isCurrentSchema ? parsed.shippingEnabled ?? defaultInvoiceDraft.shippingEnabled : false,
-      lineItems: Array.isArray(parsed.lineItems) && parsed.lineItems.length > 0 ? parsed.lineItems : defaultInvoiceDraft.lineItems,
+      lineItems:
+        Array.isArray(parsed.lineItems) && parsed.lineItems.length > 0 && !hasLegacyDemoItems
+          ? parsed.lineItems
+          : defaultInvoiceDraft.lineItems,
       terms: Array.isArray(parsed.terms) && parsed.terms.length > 0 ? parsed.terms : defaultInvoiceDraft.terms,
       customFields: Array.isArray(parsed.customFields) ? parsed.customFields : defaultInvoiceDraft.customFields,
       attachments: Array.isArray(parsed.attachments)
@@ -287,7 +298,7 @@ export function getInvoiceTotal(draft: InvoiceDraft, includeTax = true) {
 }
 
 export function makeInvoiceLineItem(): InvoiceLineItem {
-  return { id: makeId('item'), name: 'Item', description: 'Description', quantity: 1, rate: 0, tax: 0 };
+  return { id: makeId('item'), name: '', description: '', quantity: 1, rate: 0, tax: 0 };
 }
 
 export function makeInvoiceTerm(): InvoiceTerm {
