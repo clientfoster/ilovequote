@@ -19,6 +19,7 @@ import { useNavigate } from 'react-router-dom';
 import { createCustomer, fetchCustomers } from '../customerApi';
 import { fetchUserQuotes } from '../quoteApi';
 import { AUTH_STATE_EVENT, getScopedStorageKey, isAuthenticated } from '../auth';
+import SearchableProfileSelect from '../components/SearchableProfileSelect';
 import {
   formatInvoiceCurrency,
   getDiscountAmount,
@@ -32,6 +33,7 @@ import {
   type InvoiceDraft,
   useInvoiceDraft,
 } from '../invoiceDraft';
+import { BUSINESS_LIBRARY_KEY, buildProfileKey } from '../profileAutofill';
 import { BUSINESS_DRAFT_KEY, CLIENT_DRAFT_KEY } from '../wizard/WizardState';
 import type { BusinessFormValues, ClientFormValues, Customer, Quote } from '../types';
 
@@ -42,8 +44,6 @@ const steps = [
 ];
 
 const currencyOptions = ['INR (INR, Rs)', 'USD (USD, $)', 'EUR (EUR, €)', 'GBP (GBP, £)'];
-
-const BUSINESS_LIBRARY_KEY = 'ilovequote_invoice_business_library';
 
 function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -135,96 +135,6 @@ function ProfileSelect({
   );
 }
 
-function SearchableProfileSelect({
-  label,
-  value,
-  onChange,
-  options,
-  placeholder,
-  emptyMessage,
-}: {
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: ProfileOption[];
-  placeholder: string;
-  emptyMessage: string;
-}) {
-  const [query, setQuery] = useState('');
-  const [isOpen, setIsOpen] = useState(false);
-  const containerRef = useRef<HTMLDivElement | null>(null);
-
-  useEffect(() => {
-    const selected = options.find((option) => option.id === value);
-    setQuery(selected?.label || '');
-  }, [options, value]);
-
-  useEffect(() => {
-    if (!isOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => document.removeEventListener('mousedown', handlePointerDown);
-  }, [isOpen]);
-
-  const filteredOptions = options.filter((option) =>
-    !query.trim() || option.label.toLowerCase().includes(query.trim().toLowerCase()),
-  );
-
-  return (
-    <div ref={containerRef} className="space-y-2">
-      <span className="text-sm font-semibold text-slate-700">{label}</span>
-      <div className="relative">
-        <div className="flex min-h-[46px] items-center rounded-xl border border-slate-200 bg-white px-4 shadow-sm">
-          <Search className="mr-3 h-4 w-4 shrink-0 text-slate-400" />
-          <input
-            value={query}
-            onFocus={() => setIsOpen(true)}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              setQuery(nextValue);
-              setIsOpen(true);
-              if (!nextValue.trim()) {
-                onChange('manual');
-              }
-            }}
-            placeholder={placeholder}
-            className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:text-slate-400"
-          />
-          <ChevronDown className="h-4 w-4 shrink-0 text-slate-400" />
-        </div>
-
-        {isOpen ? (
-          <div className="absolute left-0 right-0 top-full z-20 mt-2 max-h-64 overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((option) => (
-                <button
-                  key={option.id}
-                  type="button"
-                  onClick={() => {
-                    onChange(option.id);
-                    setQuery(option.label);
-                    setIsOpen(false);
-                  }}
-                  className="flex w-full items-center px-4 py-3 text-left text-sm font-semibold text-slate-700 hover:bg-slate-50"
-                >
-                  {option.label}
-                </button>
-              ))
-            ) : (
-              <div className="px-4 py-3 text-sm font-medium text-slate-500">{emptyMessage}</div>
-            )}
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
 
 function BusinessDetailsFields({
   draft,
@@ -287,12 +197,6 @@ function ClientDetailsFields({
       </div>
     </div>
   );
-}
-
-function buildProfileKey(parts: Array<string | undefined | null>) {
-  return parts
-    .map((part) => part?.trim().toLowerCase() || '')
-    .join('|');
 }
 
 function buildBusinessProfileOption(

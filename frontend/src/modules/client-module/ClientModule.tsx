@@ -1,6 +1,8 @@
 import React from 'react';
 import { ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import { FieldErrors, UseFormRegister, UseFormSetValue } from 'react-hook-form';
+import SearchableProfileSelect from '../../components/SearchableProfileSelect';
+import { ProfileOption } from '../../profileAutofill';
 import { ClientFormValues } from '../../types';
 import ClientForm from './components/ClientForm';
 import LivePreview from './components/LivePreview';
@@ -13,6 +15,10 @@ interface ClientStepProps {
   setValue: UseFormSetValue<ClientFormValues>;
   logoUrl: string | null;
   formData: ClientFormValues;
+  isAuthed?: boolean;
+  clientProfiles: Array<ProfileOption<Partial<ClientFormValues>>>;
+  selectedClientProfileId: string;
+  onClientProfileChange: (value: string) => void;
   onLogoChange: (base64: string | null) => void;
   onSubmit: (e: React.FormEvent) => void;
   onBack: () => void;
@@ -27,6 +33,10 @@ export default function ClientStep({
   setValue,
   logoUrl,
   formData,
+  isAuthed = false,
+  clientProfiles,
+  selectedClientProfileId,
+  onClientProfileChange,
   onLogoChange,
   onSubmit,
   onBack,
@@ -50,6 +60,19 @@ export default function ClientStep({
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.76fr)_320px] xl:gap-8 items-start">
         <div>
+          {isAuthed ? (
+            <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <SearchableProfileSelect
+                label="Use a saved customer profile"
+                value={selectedClientProfileId}
+                onChange={onClientProfileChange}
+                options={clientProfiles}
+                placeholder="Search by client name"
+                emptyMessage="No saved customer profiles found."
+              />
+            </div>
+          ) : null}
+
           <ClientForm
             register={register}
             errors={errors}

@@ -1,6 +1,8 @@
 import React from 'react';
 import { Building, ChevronLeft, ChevronRight, Image, MapPin, Share2, Sparkles, Smartphone } from 'lucide-react';
 import { Control, FieldErrors, UseFormRegister, UseFormSetValue, UseFormWatch } from 'react-hook-form';
+import SearchableProfileSelect from '../../components/SearchableProfileSelect';
+import { ProfileOption } from '../../profileAutofill';
 import { BusinessFormValues, ClientFormValues } from '../../types';
 import BusinessForm from './components/BusinessForm';
 import BusinessPreviewCard from './components/BusinessPreviewCard';
@@ -14,6 +16,10 @@ interface BusinessStepProps {
   setValue: UseFormSetValue<BusinessFormValues>;
   businessValues: BusinessFormValues;
   clientValues: Partial<ClientFormValues>;
+  isAuthed?: boolean;
+  businessProfiles: Array<ProfileOption<Partial<BusinessFormValues>>>;
+  selectedBusinessProfileId: string;
+  onBusinessProfileChange: (value: string) => void;
   onNext: () => void;
   onBack: () => void;
   onScrollToSection: (id: string) => void;
@@ -29,6 +35,10 @@ export default function BusinessStep({
   setValue,
   businessValues,
   clientValues,
+  isAuthed = false,
+  businessProfiles,
+  selectedBusinessProfileId,
+  onBusinessProfileChange,
   onNext,
   onBack,
   onScrollToSection,
@@ -38,6 +48,19 @@ export default function BusinessStep({
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 md:gap-5 items-start">
       <div className="lg:col-span-8 xl:col-span-8 space-y-4 md:space-y-5">
+        {isAuthed ? (
+          <div className="rounded-[14px] border border-slate-200 bg-white p-4 shadow-xs">
+            <SearchableProfileSelect
+              label="Use a saved business profile"
+              value={selectedBusinessProfileId}
+              onChange={onBusinessProfileChange}
+              options={businessProfiles}
+              placeholder="Search by business name"
+              emptyMessage="No saved business profiles found."
+            />
+          </div>
+        ) : null}
+
         <BusinessForm
           register={register}
           control={control}

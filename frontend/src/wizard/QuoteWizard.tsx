@@ -26,7 +26,8 @@ import {
   SETTINGS_STORAGE_KEY as SETTINGS_STORAGE_KEY_BASE,
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
-import { getScopedStorageKey, getScopedStorageKeyForScope, isAuthenticated } from '../auth';
+import { AUTH_STATE_EVENT, getScopedStorageKey, getScopedStorageKeyForScope, isAuthenticated } from '../auth';
+import { loadQuoteAutofillProfiles, ProfileOption } from '../profileAutofill';
 import { createQuote, updateQuote } from '../quoteApi';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
@@ -160,6 +161,11 @@ export default function QuoteWizard() {
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isFinalizingQuote, setIsFinalizingQuote] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
+  const [isAuthed, setIsAuthed] = useState(() => isAuthenticated());
+  const [businessProfiles, setBusinessProfiles] = useState<Array<ProfileOption<Partial<BusinessFormValues>>>>([]);
+  const [clientProfiles, setClientProfiles] = useState<Array<ProfileOption<Partial<ClientFormValues>>>>([]);
+  const [selectedBusinessProfileId, setSelectedBusinessProfileId] = useState('manual');
+  const [selectedClientProfileId, setSelectedClientProfileId] = useState('manual');
   const [authPromptIntent, setAuthPromptIntent] = useState<'draft' | 'final' | null>(null);
   const quoteContainerRef = useRef<HTMLDivElement | null>(null);
   const handledAfterLoginActionRef = useRef<string | null>(null);
@@ -185,6 +191,17 @@ export default function QuoteWizard() {
 
   const watchedBusinessValues = watch();
   const watchedClientValues = watchClient();
+
+  useEffect(() => {
+    const syncAuth = () => setIsAuthed(isAuthenticated());
+    syncAuth();
+    window.addEventListener(AUTH_STATE_EVENT, syncAuth);
+    window.addEventListener('storage', syncAuth);
+    return () => {
+      window.removeEventListener(AUTH_STATE_EVENT, syncAuth);
+      window.removeEventListener('storage', syncAuth);
+    };
+  }, []);
 
   useEffect(() => {
     try {
@@ -310,6 +327,62 @@ export default function QuoteWizard() {
       // keep defaults
     }
   }, [reset, resetClient]);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadProfiles = async () => {
+      if (!isAuthed) {
+        if (!cancelled) {
+          setBusinessProfiles([]);
+          setClientProfiles([]);
+          setSelectedBusinessProfileId('manual');
+          setSelectedClientProfileId('manual');
+        }
+        return;
+      }
+
+      const profiles = await loadQuoteAutofillProfiles({
+        businessDraftStorageKey: BUSINESS_DRAFT_KEY,
+        clientDraftStorageKey: CLIENT_DRAFT_KEY,
+      });
+
+      if (!cancelled) {
+        setBusinessProfiles(profiles.businessProfiles);
+        setClientProfiles(profiles.clientProfiles);
+      }
+    };
+
+    void loadProfiles();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isAuthed, BUSINESS_DRAFT_KEY, CLIENT_DRAFT_KEY]);
+
+  const handleBusinessProfileChange = (profileId: string) => {
+    setSelectedBusinessProfileId(profileId);
+    if (profileId === 'manual') return;
+
+    const selectedProfile = businessProfiles.find((profile) => profile.id === profileId);
+    if (!selectedProfile) return;
+
+    Object.entries(selectedProfile.patch).forEach(([key, value]) => {
+      setValue(key as keyof BusinessFormValues, value as never, { shouldDirty: true, shouldTouch: true });
+    });
+  };
+
+  const handleClientProfileChange = (profileId: string) => {
+    setSelectedClientProfileId(profileId);
+    if (profileId === 'manual') return;
+
+    const selectedProfile = clientProfiles.find((profile) => profile.id === profileId);
+    if (!selectedProfile) return;
+
+    Object.entries(selectedProfile.patch).forEach(([key, value]) => {
+      setClientValue(key as keyof ClientFormValues, value as never, { shouldDirty: true, shouldTouch: true });
+    });
+  };
 
   useEffect(() => {
     const formattedTermsStr = termsList
@@ -785,6 +858,10 @@ export default function QuoteWizard() {
                   setValue={setValue}
                   businessValues={watchedBusinessValues}
                   clientValues={watchedClientValues}
+                  isAuthed={isAuthed}
+                  businessProfiles={businessProfiles}
+                  selectedBusinessProfileId={selectedBusinessProfileId}
+                  onBusinessProfileChange={handleBusinessProfileChange}
                   onNext={handleStepNext}
                   onBack={handleBackOrHome}
                   onScrollToSection={() => {}}
@@ -800,6 +877,10 @@ export default function QuoteWizard() {
                   setValue={setClientValue}
                   logoUrl={logoUrl}
                   formData={watchedClientValues}
+                  isAuthed={isAuthed}
+                  clientProfiles={clientProfiles}
+                  selectedClientProfileId={selectedClientProfileId}
+                  onClientProfileChange={handleClientProfileChange}
                   onLogoChange={setLogoUrl}
                   onSubmit={handleClientSubmit(() => handleStepNext())}
                   onBack={() => setCurrentStep(1)}
