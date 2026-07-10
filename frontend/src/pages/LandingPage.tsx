@@ -364,13 +364,39 @@ export default function LandingPage({ isAuthed = false, userName, onLogout }: La
               <Star className="h-4 w-4 fill-current" />
               Popular Tools
             </div>
-            <h1 className="mt-3 text-[28px] font-black leading-[1.03] tracking-[-0.04em] text-[#08143C] sm:mt-4 sm:text-[34px] md:text-[44px]">
+            <h1 className="mt-3 text-[26px] font-black leading-[1.06] tracking-[-0.04em] text-[#08143C] sm:mt-4 sm:text-[34px] md:text-[44px]">
               Create Quotes, Invoices &amp; Business Documents
             </h1>
-            <p className="mt-2 text-[15px] text-slate-600 sm:text-[18px]">All tools are free to use. No hidden charges.</p>
+            <p className="mt-2 text-[15px] leading-7 text-slate-600 sm:text-[18px]">All tools are free to use. No hidden charges.</p>
           </section>
 
-          <section className="relative mt-4 px-0 sm:px-1 md:px-2">
+          <section className="relative mt-5 px-0 sm:px-1 md:px-2">
+            <div className="space-y-4 px-4 sm:hidden">
+              {toolCards.map((card) => (
+                <button
+                  key={card.title}
+                  type="button"
+                  onClick={() => openCreateRoute(card.route)}
+                  className="group flex w-full items-start gap-4 rounded-[28px] border border-slate-200 bg-white px-5 py-5 text-left shadow-[0_10px_28px_rgba(15,23,42,0.05)] transition-transform active:scale-[0.99]"
+                >
+                  <div className={`flex h-[58px] w-[58px] shrink-0 items-center justify-center rounded-[18px] ${card.iconWrap}`}>
+                    <div className="scale-[0.58] origin-center">{card.renderIcon()}</div>
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="text-[17px] font-black tracking-[-0.03em] text-[#09143C]">
+                        {card.title}
+                      </h3>
+                      <ArrowRight className={`mt-1 h-4.5 w-4.5 shrink-0 ${card.accent}`} />
+                    </div>
+                    <p className="mt-2 text-[14px] leading-6 text-slate-600">
+                      {card.description.replace(/\n/g, ' ')}
+                    </p>
+                  </div>
+                </button>
+              ))}
+            </div>
+
             <button
               type="button"
               onClick={() => scrollTools('left')}
@@ -382,7 +408,7 @@ export default function LandingPage({ isAuthed = false, userName, onLogout }: La
 
             <div
               ref={toolsScrollerRef}
-              className="flex gap-4 overflow-x-auto scroll-smooth px-4 pb-2 pt-2 sm:gap-6 sm:px-14 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="hidden gap-4 overflow-x-auto scroll-smooth px-4 pb-2 pt-2 sm:flex sm:gap-6 sm:px-14 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               {toolCards.map((card) => (
                 <article
