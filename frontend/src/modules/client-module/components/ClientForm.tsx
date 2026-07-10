@@ -118,16 +118,14 @@ export default function ClientForm({
         <div className="p-4 md:p-6 space-y-5 md:space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Client / Company Name <span className="text-red-500">*</span>
-              </label>
+              <label className="sr-only" htmlFor="inp-companyName">Client / Company Name</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                   <Building2 size={16} />
                 </span>
                 <input
                   type="text"
-                  placeholder="e.g. Microsoft, ABC Solutions"
+                  placeholder="Client's Business Name (required)"
                   id="inp-companyName"
                   {...register('companyName', { required: true })}
                   className={`w-full pl-10 pr-4 py-3 min-h-[44px] bg-white border rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:ring-4 focus:ring-blue-100 transition-all ${
@@ -138,16 +136,14 @@ export default function ClientForm({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Contact Person <span className="text-slate-400 font-medium normal-case">(Optional)</span>
-              </label>
+              <label className="sr-only" htmlFor="inp-contactPerson">Contact Person</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                   <User size={16} />
                 </span>
                 <input
                   type="text"
-                  placeholder="e.g. Your client name"
+                  placeholder="Contact Person (optional)"
                   id="inp-contactPerson"
                   {...register('contactPerson')}
                   className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
@@ -156,16 +152,14 @@ export default function ClientForm({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Email <span className="text-slate-400 font-medium normal-case">(Optional)</span>
-              </label>
+              <label className="sr-only" htmlFor="inp-email">Email</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                   <Mail size={16} />
                 </span>
                 <input
                   type="email"
-                  placeholder="e.g. john@company.com"
+                  placeholder="Email (optional)"
                   id="inp-email"
                   {...register('email')}
                   className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
@@ -174,16 +168,14 @@ export default function ClientForm({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Phone <span className="text-slate-400 font-medium normal-case">(Optional)</span>
-              </label>
+              <label className="sr-only" htmlFor="inp-phone">Phone</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-3 flex items-center gap-1.5 text-slate-500 text-xs font-semibold">
                   <span className="text-lg leading-none">IN</span>
                 </span>
                 <input
                   type="tel"
-                  placeholder="+91 98765 43210"
+                  placeholder="Phone Number (optional)"
                   id="inp-phone"
                   {...register('phone')}
                   className="w-full pl-12 pr-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
@@ -192,16 +184,14 @@ export default function ClientForm({
             </div>
 
             <div className="md:col-span-2 space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Website <span className="text-slate-400 font-medium normal-case">(Optional)</span>
-              </label>
+              <label className="sr-only" htmlFor="inp-website">Website</label>
               <div className="relative">
                 <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-400">
                   <Globe size={16} />
                 </span>
                 <input
                   type="text"
-                  placeholder="e.g. www.company.com"
+                  placeholder="Website (optional)"
                   id="inp-website"
                   {...register('website')}
                   className="w-full pl-10 pr-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
@@ -224,9 +214,7 @@ export default function ClientForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Tax ID Type
-              </label>
+              <label className="sr-only" htmlFor="inp-taxIdType">Tax ID Type</label>
               <select
                 id="inp-taxIdType"
                 {...register('taxIdType')}
@@ -240,12 +228,10 @@ export default function ClientForm({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Tax ID / GST Number
-              </label>
+              <label className="sr-only" htmlFor="inp-taxId">Tax ID / GST Number</label>
               <input
                 type="text"
-                placeholder="e.g. 27ABCDE1234F1Z5"
+                placeholder="Client's GSTIN (optional)"
                 id="inp-taxId"
                 {...register('taxId')}
                 className="w-full px-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
@@ -253,12 +239,10 @@ export default function ClientForm({
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                PO / Reference No.
-              </label>
+              <label className="sr-only" htmlFor="inp-poNumber">PO / Reference No.</label>
               <input
                 type="text"
-                placeholder="e.g. PO12345"
+                placeholder="PO / Reference No. (optional)"
                 id="inp-poNumber"
                 {...register('poNumber')}
                 className="w-full px-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all"
@@ -266,12 +250,10 @@ export default function ClientForm({
             </div>
 
             <div className="space-y-1.5" id="section-billing-address">
-              <label className="text-xs font-bold text-slate-700 uppercase tracking-wider">
-                Billing Address
-              </label>
+              <label className="sr-only" htmlFor="inp-billingAddress">Billing Address</label>
               <textarea
                 rows={3}
-                placeholder="Kozhikode, Kerala, India 673006"
+                placeholder="Address (optional)"
                 id="inp-billingAddress"
                 {...register('billingAddress')}
                 className="w-full px-4 py-3 min-h-[44px] bg-white border border-[#E5E7EB] rounded-xl text-sm text-slate-800 placeholder-slate-400 font-medium focus:outline-none focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100 transition-all leading-relaxed resize-none"

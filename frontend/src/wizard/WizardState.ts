@@ -1,4 +1,4 @@
-import { INITIAL_ITEMS } from '../itemData';
+import { createInitialItems } from '../itemData';
 import { calculateQuotationTotals } from '../itemUtils';
 import { getScopedStorageKey, getScopedStorageKeyForScope } from '../auth';
 import {
@@ -97,12 +97,13 @@ export const DEFAULT_ITEM_META: ItemQuotationMeta = {
 };
 
 export function createDefaultWizardState(): WizardState {
+  const itemsData = createInitialItems();
   return {
     currentStep: 1,
     businessData: DEFAULT_BUSINESS_VALUES,
     clientData: DEFAULT_CLIENT_VALUES,
-    itemsData: INITIAL_ITEMS,
-    quotationTotals: calculateQuotationTotals(INITIAL_ITEMS),
+    itemsData,
+    quotationTotals: calculateQuotationTotals(itemsData),
     quotationMeta: DEFAULT_ITEM_META,
     logoUrl: null,
     taxRate: DEFAULT_SETTINGS.defaultGstPercent,

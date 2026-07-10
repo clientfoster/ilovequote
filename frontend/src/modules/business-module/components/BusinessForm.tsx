@@ -2,9 +2,6 @@ import React, { useEffect } from 'react';
 import { UseFormRegister, Control, FieldErrors, UseFormWatch, UseFormSetValue } from 'react-hook-form';
 import {
   Building,
-  Mail,
-  Phone,
-  Globe,
   Sparkles,
 } from 'lucide-react';
 import { BusinessFormValues } from '../../../types';
@@ -64,14 +61,12 @@ export default function BusinessForm({ register, control, errors, watch, setValu
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-0.5">
           {/* Company Name */}
           <div className="md:col-span-2 space-y-1.5" id="company-name-group">
-            <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-              Company Name <span className="text-red-500 font-bold">*</span>
-            </label>
+            <label className="sr-only" htmlFor="biz-company-name">Company Name</label>
             <div className="relative">
               <input
                 type="text"
                 id="biz-company-name"
-                placeholder="Your company name"
+                placeholder="Your Business Name (required)"
                 {...register('companyName', { 
                   required: 'Company name is required to build the quote.' 
                 })}
@@ -94,15 +89,10 @@ export default function BusinessForm({ register, control, errors, watch, setValu
 
           {/* Tagline / Business Description */}
           <div className="md:col-span-2 space-y-1.5" id="tagline-group">
-            <div className="flex items-center justify-between">
-              <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider">
-                Tagline / Business Description
-              </label>
-              <span className="text-[10px] text-slate-400 font-bold uppercase">Optional</span>
-            </div>
+            <label className="sr-only" htmlFor="biz-tagline">Tagline / Business Description</label>
             <textarea
               id="biz-tagline"
-              placeholder="Describe what your business does."
+              placeholder="Describe what your business does (optional)"
               {...register('tagline')}
               className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105 rounded-xl px-4 py-3 text-sm font-semibold transition-all outline-hidden h-24 max-h-36 placeholder:text-slate-400"
             />
@@ -110,14 +100,11 @@ export default function BusinessForm({ register, control, errors, watch, setValu
 
           {/* Email */}
           <div className="space-y-1.5" id="email-group">
-            <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-              <Mail className="w-3.5 h-3.5 text-slate-400" />
-              Email <span className="text-slate-400 font-medium normal-case">(Optional)</span>
-            </label>
+            <label className="sr-only" htmlFor="biz-email">Email</label>
             <input
               type="text"
               id="biz-email"
-              placeholder="hello@yourbusiness.com"
+              placeholder="Your Email (optional)"
               {...register('email', {
                 pattern: {
                   value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
@@ -139,14 +126,11 @@ export default function BusinessForm({ register, control, errors, watch, setValu
 
           {/* Phone */}
           <div className="space-y-1.5" id="phone-group">
-            <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-              <Phone className="w-3.5 h-3.5 text-slate-400" />
-              Phone <span className="text-slate-400 font-medium normal-case">(Optional)</span>
-            </label>
+            <label className="sr-only" htmlFor="biz-phone">Phone</label>
             <input
               type="text"
               id="biz-phone"
-              placeholder="+91 98765 43210"
+              placeholder="Phone Number (optional)"
               {...register('phone')}
               className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105 rounded-xl px-4 py-2.5 min-h-[46px] text-sm font-semibold transition-all outline-hidden"
             />
@@ -154,14 +138,11 @@ export default function BusinessForm({ register, control, errors, watch, setValu
 
           {/* Website */}
           <div className="md:col-span-2 space-y-1.5" id="website-group">
-            <label className="text-xs font-extrabold text-slate-700 uppercase tracking-wider flex items-center gap-1">
-              <Globe className="w-3.5 h-3.5 text-slate-400" />
-              Website <span className="text-slate-400 font-medium normal-case">(Optional)</span>
-            </label>
+            <label className="sr-only" htmlFor="biz-website">Website</label>
             <input
               type="text"
               id="biz-website"
-              placeholder="https://www.yourbusiness.com"
+              placeholder="Website (optional)"
               {...register('website', {
                 validate: (v) => {
                   if (!v) return true;

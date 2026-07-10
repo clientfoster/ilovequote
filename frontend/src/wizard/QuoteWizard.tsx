@@ -9,7 +9,7 @@ import ItemsWorkspace from '../modules/items-module/ItemsModule';
 import PreviewStep from '../modules/preview-module/PreviewModule';
 import StepWizard from '../components/StepWizard';
 import BrandMark from '../components/BrandMark';
-import { INITIAL_ITEMS } from '../itemData';
+import { createInitialItems } from '../itemData';
 import { calculateQuotationTotals } from '../itemUtils';
 import { BusinessFormValues, ClientFormValues, ItemQuoteItem, ItemQuotationMeta } from '../types';
 import {
@@ -27,6 +27,7 @@ import {
 } from './WizardState';
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
 import { AUTH_STATE_EVENT, getScopedStorageKey, getScopedStorageKeyForScope, isAuthenticated } from '../auth';
+import { NEW_DOCUMENT_EVENT } from '../documentReset';
 import { loadQuoteAutofillProfiles, ProfileOption } from '../profileAutofill';
 import { createQuote, updateQuote } from '../quoteApi';
 
@@ -151,7 +152,7 @@ export default function QuoteWizard() {
   });
   const [businessData, setBusinessData] = useState<BusinessFormValues>(DEFAULT_BUSINESS_VALUES);
   const [clientData, setClientData] = useState<ClientFormValues>(DEFAULT_CLIENT_VALUES);
-  const [itemsData, setItemsData] = useState<ItemQuoteItem[]>(INITIAL_ITEMS);
+  const [itemsData, setItemsData] = useState<ItemQuoteItem[]>(() => createInitialItems());
   const [quotationMeta, setQuotationMeta] = useState<ItemQuotationMeta>(DEFAULT_ITEM_META);
   const [logoUrl, setLogoUrl] = useState<string | null>(null);
   const [taxRate, setTaxRate] = useState(18);
@@ -484,7 +485,7 @@ export default function QuoteWizard() {
   const handleReset = () => {
     setBusinessData(DEFAULT_BUSINESS_VALUES);
     setClientData(DEFAULT_CLIENT_VALUES);
-    setItemsData(INITIAL_ITEMS);
+    setItemsData(createInitialItems());
     setQuotationMeta(DEFAULT_ITEM_META);
     setLogoUrl(null);
     setTaxRate(DEFAULT_SETTINGS.defaultGstPercent);
@@ -500,10 +501,23 @@ export default function QuoteWizard() {
     localStorage.removeItem(TERMS_STORAGE_KEY);
     localStorage.removeItem(EDITING_QUOTE_ID_KEY);
     window.sessionStorage.removeItem(WIZARD_STEP_STORAGE_KEY);
+    setSelectedBusinessProfileId('manual');
+    setSelectedClientProfileId('manual');
     setEditingQuoteId(null);
     setSaveState('idle');
     onTriggerToast('Draft reset');
   };
+
+  useEffect(() => {
+    const handleNewDocument = (event: Event) => {
+      const detail = (event as CustomEvent<{ module?: string }>).detail;
+      if (detail?.module !== 'quote') return;
+      handleReset();
+    };
+
+    window.addEventListener(NEW_DOCUMENT_EVENT, handleNewDocument);
+    return () => window.removeEventListener(NEW_DOCUMENT_EVENT, handleNewDocument);
+  }, []);
 
   const handleStepBack = () => setCurrentStep((s) => (Math.max(1, s - 1) as 1 | 2 | 3 | 4));
 

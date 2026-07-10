@@ -134,7 +134,7 @@ export default function ItemsWorkspace({
 
   return (
     <div className="w-full space-y-5 md:space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_360px] gap-4 md:gap-6 items-start">
+      <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-6 items-start">
         <div className="space-y-4 md:space-y-5">
           <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -161,17 +161,17 @@ export default function ItemsWorkspace({
           </div>
 
           <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-            <div className="hidden lg:grid grid-cols-[minmax(170px,1.35fr)_72px_96px_84px_118px_108px_72px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
-              <div>Item / Description</div>
-              <div className="text-center">Qty</div>
-              <div>Unit Price</div>
-              <div>Discount</div>
-              <div>Tax</div>
-              <div>Amount</div>
-              <div />
-            </div>
+              <div className="hidden lg:grid grid-cols-[minmax(0,2.5fr)_72px_96px_86px_128px_92px_40px] gap-3 px-4 py-3 bg-slate-50 border-b border-slate-200 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+                <div>Item / Description</div>
+                <div className="text-center">Qty</div>
+                <div>Unit Price</div>
+                <div>Discount</div>
+                <div>Tax</div>
+                <div>Amount</div>
+                <div />
+              </div>
 
-            <div className="divide-y divide-slate-200">
+              <div className="divide-y divide-slate-200">
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center text-center py-16 px-6 bg-white min-h-[400px]">
                   <div className="relative mb-6 flex justify-center w-full">
@@ -213,14 +213,16 @@ export default function ItemsWorkspace({
                   const row = getRowBreakdown(item);
                   return (
                     <div key={item.id} className="px-4 py-4 lg:py-6">
-                      <div className="hidden lg:grid grid-cols-[minmax(170px,1.35fr)_72px_96px_84px_118px_108px_72px] gap-3 items-center min-h-[96px]">
-                        <div className="flex items-start gap-3 min-w-0">
+                      <div className="hidden lg:grid grid-cols-[minmax(0,2.5fr)_72px_96px_86px_128px_92px_40px] gap-3 items-center min-h-[96px]">
+                        <div className="flex min-w-0 items-start gap-3">
                           <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border bg-slate-50 border-slate-200 text-slate-800 text-xl font-bold">
                             {index + 1}
                           </div>
-                          <div className="min-w-0">
-                            <h4 className="max-w-[120px] text-sm font-bold text-slate-900 leading-tight">{item.name}</h4>
-                            <p className="mt-1 max-w-[132px] text-xs leading-relaxed text-slate-500 break-words">
+                          <div className="min-w-0 flex-1">
+                            <h4 className="text-sm font-bold leading-tight text-slate-900 break-words [word-break:normal] [overflow-wrap:break-word]">
+                              {item.name}
+                            </h4>
+                            <p className="mt-1 text-xs leading-relaxed text-slate-500 break-words [word-break:normal] [overflow-wrap:break-word]">
                               {item.description || 'No description provided.'}
                             </p>
                           </div>
@@ -250,37 +252,37 @@ export default function ItemsWorkspace({
                           )}
                         </div>
 
-                        <div>
-                          <div className="inline-flex min-h-[44px] w-full items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-2 text-sm font-medium text-slate-800 whitespace-nowrap">
-                            {item.gstRate}% GST
-                            <ChevronDown size={14} className="text-slate-400" />
+                        <div className="min-w-0">
+                          <div className="inline-flex min-h-[44px] w-full min-w-0 items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-800">
+                            <span className="truncate">{item.gstRate}% GST</span>
+                            <ChevronDown size={14} className="shrink-0 text-slate-400" />
                           </div>
                         </div>
 
-                        <div className="text-sm font-bold text-slate-900 font-mono whitespace-nowrap">
+                        <div className="min-w-0 text-sm font-bold text-slate-900 font-mono whitespace-nowrap">
                           {formatCurrency(row.amount, meta.currency)}
                         </div>
 
-                        <div className="flex items-center justify-end gap-1 pl-1">
+                        <div className="flex items-center justify-end">
                           <div className="relative inline-block text-left">
                             <button
                               type="button"
                               onClick={() => setActiveMenuId(activeMenuId === item.id ? null : item.id)}
-                              className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700"
+                              className="inline-flex h-9 w-9 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 shadow-sm transition-colors hover:bg-slate-50 hover:text-slate-700"
                               aria-label={`More actions for ${item.name}`}
                               title="More actions"
                             >
                               <MoreVertical size={16} />
                             </button>
-                            
+
                             {activeMenuId === item.id && (
                               <>
-                                <div 
-                                  className="fixed inset-0 z-10" 
+                                <div
+                                  className="fixed inset-0 z-10"
                                   onClick={() => setActiveMenuId(null)}
                                 />
-                                <div className="absolute right-0 z-20 mt-1 w-36 origin-top-right overflow-hidden rounded-xl bg-white shadow-lg ring-1 ring-black/5">
-                                  <div className="py-1">
+                                <div className="absolute right-0 z-20 mt-2 w-40 origin-top-right overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
+                                  <div className="py-1.5">
                                     <button
                                       type="button"
                                       onClick={() => {
@@ -288,7 +290,7 @@ export default function ItemsWorkspace({
                                         setIsModalOpen(true);
                                         setActiveMenuId(null);
                                       }}
-                                      className="group flex w-full items-center px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                                      className="group flex w-full items-center px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                                     >
                                       <Pencil className="mr-2 h-4 w-4 text-slate-400 group-hover:text-blue-500" />
                                       Edit
@@ -299,7 +301,7 @@ export default function ItemsWorkspace({
                                         handleDuplicateItem(item);
                                         setActiveMenuId(null);
                                       }}
-                                      className="group flex w-full items-center px-3 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
+                                      className="group flex w-full items-center px-3 py-2.5 text-sm font-medium text-slate-700 hover:bg-slate-50 hover:text-slate-900"
                                     >
                                       <Copy className="mr-2 h-4 w-4 text-slate-400 group-hover:text-indigo-500" />
                                       Duplicate
@@ -310,7 +312,7 @@ export default function ItemsWorkspace({
                                         handleDeleteItem(item.id);
                                         setActiveMenuId(null);
                                       }}
-                                      className="group flex w-full items-center px-3 py-2 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
+                                      className="group flex w-full items-center px-3 py-2.5 text-sm font-medium text-red-600 hover:bg-red-50 hover:text-red-700"
                                     >
                                       <Trash2 className="mr-2 h-4 w-4 text-red-400 group-hover:text-red-500" />
                                       Delete
@@ -320,18 +322,6 @@ export default function ItemsWorkspace({
                               </>
                             )}
                           </div>
-                          <button
-                            type="button"
-                            onClick={() => {
-                              handleDeleteItem(item.id);
-                              setActiveMenuId(null);
-                            }}
-                            className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-slate-200 bg-white text-red-400 shadow-sm transition-colors hover:bg-red-50 hover:text-red-600"
-                            aria-label={`Delete ${item.name}`}
-                            title="Delete item"
-                          >
-                            <Trash2 size={14} />
-                          </button>
                         </div>
                       </div>
 
@@ -352,7 +342,7 @@ export default function ItemsWorkspace({
                   );
                 })
               )}
-            </div>
+              </div>
 
             {items.length > 0 && (
               <div className="border-t border-slate-200 p-4 md:p-5">
@@ -378,7 +368,7 @@ export default function ItemsWorkspace({
 
           <TermsAndConditions terms={terms} onChange={onTermsChange} />
 
-          <div className="md:hidden">
+          <div className="2xl:hidden">
             <BottomSummary
               items={items}
               currencySymbol={meta.currency}
@@ -416,7 +406,7 @@ export default function ItemsWorkspace({
           )}
       </div>
 
-        <div className="hidden xl:block space-y-4 md:space-y-5 sticky top-20">
+        <div className="hidden 2xl:block space-y-4 md:space-y-5 sticky top-20">
           <BottomSummary
             items={items}
             currencySymbol={meta.currency}

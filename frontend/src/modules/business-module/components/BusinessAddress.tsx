@@ -34,13 +34,11 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
 
       {/* Street/Full Address */}
       <div className="space-y-1.5" id="address-group">
-        <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-          Address <span className="font-medium normal-case text-slate-400">(Optional)</span>
-        </label>
+        <label className="sr-only" htmlFor="address-street">Address</label>
         <input
           type="text"
           id="address-street"
-          placeholder="e.g. 123, Digital Tower, Kerala, India"
+          placeholder="Address (optional)"
           {...register('address')}
           className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
         />
@@ -49,13 +47,11 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
         {/* City */}
         <div className="space-y-1.5" id="city-group">
-          <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            City <span className="font-medium normal-case text-slate-400">(Optional)</span>
-          </label>
+          <label className="sr-only" htmlFor="address-city">City</label>
           <input
             type="text"
             id="address-city"
-            placeholder="e.g. Kozhikode"
+            placeholder="City (optional)"
             {...register('city')}
             className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
           />
@@ -63,13 +59,11 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
 
         {/* State */}
         <div className="space-y-1.5" id="state-group">
-          <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            State <span className="font-medium normal-case text-slate-400">(Optional)</span>
-          </label>
+          <label className="sr-only" htmlFor="address-state">State</label>
           <input
             type="text"
             id="address-state"
-            placeholder="e.g. Kerala"
+            placeholder="State (optional)"
             {...register('state')}
             className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
           />
@@ -79,13 +73,11 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {/* Zip/Pin Code */}
         <div className="space-y-1.5" id="zip-group">
-          <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            PIN / ZIP Code <span className="font-medium normal-case text-slate-400">(Optional)</span>
-          </label>
+          <label className="sr-only" htmlFor="address-zip">PIN / ZIP Code</label>
           <input
             type="text"
             id="address-zip"
-            placeholder="e.g. 673006"
+            placeholder="Postal Code / ZIP Code"
             {...register('zipCode')}
             className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-2.5 text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
           />
@@ -93,9 +85,7 @@ export default function BusinessAddress({ register, errors }: BusinessAddressPro
 
         {/* Country */}
         <div className="space-y-1.5" id="country-group">
-          <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            Country <span className="font-medium normal-case text-slate-400">(Optional)</span>
-          </label>
+          <label className="sr-only" htmlFor="address-country">Country</label>
           <div className="relative">
             <select
               id="address-country"

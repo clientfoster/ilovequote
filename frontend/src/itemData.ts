@@ -1,6 +1,24 @@
 import { ItemQuoteItem, ItemQuotationMeta } from './types';
 
-export const INITIAL_ITEMS: ItemQuoteItem[] = [];
+function makeInitialItem(): ItemQuoteItem {
+  return {
+    id: `item-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+    name: '',
+    price: 0,
+    description: '',
+    complimentary: false,
+    quantity: 1,
+    unit: 'Nos',
+    discountType: 'None',
+    discountValue: 0,
+    gstRate: 18,
+    taxInclusive: false,
+    icon: 'Laptop',
+  };
+}
+
+export const createInitialItems = (): ItemQuoteItem[] => [makeInitialItem()];
+export const INITIAL_ITEMS: ItemQuoteItem[] = createInitialItems();
 export const INITIAL_META: ItemQuotationMeta = {
   quotationNumber: '',
   clientName: '',

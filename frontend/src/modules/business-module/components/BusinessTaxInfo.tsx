@@ -1,7 +1,7 @@
 import React from 'react';
 import { UseFormRegister, FieldErrors, UseFormWatch } from 'react-hook-form';
 import { Percent } from 'lucide-react';
-import { BusinessFormValues, TaxType } from '../../../types';
+import { BusinessFormValues } from '../../../types';
 
 interface BusinessTaxInfoProps {
   register: UseFormRegister<BusinessFormValues>;
@@ -11,19 +11,6 @@ interface BusinessTaxInfoProps {
 
 export default function BusinessTaxInfo({ register, errors, watch }: BusinessTaxInfoProps) {
   const selectedTaxType = watch('taxType') || 'GSTIN';
-
-  const getTaxPlaceholder = (type: TaxType) => {
-    switch (type) {
-      case 'GSTIN':
-        return 'E.g., 22AAAAA0000A1Z5';
-      case 'VAT':
-        return 'E.g., GB123456789';
-      case 'PAN':
-        return 'E.g., ABCDE1234F';
-      default:
-        return 'E.g., Tax reference or registration number';
-    }
-  };
 
   return (
     <div className="space-y-4" id="tax-section">
@@ -38,9 +25,7 @@ export default function BusinessTaxInfo({ register, errors, watch }: BusinessTax
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 md:gap-4">
         {/* Tax ID Type Select */}
         <div className="space-y-1.5" id="tax-type-group">
-          <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            Tax ID Type
-          </label>
+          <label className="sr-only" htmlFor="tax-id-type">Tax ID Type</label>
           <div className="relative">
             <select
               id="tax-id-type"
@@ -62,13 +47,17 @@ export default function BusinessTaxInfo({ register, errors, watch }: BusinessTax
 
         {/* Tax ID Input */}
         <div className="space-y-1.5" id="tax-id-group">
-          <label className="text-xs font-bold text-slate-600 tracking-wide uppercase">
-            Tax ID / GST Number
-          </label>
+          <label className="sr-only" htmlFor="tax-id-number">Tax ID / GST Number</label>
           <input
             type="text"
             id="tax-id-number"
-            placeholder={getTaxPlaceholder(selectedTaxType)}
+            placeholder={
+              selectedTaxType === 'GSTIN'
+                ? 'Your GSTIN (optional)'
+                : selectedTaxType === 'PAN'
+                  ? 'Your PAN (optional)'
+                  : 'Tax ID / Registration Number (optional)'
+            }
             {...register('taxId')}
             className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-800 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-100 rounded-xl px-4 py-3 min-h-[44px] text-sm font-medium transition-all outline-hidden placeholder:text-slate-400"
           />

@@ -6,7 +6,6 @@ import { ProfileOption } from '../../profileAutofill';
 import { ClientFormValues } from '../../types';
 import ClientForm from './components/ClientForm';
 import LivePreview from './components/LivePreview';
-import ShortcutCards from './components/ShortcutCards';
 import FeatureSection from './components/FeatureSection';
 
 interface ClientStepProps {
@@ -58,7 +57,7 @@ export default function ClientStep({
         </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.08fr)_minmax(0,0.76fr)_320px] xl:gap-8 items-start">
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(360px,0.85fr)] xl:gap-8 items-start">
         <div>
           {isAuthed ? (
             <div className="mb-4 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
@@ -85,10 +84,6 @@ export default function ClientStep({
 
         <div className="lg:sticky lg:top-24">
           <LivePreview formData={formData} logoUrl={logoUrl} />
-        </div>
-
-        <div className="lg:sticky lg:top-24">
-          <ShortcutCards />
         </div>
       </div>
 

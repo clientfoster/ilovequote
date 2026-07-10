@@ -20,7 +20,10 @@ import { createCustomer, fetchCustomers } from '../customerApi';
 import { fetchUserQuotes } from '../quoteApi';
 import { AUTH_STATE_EVENT, getScopedStorageKey, isAuthenticated } from '../auth';
 import SearchableProfileSelect from '../components/SearchableProfileSelect';
+import { NEW_DOCUMENT_EVENT } from '../documentReset';
 import {
+  clearInvoiceDraftStorage,
+  defaultInvoiceDraft,
   formatInvoiceCurrency,
   getDiscountAmount,
   getInvoiceTotal,
@@ -71,6 +74,8 @@ function Field({
   icon,
   required = true,
   inputRef,
+  placeholder,
+  hideLabel = true,
 }: {
   label: string;
   value: string;
@@ -79,20 +84,28 @@ function Field({
   icon?: React.ReactNode;
   required?: boolean;
   inputRef?: React.Ref<HTMLInputElement>;
+  placeholder?: string;
+  hideLabel?: boolean;
 }) {
+  const resolvedPlaceholder = placeholder || `${label} ${required ? '(required)' : '(optional)'}`;
+
   return (
     <label className="space-y-2">
-      <span className="text-sm font-semibold text-slate-700">
-        {label}
-        {required ? <span className="text-rose-500">*</span> : null}
-      </span>
+      {hideLabel ? <span className="sr-only">{label}</span> : (
+        <span className="text-sm font-semibold text-slate-700">
+          {label}
+          {required ? <span className="text-rose-500">*</span> : null}
+        </span>
+      )}
       <div className="flex min-h-[46px] items-center rounded-xl border border-slate-200 bg-white px-4 shadow-sm">
         <input
           ref={inputRef}
           type={type}
           value={value}
           onChange={(event) => onChange(event.target.value)}
-          className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none"
+          placeholder={resolvedPlaceholder}
+          aria-label={label}
+          className="w-full bg-transparent text-sm font-medium text-slate-700 outline-none placeholder:font-medium placeholder:text-slate-400"
         />
         {icon}
       </div>
@@ -160,15 +173,15 @@ function BusinessDetailsFields({
         </button>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Business Name" value={draft.businessName} onChange={(businessName) => updateDraft({ businessName })} />
-        <Field label="Email" value={draft.email} onChange={(email) => updateDraft({ email })} />
-        <Field label="Phone No" value={draft.businessPhone} type="tel" required={false} onChange={(businessPhone) => updateDraft({ businessPhone })} />
-        <Field label="Address" value={draft.businessAddress} onChange={(businessAddress) => updateDraft({ businessAddress })} />
-        <Field label="GSTIN" value={draft.gstin} onChange={(gstin) => updateDraft({ gstin })} />
-        <Field label="PAN" value={draft.pan} onChange={(pan) => updateDraft({ pan })} />
-        <Field label="Postal" value={draft.businessPostal} onChange={(businessPostal) => updateDraft({ businessPostal })} />
-        <Field label="City" value={draft.businessCity} onChange={(businessCity) => updateDraft({ businessCity })} />
-        <Field label="Country" value={draft.businessCountry} onChange={(businessCountry) => updateDraft({ businessCountry })} />
+        <Field label="Business Name" placeholder="Your Business Name (required)" hideLabel value={draft.businessName} onChange={(businessName) => updateDraft({ businessName })} />
+        <Field label="Email" placeholder="Your Email (required)" hideLabel value={draft.email} onChange={(email) => updateDraft({ email })} />
+        <Field label="Phone No" placeholder="Phone Number (optional)" hideLabel type="tel" required={false} value={draft.businessPhone} onChange={(businessPhone) => updateDraft({ businessPhone })} />
+        <Field label="Address" placeholder="Address (optional)" hideLabel required={false} value={draft.businessAddress} onChange={(businessAddress) => updateDraft({ businessAddress })} />
+        <Field label="GSTIN" placeholder="Your GSTIN (optional)" hideLabel required={false} value={draft.gstin} onChange={(gstin) => updateDraft({ gstin })} />
+        <Field label="PAN" placeholder="Your PAN (optional)" hideLabel required={false} value={draft.pan} onChange={(pan) => updateDraft({ pan })} />
+        <Field label="Postal" placeholder="Postal Code / ZIP Code" hideLabel required={false} value={draft.businessPostal} onChange={(businessPostal) => updateDraft({ businessPostal })} />
+        <Field label="City" placeholder="City (optional)" hideLabel required={false} value={draft.businessCity} onChange={(businessCity) => updateDraft({ businessCity })} />
+        <Field label="Country" placeholder="Country (optional)" hideLabel required={false} value={draft.businessCountry} onChange={(businessCountry) => updateDraft({ businessCountry })} />
       </div>
     </div>
   );
@@ -184,16 +197,16 @@ function ClientDetailsFields({
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
       <div className="grid gap-3 md:grid-cols-2">
-        <Field label="Client Name" value={draft.clientName} onChange={(clientName) => updateDraft({ clientName })} />
-        <Field label="Company Name" value={draft.billedToCompany} onChange={(billedToCompany) => updateDraft({ billedToCompany })} />
-        <Field label="Phone No" value={draft.billedToPhone} type="tel" required={false} onChange={(billedToPhone) => updateDraft({ billedToPhone })} />
-        <Field label="Client ID" value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
-        <Field label="Address" value={draft.billedToAddress} onChange={(billedToAddress) => updateDraft({ billedToAddress })} />
-        <Field label="City" value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} />
-        <Field label="Country" value={draft.billedToCountry} onChange={(billedToCountry) => updateDraft({ billedToCountry })} />
-        <Field label="Postal" value={draft.billedToPostal} onChange={(billedToPostal) => updateDraft({ billedToPostal })} />
-        <Field label="PO Number" value={draft.subtitle} onChange={(subtitle) => updateDraft({ subtitle, showSubtitle: true })} />
-        <Field label="Reference Number" value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
+        <Field label="Client Name" placeholder="Client Name (required)" hideLabel value={draft.clientName} onChange={(clientName) => updateDraft({ clientName })} />
+        <Field label="Company Name" placeholder="Client's Business Name (required)" hideLabel value={draft.billedToCompany} onChange={(billedToCompany) => updateDraft({ billedToCompany })} />
+        <Field label="Phone No" placeholder="Phone Number (optional)" hideLabel type="tel" required={false} value={draft.billedToPhone} onChange={(billedToPhone) => updateDraft({ billedToPhone })} />
+        <Field label="Client ID" placeholder="Client ID (optional)" hideLabel required={false} value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
+        <Field label="Address" placeholder="Address (optional)" hideLabel required={false} value={draft.billedToAddress} onChange={(billedToAddress) => updateDraft({ billedToAddress })} />
+        <Field label="City" placeholder="City (optional)" hideLabel required={false} value={draft.billedToCity} onChange={(billedToCity) => updateDraft({ billedToCity })} />
+        <Field label="Country" placeholder="Country (optional)" hideLabel required={false} value={draft.billedToCountry} onChange={(billedToCountry) => updateDraft({ billedToCountry })} />
+        <Field label="Postal" placeholder="Postal Code / ZIP Code" hideLabel required={false} value={draft.billedToPostal} onChange={(billedToPostal) => updateDraft({ billedToPostal })} />
+        <Field label="PO Number" placeholder="PO Number (optional)" hideLabel required={false} value={draft.subtitle} onChange={(subtitle) => updateDraft({ subtitle, showSubtitle: true })} />
+        <Field label="Reference Number" placeholder="Reference Number (optional)" hideLabel required={false} value={draft.clientId} onChange={(clientId) => updateDraft({ clientId })} />
       </div>
     </div>
   );
@@ -447,6 +460,23 @@ export default function CreateInvoicePage() {
     });
   };
 
+  const resetInvoiceBuilder = () => {
+    clearInvoiceDraftStorage();
+    setDraft(defaultInvoiceDraft);
+    setSelectedBusinessProfileId('manual');
+    setSelectedClientProfileId('manual');
+    setIsBusinessEditing(true);
+    setIsCurrencyMenuOpen(false);
+    setIsMobileStepsOpen(false);
+    setShowNotesEditor(false);
+    setShowAttachmentsEditor(false);
+    setShowSignatureEditor(false);
+
+    if (attachmentInputRef.current) attachmentInputRef.current.value = '';
+    if (signatureInputRef.current) signatureInputRef.current.value = '';
+    if (logoInputRef.current) logoInputRef.current.value = '';
+  };
+
   useEffect(() => {
     const syncAuth = () => setIsAuthed(isAuthenticated());
     syncAuth();
@@ -458,6 +488,17 @@ export default function CreateInvoicePage() {
       window.removeEventListener(AUTH_STATE_EVENT, syncAuth);
       window.removeEventListener('storage', syncAuth);
     };
+  }, []);
+
+  useEffect(() => {
+    const handleNewDocument = (event: Event) => {
+      const detail = (event as CustomEvent<{ module?: string }>).detail;
+      if (detail?.module !== 'invoice') return;
+      resetInvoiceBuilder();
+    };
+
+    window.addEventListener(NEW_DOCUMENT_EVENT, handleNewDocument);
+    return () => window.removeEventListener(NEW_DOCUMENT_EVENT, handleNewDocument);
   }, []);
 
   useEffect(() => {
