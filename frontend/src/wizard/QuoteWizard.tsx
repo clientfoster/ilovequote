@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
 import { CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle, Moon, Save, ShieldCheck, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
@@ -60,6 +60,19 @@ const makeQuoteId = () => `quote-${Date.now()}`;
 
 const WIZARD_STEP_STORAGE_KEY = 'ilovequote_quote_wizard_step';
 const GUEST_SCOPE = 'guest';
+
+function formatSaveAge(savedAt: number | null, now: number) {
+  if (!savedAt) return 'Waiting for changes';
+
+  const elapsedSeconds = Math.max(0, Math.floor((now - savedAt) / 1000));
+  if (elapsedSeconds < 2) return 'Just now';
+  if (elapsedSeconds < 60) return `${elapsedSeconds} sec ago`;
+
+  const elapsedMinutes = Math.floor(elapsedSeconds / 60);
+  if (elapsedMinutes < 60) return `${elapsedMinutes} min ago`;
+
+  return `${Math.floor(elapsedMinutes / 60)} hr ago`;
+}
 
 function readScopedStorageEntry(baseKey: string) {
   const currentKey = getScopedStorageKey(baseKey);
@@ -158,7 +171,9 @@ export default function QuoteWizard() {
   const [taxRate, setTaxRate] = useState(18);
   const [termsAndConditions, setTermsAndConditions] = useState('');
   const [termsList, setTermsList] = useState<TermItem[]>([]);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('saved');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('saving');
+  const [lastSavedAt, setLastSavedAt] = useState<number | null>(null);
+  const [saveClock, setSaveClock] = useState(() => Date.now());
   const [isSavingDraft, setIsSavingDraft] = useState(false);
   const [isFinalizingQuote, setIsFinalizingQuote] = useState(false);
   const [editingQuoteId, setEditingQuoteId] = useState<string | null>(null);
@@ -171,10 +186,23 @@ export default function QuoteWizard() {
   const quoteContainerRef = useRef<HTMLDivElement | null>(null);
   const handledAfterLoginActionRef = useRef<string | null>(null);
 
+  useEffect(() => {
+    if (!lastSavedAt) return undefined;
+
+    const timer = window.setInterval(() => setSaveClock(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [lastSavedAt]);
+
+  const saveStatusLabel = saveState === 'saving' ? 'Saving...' : saveState === 'saved' ? 'Auto Saved' : 'Save unavailable';
+  const saveStatusDetail = saveState === 'saving' ? 'Saving changes...' : formatSaveAge(lastSavedAt, saveClock);
+  const saveStatusIcon = saveState === 'saving'
+    ? <LoaderCircle className="mt-0.5 h-4 w-4 animate-spin text-[#2563EB]" />
+    : <CheckCircle2 className={`mt-0.5 h-4 w-4 ${saveState === 'saved' ? 'text-emerald-500' : 'text-slate-400'}`} />;
+
   const {
     register: registerClient,
     handleSubmit: handleClientSubmit,
-    watch: watchClient,
+    control: clientControl,
     setValue: setClientValue,
     formState: { errors: clientErrors },
     reset: resetClient,
@@ -190,8 +218,8 @@ export default function QuoteWizard() {
     trigger,
   } = useForm<BusinessFormValues>({ defaultValues: DEFAULT_BUSINESS_VALUES, mode: 'onChange' });
 
-  const watchedBusinessValues = watch();
-  const watchedClientValues = watchClient();
+  const watchedBusinessValues = useWatch({ control });
+  const watchedClientValues = useWatch({ control: clientControl });
 
   useEffect(() => {
     const syncAuth = () => setIsAuthed(isAuthenticated());
@@ -426,9 +454,11 @@ export default function QuoteWizard() {
         setBusinessData(watchedBusinessValues);
         setClientData(watchedClientValues);
         setSaveState('saved');
+        setLastSavedAt(Date.now());
         setSaveStatus('saved');
       } catch {
         setSaveState('idle');
+        setLastSavedAt(null);
         setSaveStatus('idle');
       }
     }, 400);
@@ -505,6 +535,7 @@ export default function QuoteWizard() {
     setSelectedClientProfileId('manual');
     setEditingQuoteId(null);
     setSaveState('idle');
+    setLastSavedAt(null);
     onTriggerToast('Draft reset');
   };
 
@@ -610,12 +641,14 @@ export default function QuoteWizard() {
         localStorage.setItem(EDITING_QUOTE_ID_KEY, savedQuote.id);
         persistDraftLocally();
         setSaveState('saved');
+        setLastSavedAt(Date.now());
         setSaveStatus('saved');
         onTriggerToast('Draft saved successfully');
       })
       .catch(() => {
         persistDraftLocally();
         setSaveState('idle');
+        setLastSavedAt(null);
         setSaveStatus('idle');
         onTriggerToast('Draft saved locally');
       })
@@ -675,11 +708,13 @@ export default function QuoteWizard() {
       localStorage.removeItem(TERMS_STORAGE_KEY);
       window.sessionStorage.removeItem(WIZARD_STEP_STORAGE_KEY);
       setSaveState('saved');
+      setLastSavedAt(Date.now());
       setSaveStatus('saved');
       onTriggerToast('Quote saved successfully');
       navigate('/quotes');
     } catch (error) {
       setSaveState('idle');
+      setLastSavedAt(null);
       onTriggerToast(error instanceof Error ? error.message : 'Could not save quote.');
     } finally {
       setIsFinalizingQuote(false);
@@ -799,10 +834,10 @@ export default function QuoteWizard() {
             </button>
 
             <div className="flex items-start gap-2 rounded-[14px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
-              <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+              {saveStatusIcon}
               <div className="leading-tight">
-                <p className="text-[12px] font-semibold text-slate-800">Auto Saved</p>
-                <p className="text-[10px] text-slate-400">2 sec ago</p>
+                <p className="text-[12px] font-semibold text-slate-800">{saveStatusLabel}</p>
+                <p className="text-[10px] text-slate-400">{saveStatusDetail}</p>
               </div>
             </div>
 
@@ -819,10 +854,10 @@ export default function QuoteWizard() {
           </div>
 
           <div className="md:hidden flex items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
-            <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+            {saveStatusIcon}
             <div className="leading-tight">
-              <p className="text-[12px] font-semibold text-slate-800">Auto Saved</p>
-              <p className="text-[10px] text-slate-400">2 sec ago</p>
+              <p className="text-[12px] font-semibold text-slate-800">{saveStatusLabel}</p>
+              <p className="text-[10px] text-slate-400">{saveStatusDetail}</p>
             </div>
           </div>
         </div>

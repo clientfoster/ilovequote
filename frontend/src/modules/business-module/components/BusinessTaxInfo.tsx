@@ -9,7 +9,7 @@ interface BusinessTaxInfoProps {
 }
 
 export default function BusinessTaxInfo({ register, watch }: BusinessTaxInfoProps) {
-  const [showSummary, setShowSummary] = useState(true);
+  const [showSummary, setShowSummary] = useState(false);
 
   const selectedTaxType = watch('taxType') || 'GSTIN';
   const taxId = watch('taxId');
@@ -26,7 +26,7 @@ export default function BusinessTaxInfo({ register, watch }: BusinessTaxInfoProp
           />
           <div>
             <h3 className="text-[15px] font-semibold text-slate-900">
-              Tax Information <span className="font-medium text-slate-400">(Optional)</span>
+              Tax Settings <span className="font-medium text-slate-400">(Optional)</span>
             </h3>
             <p className="text-xs text-slate-500">Add your tax details if applicable.</p>
           </div>

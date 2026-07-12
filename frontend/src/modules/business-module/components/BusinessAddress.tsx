@@ -20,7 +20,7 @@ const COUNTRIES = [
 ];
 
 export default function BusinessAddress({ register }: BusinessAddressProps) {
-  const [showSummary, setShowSummary] = useState(true);
+  const [showSummary, setShowSummary] = useState(false);
 
   return (
     <div className="space-y-4" id="address-section">

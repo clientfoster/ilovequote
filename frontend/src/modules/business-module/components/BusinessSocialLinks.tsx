@@ -178,7 +178,7 @@ export default function BusinessSocialLinks({ control, register, errors, watch }
     name: 'socialLinks',
   });
 
-  const [showSummary, setShowSummary] = useState(true);
+  const [showSummary, setShowSummary] = useState(false);
   const [isMoreModalOpen, setIsMoreModalOpen] = useState(false);
   const [isCustomModalOpen, setIsCustomModalOpen] = useState(false);
   const [search, setSearch] = useState('');
