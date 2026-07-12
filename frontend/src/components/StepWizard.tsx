@@ -16,8 +16,8 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
   ];
 
   return (
-    <div className="w-full rounded-[20px] border border-slate-200 bg-white px-4 py-3 md:px-5 md:py-3.5 shadow-sm mb-4 overflow-hidden" id="wizard-container">
-      <div className="hidden md:flex items-center gap-2.5 xl:gap-4" id="wizard-desktop">
+    <div className="mb-4 w-full overflow-hidden rounded-[16px] border border-slate-200 bg-white px-4 py-3 shadow-[0_10px_30px_rgba(15,23,42,0.04)] md:px-6 md:py-4" id="wizard-container">
+      <div className="hidden min-h-[28px] items-center md:flex" id="wizard-desktop">
         {steps.map((step, index) => {
           const isCompleted = step.status === 'completed';
           const isCurrent = step.status === 'current';
@@ -31,54 +31,37 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
                 type="button"
                 onClick={() => onStepClick?.(step.id)}
                 disabled={!isClickable}
-                className="flex min-w-0 flex-1 items-center gap-2.5 text-left focus:outline-none disabled:cursor-default"
+                className="group flex shrink-0 items-center gap-2 text-left focus:outline-none focus-visible:ring-2 focus-visible:ring-[#2563EB]/30 disabled:cursor-default"
               >
                 <span
-                  className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 text-[13px] font-bold transition-all duration-300 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border text-[11px] font-semibold transition-colors duration-200 ${
                     isCompleted
-                      ? 'border-emerald-500 bg-white text-emerald-600 shadow-sm shadow-emerald-100'
+                      ? 'border-emerald-500 bg-emerald-500 text-white shadow-sm shadow-emerald-100'
                       : isCurrent
-                        ? 'border-[#2563EB] bg-white text-[#2563EB] shadow-md shadow-blue-100 ring-4 ring-blue-50'
+                        ? 'border-[#7C9BF2] bg-white text-[#2563EB] shadow-sm shadow-blue-100'
                         : 'border-slate-200 bg-white text-slate-400'
                   }`}
                 >
-                  {isCompleted ? <Check className="h-5 w-5 stroke-[2.75]" /> : step.id}
+                  {isCompleted ? <Check className="h-3.5 w-3.5 stroke-[2.75]" /> : step.id}
                 </span>
 
-                <span className="min-w-0">
-                  <span
-                      className={`block text-[15px] font-semibold leading-none ${
-                      isCompleted
-                        ? 'text-emerald-500'
-                        : isCurrent
-                          ? 'text-[#2563EB]'
-                          : 'text-slate-400'
-                    }`}
-                  >
-                    {step.name}
-                  </span>
+                <span className={`whitespace-nowrap text-[12px] font-semibold leading-none ${isCompleted ? 'text-[#2563EB]' : isCurrent ? 'text-slate-700' : 'text-slate-400'}`}>
+                  {step.name}
                 </span>
               </button>
 
-              {index < steps.length - 1 && (
-                <div className="flex-1 px-1">
-                  <div
-                    className={`h-0.5 rounded-full transition-colors duration-300 ${
-                      currentStep > step.id
-                        ? 'bg-emerald-500'
-                        : currentStep === step.id
-                          ? 'bg-[#2563EB]'
-                          : 'bg-slate-200'
-                    }`}
-                  />
-                </div>
-              )}
+              {index < steps.length - 1 ? (
+                <div
+                  className={`mx-3 h-0.5 min-w-5 flex-1 rounded-full transition-colors duration-200 ${index < currentStep - 1 ? 'bg-[#8EA7F5]' : 'bg-slate-100'}`}
+                  aria-hidden="true"
+                />
+              ) : null}
             </React.Fragment>
           );
         })}
       </div>
 
-      <div className="md:hidden space-y-3" id="wizard-mobile">
+      <div className="space-y-3 md:hidden" id="wizard-mobile">
         <div className="relative px-1 pt-1">
           <div className="absolute left-4 right-4 top-[18px] h-px bg-slate-200" />
           <div className="absolute left-4 top-[18px] h-px bg-[#2563EB] transition-all duration-300" style={{ width: `${((currentStep - 1) / (steps.length - 1)) * 100}%` }} />
@@ -94,12 +77,12 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
                   key={step.id}
                   type="button"
                   onClick={() => onStepClick?.(step.id)}
-                  className="flex flex-col items-center gap-2 min-w-0 flex-1"
+                  className="flex min-w-0 flex-1 flex-col items-center gap-2"
                 >
                   <span
-                    className={`flex h-8 w-8 items-center justify-center rounded-full border text-[12px] font-bold transition-all ${
+                    className={`flex h-9 w-9 items-center justify-center rounded-full border text-[12px] font-semibold transition-all ${
                       isCompleted
-                        ? 'border-[#2563EB] bg-[#2563EB] text-white'
+                        ? 'border-emerald-500 bg-emerald-500 text-white'
                         : isCurrent
                           ? 'border-[#2563EB] bg-[#2563EB] text-white shadow-md shadow-blue-100'
                           : 'border-slate-200 bg-white text-slate-400'
@@ -108,7 +91,7 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
                     {isCompleted ? <Check className="h-4 w-4 stroke-[2.5]" /> : step.id}
                   </span>
                   <span
-                    className={`text-[11px] font-semibold leading-tight ${
+                    className={`text-[11px] font-medium leading-tight ${
                       isCurrent ? 'text-slate-900' : isUpcoming ? 'text-slate-400' : 'text-[#2563EB]'
                     }`}
                   >

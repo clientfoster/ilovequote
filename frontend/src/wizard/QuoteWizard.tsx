@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate, useOutletContext } from 'react-router-dom';
-import { ChevronLeft, ChevronRight, LoaderCircle, Moon, Save, ShieldCheck, X } from 'lucide-react';
+import { CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle, Moon, Save, ShieldCheck, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import BusinessStep from '../modules/business-module/BusinessModule';
 import ClientStep from '../modules/client-module/ClientModule';
@@ -704,7 +704,7 @@ export default function QuoteWizard() {
   }, [currentStep, handlePrimaryAction, handleSaveDraft, location.pathname, location.search, navigate]);
 
   return (
-    <div className="quote-wizard-shell min-h-dvh overflow-x-hidden bg-slate-50 text-slate-900">
+    <div className="quote-wizard-shell [overflow-x:clip] bg-slate-50 text-slate-900">
       <AnimatePresence>
         {authPromptIntent ? (
           <div className="fixed inset-0 z-[80] flex items-center justify-center p-4">
@@ -773,16 +773,17 @@ export default function QuoteWizard() {
       </AnimatePresence>
 
       <header className="no-print sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:relative md:z-30">
-        <div className="mx-auto hidden max-w-[1680px] items-center justify-between gap-4 px-4 py-2 md:flex md:px-4 md:py-2.5">
+        <div className="mx-auto hidden max-w-[1680px] items-center justify-between gap-4 px-4 py-2 md:flex md:px-4 md:py-3">
           <div className="flex min-w-0 items-center gap-4">
             <BrandMark />
             <div className="h-8 w-px bg-slate-200" />
             <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-lg font-extrabold leading-none text-slate-900">Create Quote</h1>
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-amber-700">
-                  Draft Mode
+                <span className="inline-flex items-center gap-1 rounded-full border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-emerald-700">
+                  DRAFT
                 </span>
+                <span className="text-[11px] font-semibold text-slate-500">{quotationMeta.quotationNumber || 'Q-2026-00021'}</span>
               </div>
               <p className="mt-0.5 text-[11px] text-slate-400">Build, style, and send quotation bills in less than 2 minutes.</p>
             </div>
@@ -797,19 +798,19 @@ export default function QuoteWizard() {
               <Moon size={18} />
             </button>
 
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="inline-flex h-10 min-h-[40px] items-center gap-2 rounded-lg border border-slate-200 bg-white px-4 text-sm font-extrabold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-            >
-              Save Draft
-            </button>
+            <div className="flex items-start gap-2 rounded-[14px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+              <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+              <div className="leading-tight">
+                <p className="text-[12px] font-semibold text-slate-800">Auto Saved</p>
+                <p className="text-[10px] text-slate-400">2 sec ago</p>
+              </div>
+            </div>
 
             <button
               type="button"
               onClick={handlePrimaryAction}
               disabled={isFinalizingQuote}
-              className="inline-flex h-10 min-h-[40px] items-center gap-2 rounded-lg bg-[#2F5BFF] px-4 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition-colors hover:bg-[#244ad9] disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex h-10 min-h-[40px] items-center gap-2 rounded-xl bg-[#2563EB] px-4 text-sm font-semibold text-white shadow-sm transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-70"
             >
               {isFinalizingQuote && currentStep === 4 ? <LoaderCircle size={16} className="animate-spin" /> : null}
               <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving Quote...' : 'Save Quote') : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
@@ -817,15 +818,13 @@ export default function QuoteWizard() {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            className="md:hidden inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
-            aria-label="Save draft"
-            title="Save draft"
-          >
-            <Save size={16} />
-          </button>
+          <div className="md:hidden flex items-center gap-2 rounded-[14px] border border-slate-200 bg-white px-3 py-2 shadow-sm">
+            <CheckCircle2 className="mt-0.5 h-4 w-4 text-emerald-500" />
+            <div className="leading-tight">
+              <p className="text-[12px] font-semibold text-slate-800">Auto Saved</p>
+              <p className="text-[10px] text-slate-400">2 sec ago</p>
+            </div>
+          </div>
         </div>
 
         <div className="md:hidden px-4 pb-3">
@@ -849,7 +848,7 @@ export default function QuoteWizard() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-[1680px] px-4 pt-2 pb-28 md:px-4 md:pt-2.5 md:pb-16">
+      <div className="mx-auto max-w-[1680px] px-4 pt-2 pb-20 md:px-4 md:pt-2.5 md:pb-8">
         <div className="no-print md:sticky md:top-3 z-20">
           <StepWizard currentStep={currentStep} onStepClick={(step) => setCurrentStep(step as 1 | 2 | 3 | 4)} />
         </div>
@@ -857,9 +856,9 @@ export default function QuoteWizard() {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentStep}
-            initial={{ opacity: 0, y: 14 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -14 }}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
             transition={{ duration: 0.22 }}
           >
             <div className="mt-4">

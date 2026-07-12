@@ -1,9 +1,6 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { UseFormRegister, Control, FieldErrors, UseFormWatch, UseFormSetValue } from 'react-hook-form';
-import {
-  Building,
-  Sparkles,
-} from 'lucide-react';
+import { Building, Sparkles } from 'lucide-react';
 import { BusinessFormValues } from '../../../types';
 import BusinessLogoUpload from './BusinessLogoUpload';
 import BusinessAddress from './BusinessAddress';
@@ -19,21 +16,20 @@ interface BusinessFormProps {
 }
 
 export default function BusinessForm({ register, control, errors, watch, setValue }: BusinessFormProps) {
-  // Watch Logo and Company Name to automatically update custom parameters
   const logoValue = watch('logo');
   const companyName = watch('companyName');
+  const [showSummary, setShowSummary] = useState(true);
 
-  // Automatically generate portfolio slug from Company Name
   useEffect(() => {
     if (companyName) {
       const generatedSlug = companyName
         .toLowerCase()
         .trim()
-        .replace(/[^a-z0-9\s-]/g, '') // remove special chars
-        .replace(/\s+/g, '-')          // replace spaces with hyphens
-        .replace(/-+/g, '-')          // remove duplicate hyphens
-        .substring(0, 30);            // cap length
-      
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .substring(0, 30);
+
       setValue('businessSlug', generatedSlug);
     }
   }, [companyName, setValue]);
@@ -44,151 +40,143 @@ export default function BusinessForm({ register, control, errors, watch, setValu
 
   return (
     <div className="space-y-4 md:space-y-5" id="business-form-wrapper">
-      
-      {/* SECTION 1: Logo & Basic Information */}
-      <div className="bg-white rounded-[14px] border border-slate-150 p-4 md:p-5 space-y-4 shadow-xs" id="form-basic-section">
-        <div className="flex items-center gap-2 pb-3 border-b border-slate-100">
-          <div className="w-8 h-8 rounded-lg bg-blue-50 text-[#1D4ED8] flex items-center justify-center">
-            <Building className="w-5 h-5 stroke-[2]" />
-          </div>
-          <div>
-            <h3 className="text-base font-extrabold text-slate-800">Business Information</h3>
-            <p className="text-xs text-slate-400 font-medium">Add your business details that will appear on the quote</p>
-          </div>
+      <div className="rounded-[16px] border border-slate-200 bg-white p-4 md:p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]" id="form-basic-section">
+        <div className="flex flex-col gap-3 border-b border-slate-100 pb-4">
+          <label className="inline-flex items-start gap-3 self-start">
+            <input
+              type="checkbox"
+              checked={showSummary}
+              onChange={(event) => setShowSummary(event.target.checked)}
+              className="mt-0.5 h-4 w-4 rounded border-slate-300 text-[#2563EB] accent-[#2563EB] focus:ring-2 focus:ring-blue-200"
+            />
+            <div className="min-w-0">
+              <h3 className="text-[15px] font-semibold text-slate-900">Business Information</h3>
+              <p className="text-xs text-slate-500">Add your business details that will appear on the quote.</p>
+            </div>
+          </label>
         </div>
 
-        {/* Main Inputs */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-0.5">
-          {/* Company Name */}
-          <div className="md:col-span-2 space-y-1.5" id="company-name-group">
-            <label className="sr-only" htmlFor="biz-company-name">Company Name</label>
-            <div className="relative">
+        {showSummary ? (
+          <div className="grid grid-cols-1 gap-4 pt-4">
+            <div className="space-y-1.5" id="company-name-group">
+              <label className="text-[12px] font-medium text-slate-600" htmlFor="biz-company-name">Business Name</label>
+              <div className="relative">
+                <input
+                  type="text"
+                  id="biz-company-name"
+                  placeholder="Your Business Name (required)"
+                  {...register('companyName', {
+                    required: 'Company name is required to build the quote.',
+                  })}
+                  className={`w-full rounded-xl border px-4 py-3 text-sm font-medium text-slate-800 outline-hidden transition-all placeholder:text-slate-400 ${
+                    errors.companyName
+                      ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-50'
+                      : 'border-slate-200 bg-white hover:bg-slate-50/30 focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100'
+                  }`}
+                />
+                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400">
+                  <Sparkles className="h-4 w-4 fill-[#2563EB]/15 text-[#2563EB]" />
+                </div>
+              </div>
+              {errors.companyName ? (
+                <p className="mt-1 text-xs font-bold text-red-650" id="err-company-name">
+                  {errors.companyName.message}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5" id="tagline-group">
+              <label className="text-[12px] font-medium text-slate-600" htmlFor="biz-tagline">Business Description</label>
+              <textarea
+                id="biz-tagline"
+                placeholder="Describe what your business does (optional)"
+                {...register('tagline')}
+                className="h-24 max-h-36 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-hidden transition-all placeholder:text-slate-400 hover:bg-slate-50/30 focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
+
+            <div className="space-y-1.5" id="email-group">
+              <label className="text-[12px] font-medium text-slate-600" htmlFor="biz-email">Email</label>
               <input
                 type="text"
-                id="biz-company-name"
-                placeholder="Your Business Name (required)"
-                {...register('companyName', { 
-                  required: 'Company name is required to build the quote.' 
+                id="biz-email"
+                placeholder="Your Email (optional)"
+                {...register('email', {
+                  pattern: {
+                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                    message: 'Must enter a valid email format, e.g., name@domain.com',
+                  },
                 })}
-                className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-850 border rounded-xl pl-4 pr-10 py-2.5 min-h-[46px] text-sm font-semibold transition-all outline-hidden ${
-                  errors.companyName 
-                    ? 'border-red-500 focus:border-red-550 focus:ring-4 focus:ring-red-50' 
-                    : 'border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105'
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium text-slate-800 outline-hidden transition-all placeholder:text-slate-400 ${
+                  errors.email
+                    ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-50'
+                    : 'border-slate-200 bg-white hover:bg-slate-50/30 focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100'
                 }`}
               />
-              <div className="absolute inset-y-0 right-0 flex items-center pr-3.5 pointer-events-none text-slate-400">
-                <Sparkles className="w-4 h-4 text-[#1D4ED8] fill-[#1D4ED8]/20" />
-              </div>
+              {errors.email ? (
+                <p className="mt-1 text-xs font-bold text-red-650" id="err-email">
+                  {errors.email.message}
+                </p>
+              ) : null}
             </div>
-            {errors.companyName && (
-              <p className="text-xs text-red-650 font-bold mt-1" id="err-company-name">
-                {errors.companyName.message}
-              </p>
-            )}
-          </div>
 
-          {/* Tagline / Business Description */}
-          <div className="md:col-span-2 space-y-1.5" id="tagline-group">
-            <label className="sr-only" htmlFor="biz-tagline">Tagline / Business Description</label>
-            <textarea
-              id="biz-tagline"
-              placeholder="Describe what your business does (optional)"
-              {...register('tagline')}
-              className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105 rounded-xl px-4 py-3 text-sm font-semibold transition-all outline-hidden h-24 max-h-36 placeholder:text-slate-400"
-            />
-          </div>
+            <div className="space-y-1.5" id="phone-group">
+              <label className="text-[12px] font-medium text-slate-600" htmlFor="biz-phone">Phone Number</label>
+              <input
+                type="text"
+                id="biz-phone"
+                placeholder="Phone Number (optional)"
+                {...register('phone')}
+                className="w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm font-medium text-slate-800 outline-hidden transition-all placeholder:text-slate-400 hover:bg-slate-50/30 focus:border-[#2563EB] focus:bg-white focus:ring-4 focus:ring-blue-100"
+              />
+            </div>
 
-          {/* Email */}
-          <div className="space-y-1.5" id="email-group">
-            <label className="sr-only" htmlFor="biz-email">Email</label>
-            <input
-              type="text"
-              id="biz-email"
-              placeholder="Your Email (optional)"
-              {...register('email', {
-                pattern: {
-                  value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                  message: 'Must enter a valid email format, e.g., name@domain.com',
-                },
-              })}
-              className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border rounded-xl px-4 py-2.5 min-h-[46px] text-sm font-semibold transition-all outline-hidden ${
-                errors.email 
-                  ? 'border-red-500 focus:border-red-550 focus:ring-4 focus:ring-red-50' 
-                  : 'border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105'
-              }`}
-            />
-            {errors.email && (
-              <p className="text-xs text-red-650 font-bold mt-1" id="err-email">
-                {errors.email.message}
-              </p>
-            )}
-          </div>
+            <div className="space-y-1.5" id="website-group">
+              <label className="text-[12px] font-medium text-slate-600" htmlFor="biz-website">Website</label>
+              <input
+                type="text"
+                id="biz-website"
+                placeholder="Website (optional)"
+                {...register('website', {
+                  validate: (v) => {
+                    if (!v) return true;
+                    if (!v.includes('.')) {
+                      return 'Please enter a valid website domain or link';
+                    }
+                    return true;
+                  },
+                })}
+                className={`w-full rounded-xl border px-4 py-3 text-sm font-medium text-slate-800 outline-hidden transition-all placeholder:text-slate-400 ${
+                  errors.website
+                    ? 'border-red-500 focus:border-red-500 focus:ring-4 focus:ring-red-50'
+                    : 'border-slate-200 bg-white hover:bg-slate-50/30 focus:bg-white focus:border-[#2563EB] focus:ring-4 focus:ring-blue-100'
+                }`}
+              />
+              {errors.website ? (
+                <p className="mt-1 text-xs font-bold text-red-650" id="err-website">
+                  {errors.website.message}
+                </p>
+              ) : null}
+            </div>
 
-          {/* Phone */}
-          <div className="space-y-1.5" id="phone-group">
-            <label className="sr-only" htmlFor="biz-phone">Phone</label>
-            <input
-              type="text"
-              id="biz-phone"
-              placeholder="Phone Number (optional)"
-              {...register('phone')}
-              className="w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105 rounded-xl px-4 py-2.5 min-h-[46px] text-sm font-semibold transition-all outline-hidden"
-            />
+            <div className="space-y-1.5" id="logo-upload-inline">
+              <BusinessLogoUpload value={logoValue} onChange={handleLogoChange} />
+            </div>
           </div>
-
-          {/* Website */}
-          <div className="md:col-span-2 space-y-1.5" id="website-group">
-            <label className="sr-only" htmlFor="biz-website">Website</label>
-            <input
-              type="text"
-              id="biz-website"
-              placeholder="Website (optional)"
-              {...register('website', {
-                validate: (v) => {
-                  if (!v) return true;
-                  // basic URL format validation with warning
-                  if (!v.includes('.')) {
-                    return 'Please enter a valid website domain or link';
-                  }
-                  return true;
-                }
-              })}
-              className={`w-full bg-white hover:bg-slate-50/30 focus:bg-white text-slate-855 border rounded-xl px-4 py-2.5 min-h-[46px] text-sm font-semibold transition-all outline-hidden ${
-                errors.website 
-                  ? 'border-red-500 focus:border-red-550 focus:ring-4 focus:ring-red-50' 
-                  : 'border-slate-200 focus:border-[#1D4ED8] focus:ring-4 focus:ring-blue-105'
-              }`}
-            />
-            {errors.website && (
-              <p className="text-xs text-red-650 font-bold mt-1" id="err-website">
-                {errors.website.message}
-              </p>
-            )}
-          </div>
-
-          {/* Business Logo */}
-          <div className="md:col-span-2 space-y-1.5" id="logo-upload-inline">
-            <BusinessLogoUpload value={logoValue} onChange={handleLogoChange} />
-          </div>
-        </div>
+        ) : null}
       </div>
 
-      {/* SECTION 2: Business Address Info */}
-      <div className="bg-white rounded-xl border border-slate-150 p-4 md:p-5 shadow-xs">
+      <div className="rounded-[16px] border border-slate-200 bg-white p-4 md:p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
         <BusinessAddress register={register} errors={errors} />
       </div>
 
-      {/* SECTION 3: Tax Information */}
-      <div className="bg-white rounded-xl border border-slate-150 p-4 md:p-5 shadow-xs">
+      <div className="rounded-[16px] border border-slate-200 bg-white p-4 md:p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
         <BusinessTaxInfo register={register} errors={errors} watch={watch} />
       </div>
 
-      {/* SECTION 4: Social Accounts with unlimited capabilities */}
-      <div className="bg-white rounded-xl border border-slate-150 p-4 md:p-5 shadow-xs">
+      <div className="rounded-[16px] border border-slate-200 bg-white p-4 md:p-5 shadow-[0_10px_30px_rgba(15,23,42,0.04)]">
         <BusinessSocialLinks control={control} register={register} errors={errors} watch={watch} />
       </div>
-
     </div>
   );
 }
-

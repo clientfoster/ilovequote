@@ -134,7 +134,7 @@ export default function ItemsWorkspace({
 
   return (
     <div className="w-full space-y-5 md:space-y-6 animate-fade-in">
-      <div className="grid grid-cols-1 2xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-6 items-start">
+      <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,1fr)_300px] 2xl:grid-cols-[minmax(0,1fr)_320px] gap-4 md:gap-6 items-start">
         <div className="space-y-4 md:space-y-5">
           <div className="bg-white rounded-xl border border-slate-200 p-4 md:p-5 shadow-xs">
             <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -368,7 +368,7 @@ export default function ItemsWorkspace({
 
           <TermsAndConditions terms={terms} onChange={onTermsChange} />
 
-          <div className="2xl:hidden">
+          <div className="xl:hidden">
             <BottomSummary
               items={items}
               currencySymbol={meta.currency}
@@ -406,7 +406,7 @@ export default function ItemsWorkspace({
           )}
       </div>
 
-        <div className="hidden 2xl:block space-y-4 md:space-y-5 sticky top-20">
+        <div className="hidden xl:block space-y-4 md:space-y-5 sticky top-20">
           <BottomSummary
             items={items}
             currencySymbol={meta.currency}

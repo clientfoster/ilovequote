@@ -157,7 +157,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     || (path === '/invoice-help-support' && location.pathname === '/help-support');
 
   const renderNavList = (expanded: boolean, mobile = false) => (
-    <nav className={`flex-1 ${expanded ? 'space-y-1.5' : 'space-y-1.5'} overflow-y-auto px-2.5 py-2.5`}>
+    <nav className="flex-1 overflow-y-auto px-3 py-3 space-y-2">
       {visibleNavItems.map((item) => {
         const Icon = item.icon;
         const isActive = isPathActive(item.path);
@@ -171,10 +171,10 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 setIsMobileMenuOpen(false);
               }
             }}
-            className={`group flex w-full items-center ${expanded ? 'justify-start gap-3 px-3.5' : 'justify-center px-0'} min-h-[42px] rounded-[16px] text-sm font-semibold transition-all duration-300 ${
+            className={`group flex w-full items-center ${expanded ? 'justify-start gap-3 px-3.5' : 'justify-center px-0'} min-h-[44px] rounded-[16px] text-sm font-medium transition-all duration-200 ${
               isActive
-                ? 'bg-[#EEF4FF] text-[#1D4ED8] shadow-[0_10px_24px_rgba(37,99,235,0.08)]'
-                : 'text-slate-500 hover:bg-slate-50 hover:text-slate-900'
+                ? 'bg-[#EEF4FF] text-[#1D4ED8] shadow-[0_8px_20px_rgba(37,99,235,0.08)] ring-1 ring-[#DCE9FF]'
+                : 'text-slate-500 hover:bg-slate-50/80 hover:text-slate-900'
             }`}
           >
             <Icon className={`h-5 w-5 shrink-0 ${isActive ? 'text-[#1D4ED8]' : 'text-slate-400 group-hover:text-slate-700'}`} />
@@ -233,7 +233,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 <button
                   type="button"
                   onClick={handleLogout}
-                  className="inline-flex items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
+                  className="inline-flex items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 shadow-sm transition hover:bg-slate-50"
                 >
                   <LogOut className="h-4 w-4" />
                   Logout
@@ -241,17 +241,11 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
               </>
             ) : (
               <div className="flex items-center gap-2">
-                <Link
-                  to="/login?mode=login"
-                  className="inline-flex items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-                >
+                <Link to="/login?mode=login" className="inline-flex items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
                   <LogIn className="h-4 w-4" />
                   Login
                 </Link>
-                <Link
-                  to="/login?mode=signup"
-                  className="inline-flex items-center gap-2 rounded-[16px] bg-[#1D4ED8] px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-blue-800"
-                >
+                <Link to="/login?mode=signup" className="inline-flex items-center gap-2 rounded-[16px] bg-[#1D4ED8] px-4 py-2 text-[13px] font-medium text-white shadow-sm transition hover:bg-blue-800">
                   <UserPlus className="h-4 w-4" />
                   Sign Up
                 </Link>
@@ -275,12 +269,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
               <div className="h-5" aria-hidden="true" />
             )}
             {isDesktopSidebarExpanded ? (
-              <button
-                type="button"
-                onClick={() => setIsDesktopSidebarExpanded(false)}
-                className="inline-flex h-8 w-8 items-center justify-center rounded-[16px] text-slate-400 transition hover:bg-slate-50 hover:text-slate-700"
-                aria-label="Close sidebar"
-              >
+              <button type="button" onClick={() => setIsDesktopSidebarExpanded(false)} className="inline-flex h-8 w-8 items-center justify-center rounded-[16px] text-slate-400 transition hover:bg-slate-50 hover:text-slate-700" aria-label="Close sidebar">
                 <X className="h-6 w-6" />
               </button>
             ) : null}
@@ -290,7 +279,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
             <button
               type="button"
               onClick={handlePrimaryAction}
-              className={`inline-flex w-full items-center justify-center gap-3 rounded-[22px] bg-[#1D4ED8] font-bold text-white shadow-[0_18px_34px_rgba(29,78,216,0.24)] transition-all duration-300 hover:bg-blue-800 ${
+              className={`inline-flex w-full items-center justify-center gap-3 rounded-[22px] bg-[#1D4ED8] font-semibold text-white shadow-[0_18px_34px_rgba(29,78,216,0.20)] transition-all duration-300 hover:-translate-y-0.5 hover:bg-blue-800 ${
                 isDesktopSidebarExpanded ? 'min-h-[48px] px-4 text-[14px]' : 'mx-auto h-[56px] w-[56px] rounded-[20px] px-0'
               }`}
               id="btn-sidebar-primary"
@@ -305,11 +294,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
 
           <div className="mt-auto border-t border-slate-100 px-2.5 py-3">
             {isDesktopSidebarExpanded ? (
-                <button
-                  type="button"
-                  onClick={() => setIsDesktopSidebarExpanded(false)}
-                  className="inline-flex min-h-[42px] w-full items-center justify-center gap-3 rounded-[16px] border border-slate-200 bg-white px-4 text-[14px] font-semibold text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700"
-                >
+                <button type="button" onClick={() => setIsDesktopSidebarExpanded(false)} className="inline-flex min-h-[42px] w-full items-center justify-center gap-3 rounded-[16px] border border-slate-200 bg-white px-4 text-[14px] font-medium text-slate-500 shadow-sm transition hover:bg-slate-50 hover:text-slate-700">
                   <span className="text-lg leading-none">‹</span>
                   Collapse
                 </button>
@@ -357,11 +342,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
           </div>
 
           <div className="px-4 py-4">
-            <button
-              type="button"
-              onClick={handlePrimaryAction}
-              className="inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-[#1D4ED8] px-4 text-sm font-bold text-white shadow-[0_18px_34px_rgba(29,78,216,0.22)] transition hover:bg-blue-800"
-            >
+              <button type="button" onClick={handlePrimaryAction} className="inline-flex min-h-[50px] w-full items-center justify-center gap-2 rounded-2xl bg-[#1D4ED8] px-4 text-sm font-semibold text-white shadow-[0_18px_34px_rgba(29,78,216,0.22)] transition hover:-translate-y-0.5 hover:bg-blue-800">
               <PlusCircle className="h-4 w-4" />
               <span>{primaryActionLabel}</span>
             </button>
@@ -371,11 +352,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
 
           <div className="border-t border-slate-100 px-4 py-4">
             {isAuthed ? (
-              <button
-                type="button"
-                onClick={handleLogout}
-                className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
-              >
+              <button type="button" onClick={handleLogout} className="inline-flex min-h-[46px] w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white px-4 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
                 <LogOut className="h-4 w-4" />
                 Logout
               </button>
@@ -402,10 +379,10 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
       </div>
 
       <main
-        className="min-h-screen overflow-x-hidden bg-[#F8FAFC] lg:ml-[var(--sidebar-width)] lg:transition-[margin-left] lg:duration-300 lg:ease-out"
+        className="min-h-screen [overflow-x:clip] bg-[#F8FAFC] lg:ml-[var(--sidebar-width)] lg:transition-[margin-left] lg:duration-300 lg:ease-out"
         style={mainContentStyle}
       >
-        <div className="min-h-[calc(100vh-56px)] overflow-y-auto lg:transition-all lg:duration-300 lg:ease-out" style={{ marginLeft: 0 }}>
+        <div className="lg:transition-all lg:duration-300 lg:ease-out" style={{ marginLeft: 0 }}>
           <div className="lg:hidden" style={{ paddingTop: 0 }} />
           <Outlet context={{ onTriggerToast: triggerToast, setSaveStatus }} />
         </div>
