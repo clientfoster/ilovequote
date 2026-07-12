@@ -6,7 +6,6 @@ import { ProfileOption } from '../../profileAutofill';
 import { ClientFormValues } from '../../types';
 import ClientForm from './components/ClientForm';
 import LivePreview from './components/LivePreview';
-import FeatureSection from './components/FeatureSection';
 
 interface ClientStepProps {
   register: UseFormRegister<ClientFormValues>;
@@ -108,10 +107,6 @@ export default function ClientStep({
           </button>
         </div>
       )}
-
-      <div className="pt-4 border-t border-slate-200">
-        <FeatureSection />
-      </div>
     </div>
   );
 }

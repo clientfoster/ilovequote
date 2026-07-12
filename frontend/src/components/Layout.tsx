@@ -68,7 +68,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   const initials = authUser.initials;
   const username = authUser.username || authUser.email || authUser.phone || '';
 
-  const isInvoiceModuleRoute = isAuthed && (
+  const isInvoiceModuleRoute = (
     location.pathname.startsWith('/create-invoice')
     || location.pathname === '/invoices'
     || location.pathname === '/clients'
@@ -98,6 +98,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   const visibleNavItems = navItems.filter((item) => isAuthed || !item.requiresAuth);
   const primaryActionLabel = isInvoiceModuleRoute ? 'New Invoice' : 'New Quote';
   const primaryActionTarget = isInvoiceModuleRoute ? '/create-invoice' : '/create-quote';
+  const logoTarget = isAuthed ? '/dashboard' : '/';
   const primaryActionStorageKey = isInvoiceModuleRoute ? null : 'ilovequote_editing_quote_id';
   const primaryActionToast = isInvoiceModuleRoute ? 'Opening invoice builder...' : 'Initializing fresh quote container...';
 
@@ -213,7 +214,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
             >
               {isDesktopSidebarExpanded ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Link to="/dashboard" className="flex items-center gap-1.5">
+            <Link to={logoTarget} className="flex items-center gap-1.5">
               <BrandMark size="sm" />
             </Link>
           </div>
@@ -262,7 +263,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
         <div className="flex h-full flex-col">
           <div className={`flex items-center ${isDesktopSidebarExpanded ? 'justify-between px-4' : 'justify-center px-2'} border-b border-slate-100 py-3`}>
             {isDesktopSidebarExpanded ? (
-              <Link to="/dashboard" className="flex items-center gap-1.5 overflow-hidden">
+              <Link to={logoTarget} className="flex items-center gap-1.5 overflow-hidden">
                 <BrandMark size="sm" />
               </Link>
             ) : (
@@ -328,7 +329,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
           className={`relative h-full w-[240px] max-w-[82vw] border-r border-slate-200 bg-white shadow-2xl transition-transform duration-300 ease-out ${isMobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
           <div className="flex items-center justify-between border-b border-slate-100 px-5 py-5">
-            <Link to="/dashboard" className="flex items-center gap-1.5">
+            <Link to={logoTarget} className="flex items-center gap-1.5">
               <BrandMark size="sm" />
             </Link>
             <button

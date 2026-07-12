@@ -667,8 +667,8 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
       <div className="absolute left-[-8rem] top-24 h-64 w-64 rounded-full bg-[#BBD2FF]/40 blur-3xl" />
       <div className="absolute bottom-[-5rem] right-[-4rem] h-72 w-72 rounded-full bg-[#DCE8FF]/70 blur-3xl" />
 
-      <div className="relative mx-auto grid min-h-screen max-w-7xl items-center gap-8 px-4 py-6 md:px-8 lg:grid-cols-[1.08fr_0.92fr] lg:px-10">
-        <section className="flex flex-col justify-between rounded-[32px] border border-white/70 bg-white/70 p-6 shadow-[0_20px_80px_rgba(15,23,42,0.08)] backdrop-blur-xl md:p-10">
+      <div className="relative mx-auto flex min-h-screen max-w-7xl items-center justify-center px-4 py-6 md:px-8 lg:px-10">
+        <section className="hidden">
           <div className="flex items-center justify-between">
             <BrandMark size="md" />
             <div className="hidden items-center gap-2 rounded-full border border-[#D8E4FF] bg-[#F4F7FF] px-3 py-1 text-[11px] font-semibold text-[#2457F0] md:inline-flex">
@@ -763,8 +763,9 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           </div>
         </section>
 
-        <section className="relative">
+        <section className="relative w-full max-w-2xl">
           <div className="rounded-[32px] border border-white/70 bg-white p-6 shadow-[0_20px_80px_rgba(15,23,42,0.12)] md:p-8">
+            <BrandMark size="md" />
             <div className="flex items-start justify-between gap-4">
               <div>
                 <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-[#2457F0]">
