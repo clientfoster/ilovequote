@@ -39,6 +39,7 @@ export default function ItemModal({ isOpen, onClose, onSave, editingItem, curren
   const [selectedIcon, setSelectedIcon] = useState('Laptop');
   const [discountOpen, setDiscountOpen] = useState(true);
   const [taxOpen, setTaxOpen] = useState(true);
+  const [customGstOpen, setCustomGstOpen] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [touched, setTouched] = useState<Record<string, boolean>>({});
 
@@ -70,6 +71,7 @@ export default function ItemModal({ isOpen, onClose, onSave, editingItem, curren
     }
     setDiscountOpen(true);
     setTaxOpen(true);
+    setCustomGstOpen(false);
     setErrors({});
     setTouched({});
   }, [editingItem, isOpen]);
@@ -213,6 +215,7 @@ export default function ItemModal({ isOpen, onClose, onSave, editingItem, curren
                           setDiscountValue(0);
                           setGstRate(0);
                           setTaxInclusive(false);
+                          setCustomGstOpen(false);
                         }
                       }}
                       className="h-5 w-5 shrink-0 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
@@ -320,17 +323,66 @@ export default function ItemModal({ isOpen, onClose, onSave, editingItem, curren
                       <AnimatePresence initial={false}>
                         {taxOpen && (
                           <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: 'auto', opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden">
-                            <div className="grid grid-cols-[0.95fr_1.15fr] items-center gap-4 px-4 pb-4">
-                              <div>
-                                <label className="mb-1.5 block text-[11px] font-bold text-slate-800">GST Rate</label>
-                                <select value={gstRate} onChange={(event) => setGstRate(Number(event.target.value))} className={fieldClass}>
-                                  {[...new Set([...gstRates, gstRate])].sort((a, b) => a - b).map((rate) => <option key={rate} value={rate}>{rate}%</option>)}
-                                </select>
+                            <div className="px-4 pb-4">
+                              <div className="grid grid-cols-[0.95fr_1.15fr] items-center gap-4">
+                                <div>
+                                  <label className="mb-1.5 block text-[11px] font-bold text-slate-800">GST Rate</label>
+                                  <select
+                                    value={String(gstRate)}
+                                    onChange={(event) => {
+                                      if (event.target.value === '__custom') {
+                                        setCustomGstOpen(true);
+                                        return;
+                                      }
+                                      setGstRate(Number(event.target.value));
+                                      setCustomGstOpen(false);
+                                    }}
+                                    className={fieldClass}
+                                  >
+                                    {gstRates.map((rate) => <option key={rate} value={rate}>{rate === 0 ? '0% (Exempt)' : `${rate}%`}</option>)}
+                                    {!gstRates.includes(gstRate) && <option value={gstRate}>{gstRate}% (Custom)</option>}
+                                    <option value="__custom">+ Add Custom Rate</option>
+                                  </select>
+                                </div>
+                                <label className="mt-5 flex cursor-pointer items-start gap-2.5">
+                                  <input type="checkbox" checked={taxInclusive} onChange={(event) => setTaxInclusive(event.target.checked)} className="mt-0.5 h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
+                                  <span><span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-800">Price includes GST <Info size={13} className="text-slate-400" /></span><span className="mt-1 block text-[10px] text-slate-400">{taxInclusive ? 'GST is included in price' : 'GST will be added on top'}</span></span>
+                                </label>
                               </div>
-                              <label className="mt-5 flex cursor-pointer items-start gap-2.5">
-                                <input type="checkbox" checked={taxInclusive} onChange={(event) => setTaxInclusive(event.target.checked)} className="mt-0.5 h-5 w-5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" />
-                                <span><span className="flex items-center gap-1.5 text-[11px] font-bold text-slate-800">Price includes GST <Info size={13} className="text-slate-400" /></span><span className="mt-1 block text-[10px] text-slate-400">{taxInclusive ? 'GST is included in price' : 'GST will be added on top'}</span></span>
-                              </label>
+                              <AnimatePresence initial={false}>
+                                {customGstOpen && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden"
+                                  >
+                                    <div className="mt-3 rounded-xl border border-blue-200 bg-blue-50/60 p-3">
+                                      <label className="mb-1.5 block text-[10px] font-bold text-slate-700">Custom GST Rate</label>
+                                      <div className="flex items-center gap-2">
+                                        <div className="relative min-w-0 flex-1">
+                                          <input
+                                            autoFocus
+                                            type="number"
+                                            min="0"
+                                            max="100"
+                                            step="0.01"
+                                            value={gstRate}
+                                            onChange={(event) => {
+                                              const nextRate = event.target.value === '' ? 0 : Number(event.target.value);
+                                              setGstRate(Math.min(100, Math.max(0, nextRate)));
+                                            }}
+                                            className="w-full rounded-lg border border-blue-200 bg-white py-2.5 pl-3 pr-8 text-xs font-bold text-slate-900 outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100"
+                                          />
+                                          <span className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-xs font-bold text-slate-500">%</span>
+                                        </div>
+                                        <button type="button" onClick={() => setCustomGstOpen(false)} className="rounded-lg bg-blue-600 px-4 py-2.5 text-[11px] font-bold text-white hover:bg-blue-700">Use Rate</button>
+                                      </div>
+                                      <p className="mt-1.5 text-[9px] font-medium text-slate-400">Enter any rate from 0% to 100%. Decimals are supported.</p>
+                                    </div>
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
                             </div>
                           </motion.div>
                         )}
