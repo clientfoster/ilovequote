@@ -196,12 +196,12 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
       ) : null}
 
       <header className="fixed inset-x-0 top-0 z-50 border-b border-[#E5E7EB] bg-white/95 backdrop-blur">
-        <div className="flex h-[56px] items-center justify-between px-4 lg:px-4">
-          <div className="flex items-center gap-3">
+        <div className="flex h-[56px] items-center justify-between gap-2 px-3 sm:px-4">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => setIsMobileMenuOpen(true)}
-              className="inline-flex h-9 w-9 items-center justify-center rounded-[16px] border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
+              className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-600 shadow-sm transition hover:bg-slate-50 lg:hidden"
               aria-label="Open menu"
             >
               <Menu className="h-5 w-5" />
@@ -214,12 +214,13 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
             >
               {isDesktopSidebarExpanded ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
-            <Link to={logoTarget} className="flex items-center gap-1.5">
-              <BrandMark size="sm" />
+            <Link to={logoTarget} className="flex shrink-0 items-center">
+              <span className="sm:hidden"><BrandMark size="xs" /></span>
+              <span className="hidden sm:block"><BrandMark size="sm" /></span>
             </Link>
           </div>
 
-          <div className="flex items-center gap-2 lg:gap-4">
+          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2 lg:gap-4">
             {isAuthed ? (
               <>
                 <div className="flex items-center gap-3 rounded-full border border-slate-200 bg-white px-3 py-1 shadow-sm">
@@ -241,14 +242,14 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                 </button>
               </>
             ) : (
-              <div className="flex items-center gap-2">
-                <Link to="/login?mode=login" className="inline-flex items-center gap-2 rounded-[16px] border border-slate-200 bg-white px-4 py-2 text-[13px] font-medium text-slate-700 shadow-sm transition hover:bg-slate-50">
-                  <LogIn className="h-4 w-4" />
-                  Login
+              <div className="flex items-center gap-1.5 sm:gap-2">
+                <Link to="/login?mode=login" className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-slate-200 bg-white px-2.5 text-[12px] font-semibold text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 sm:rounded-[16px] sm:px-4 sm:text-[13px] sm:font-medium sm:shadow-sm">
+                  <LogIn className="hidden h-4 w-4 sm:block" />
+                  Log in
                 </Link>
-                <Link to="/login?mode=signup" className="inline-flex items-center gap-2 rounded-[16px] bg-[#1D4ED8] px-4 py-2 text-[13px] font-medium text-white shadow-sm transition hover:bg-blue-800">
-                  <UserPlus className="h-4 w-4" />
-                  Sign Up
+                <Link to="/login?mode=signup" className="inline-flex h-9 items-center justify-center gap-2 whitespace-nowrap rounded-xl bg-[#1D4ED8] px-3 text-[12px] font-bold text-white shadow-[0_5px_12px_rgba(29,78,216,0.22)] transition hover:bg-blue-800 sm:rounded-[16px] sm:px-4 sm:text-[13px] sm:font-medium sm:shadow-sm">
+                  <UserPlus className="hidden h-4 w-4 sm:block" />
+                  Sign up
                 </Link>
               </div>
             )}

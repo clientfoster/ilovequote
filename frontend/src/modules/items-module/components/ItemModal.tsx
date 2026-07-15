@@ -165,14 +165,14 @@ export default function ItemModal({ isOpen, onClose, onSave, editingItem, curren
             animate={{ opacity: 0.4 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 z-50 bg-slate-900"
+            className="fixed inset-0 z-[70] bg-slate-900"
           />
           <motion.div
             initial={{ x: '100%' }}
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'spring', damping: 28, stiffness: 240 }}
-            className="fixed right-0 top-0 z-50 flex h-full w-full flex-col overflow-hidden bg-[#fcfdff] shadow-2xl sm:max-w-[560px]"
+            className="fixed right-0 top-0 z-[70] flex h-full w-full flex-col overflow-hidden bg-[#fcfdff] shadow-2xl sm:max-w-[560px]"
           >
             <header className="flex h-16 shrink-0 items-center justify-between border-b border-slate-200 bg-white px-5">
               <button type="button" onClick={onClose} title="Go back" className="rounded-lg p-2 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900">
@@ -353,7 +353,7 @@ export default function ItemModal({ isOpen, onClose, onSave, editingItem, curren
                 )}
               </div>
 
-              <footer className="grid shrink-0 grid-cols-[0.72fr_1.8fr] gap-3 border-t border-slate-200 bg-white p-4 sm:px-6">
+              <footer className="grid shrink-0 grid-cols-[0.72fr_1.8fr] gap-3 border-t border-slate-200 bg-white px-4 pb-[max(1rem,env(safe-area-inset-bottom))] pt-4 sm:px-6">
                 <button type="button" onClick={onClose} className="rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm font-bold text-slate-800 transition hover:bg-slate-50">Cancel</button>
                 <button type="submit" className="flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-3 text-sm font-bold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"><Save size={17} />Save Item</button>
               </footer>
