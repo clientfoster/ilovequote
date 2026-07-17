@@ -57,6 +57,8 @@ type RowProps = {
   column: ColumnDefinition;
   label: string;
   visible: boolean;
+  formulaValue?: string;
+  formulaDescription?: string;
   onLabelChange: (value: string) => void;
   onVisibilityChange: () => void;
   locked?: boolean;
@@ -66,15 +68,16 @@ type RowProps = {
   isOver?: boolean;
 };
 
-function ColumnRow({ column, label, visible, onLabelChange, onVisibilityChange, locked = false, dragHandleProps, dragHandleRef, isDragging = false, isOver = false }: RowProps) {
+function ColumnRow({ column, label, visible, formulaValue, formulaDescription, onLabelChange, onVisibilityChange, locked = false, dragHandleProps, dragHandleRef, isDragging = false, isOver = false }: RowProps) {
   const computed = column.type === 'FORMULA';
   return (
     <div className={`grid grid-cols-[22px_34px_minmax(0,1fr)_38px] gap-x-2 border-b py-3 transition-[transform,box-shadow,background-color,opacity] duration-200 sm:grid-cols-[22px_34px_minmax(150px,1fr)_minmax(130px,0.8fr)_38px] sm:items-start ${isDragging ? 'border-[#7FAFD8] bg-[#EAF4FF] opacity-35' : isOver ? 'border-[#2E6EAB] bg-[#EAF4FF] shadow-[inset_0_2px_0_#2E6EAB]' : 'border-slate-100 bg-white'}`}>
       {locked ? <LockKeyhole className="mt-2.5 h-3.5 w-3.5 text-slate-300" aria-label={`${label} position locked`} /> : <button ref={dragHandleRef} type="button" {...dragHandleProps} className="mt-1.5 touch-none rounded p-1 text-slate-400 hover:bg-[#EAF4FF] hover:text-[#2E6EAB] active:cursor-grabbing" aria-label={`Drag ${label} column`}><GripVertical className="h-4 w-4 cursor-grab" /></button>}
       <span className="mt-2.5 text-xs font-semibold text-slate-600">{column.cell}</span>
       <input value={label} onChange={(event) => onLabelChange(event.target.value)} aria-label={`${label} column name`} className="min-h-[38px] rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-[#2E6EAB]" />
-      {computed ? <div className="col-start-3 mt-2 sm:col-start-4 sm:mt-0"><div className="text-[11px] font-semibold text-slate-600">FORMULA</div><div className="mt-1 text-[10px] leading-4 text-slate-500">{column.description}</div></div> : <select defaultValue={column.type} aria-label={`${DEFAULT_LABELS[column.key]} column type`} className="col-start-3 mt-2 min-h-[38px] rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-700 outline-none sm:col-start-4 sm:mt-0"><option>{column.type}</option><option>TEXT</option><option>NUMBER</option><option>CURRENCY</option></select>}
+      {computed ? <div className="col-start-3 mt-2 sm:col-start-4 sm:mt-0"><div className="text-[11px] font-semibold text-slate-600">FORMULA</div><div className="mt-1 text-[10px] leading-4 text-slate-500">({formulaDescription || column.description})</div></div> : <select defaultValue={column.type} aria-label={`${label} column type`} className="col-start-3 mt-2 min-h-[38px] rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-700 outline-none sm:col-start-4 sm:mt-0"><option>{column.type}</option><option>TEXT</option><option>NUMBER</option><option>CURRENCY</option></select>}
       <button type="button" onClick={onVisibilityChange} aria-label={`${visible ? 'Hide' : 'Show'} ${label} column`} className="col-start-4 row-start-1 mt-1.5 rounded-lg p-2 text-slate-400 hover:bg-[#EAF4FF] hover:text-[#2E6EAB] sm:col-start-5">{visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</button>
+      {computed && formulaValue ? <div className="relative col-start-3 mt-2 sm:col-span-2 sm:col-start-3"><span className="absolute inset-y-0 left-0 flex w-9 items-center justify-center rounded-l-md border-r border-slate-200 bg-slate-50 text-[12px] italic text-slate-500">fx</span><input readOnly value={`=${formulaValue}`} aria-label={`${label} formula`} className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 pl-11 pr-3 text-[14px] font-normal leading-5 text-slate-700 outline-none" /></div> : null}
     </div>
   );
 }
@@ -168,6 +171,8 @@ export default function ColumnEditorModal({ open, gstType, columns, columnOrder,
     column,
     label: getLabel(column.key),
     visible: getVisible(column.key),
+    formulaValue: column.formulaKey ? nextFormulas[column.formulaKey] : undefined,
+    formulaDescription: column.key === 'igst' ? `Amount × ${nextLabels.gstRate} / 100` : column.key === 'cgst' || column.key === 'sgst' ? `Amount × (${nextLabels.gstRate} / 2) / 100` : column.description,
     onLabelChange: (value) => {
       if (isBuiltInKey(column.key)) setNextLabels((current) => ({ ...current, [column.key]: value }));
       else setNextCustomColumns((current) => current.map((custom) => custom.id === column.key ? { ...custom, label: value } : custom));
@@ -193,9 +198,9 @@ export default function ColumnEditorModal({ open, gstType, columns, columnOrder,
   };
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-2 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="columns-modal-title">
+    <div className="invoice-modal fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/50 p-2 sm:p-4" role="dialog" aria-modal="true" aria-labelledby="columns-modal-title">
       <div className="flex max-h-[94vh] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl">
-        <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-4 sm:px-5"><h2 id="columns-modal-title" className="flex items-center gap-2 text-sm font-black text-slate-900 sm:text-base">Customize Columns &amp; Formulas <Lightbulb className="h-4 w-4 text-amber-500" /></h2><button type="button" onClick={onClose} aria-label="Close column editor" className="rounded-lg p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></header>
+        <header className="flex shrink-0 items-center justify-between border-b border-slate-200 px-4 py-4 sm:px-5"><h2 id="columns-modal-title" className="flex items-center gap-2 text-[18px] font-semibold leading-6 text-slate-900">Customize Columns &amp; Formulas <Lightbulb className="h-4 w-4 text-amber-500" /></h2><button type="button" onClick={onClose} aria-label="Close column editor" className="rounded-md p-2 text-slate-400 hover:bg-slate-100"><X className="h-5 w-5" /></button></header>
         <div className="flex-1 overflow-y-auto px-3 py-2 sm:px-4">
           <div className="py-2">
             <div className="flex justify-end"><button type="button" onClick={() => setAddingColumn((current) => !current)} className="rounded-lg border border-[#2E6EAB] px-4 py-2 text-xs font-bold text-[#2E6EAB] hover:bg-[#EAF4FF]">+ Add New Column</button></div>

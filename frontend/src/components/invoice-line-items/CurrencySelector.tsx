@@ -99,15 +99,15 @@ export default function CurrencySelector({ value, onChange }: { value: string; o
 
   return (
     <div ref={rootRef} className="relative">
-      <label className="mb-1.5 block text-sm font-semibold text-slate-800">Currency<span className="text-rose-500">*</span></label>
+      <label className="mb-1.5 block text-[14px] font-medium leading-5 text-slate-800">Currency<span className="text-rose-500">*</span></label>
       <button
         type="button"
         onClick={() => setOpen((current) => !current)}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className="flex min-h-[58px] w-full items-center justify-between rounded-xl border border-slate-200 bg-white px-4 text-left shadow-sm outline-none transition focus:border-[#2E6EAB] focus:ring-2 focus:ring-[#EAF4FF]"
+        className="flex h-10 w-full items-center justify-between rounded-md border border-slate-200 bg-white px-3 text-left shadow-sm outline-none transition focus:border-[#2E6EAB] focus:ring-2 focus:ring-[#EAF4FF]"
       >
-        <span className="min-w-0"><span className="font-bold text-slate-900">{selected.code}</span><span className="ml-2 truncate text-sm text-slate-500">{selected.name} ({selected.symbol})</span></span>
+        <span className="min-w-0 truncate text-[14px] font-normal leading-5 text-slate-900">{selected.name} ({selected.code}, {selected.symbol})</span>
         <ChevronDown className={`h-4 w-4 shrink-0 text-slate-400 transition ${open ? 'rotate-180' : ''}`} />
       </button>
       {open ? (
@@ -125,14 +125,14 @@ export default function CurrencySelector({ value, onChange }: { value: string; o
                 if (event.key === 'Escape') setOpen(false);
               }}
               placeholder="Search currency"
-              className="w-full bg-transparent text-sm outline-none placeholder:text-slate-400"
+              className="w-full bg-transparent text-[14px] font-normal leading-5 outline-none placeholder:text-slate-400"
             />
           </div>
           <div role="listbox" className="max-h-64 overflow-y-auto p-1.5">
             {filtered.map((currency, index) => (
               <button key={currency.code} type="button" role="option" aria-selected={selected.code === currency.code} onMouseEnter={() => setActiveIndex(index)} onClick={() => choose(currency)} className={`flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-left ${index === activeIndex ? 'bg-[#EAF4FF]' : 'hover:bg-slate-50'}`}>
-                <span className="w-8 text-center text-sm font-bold text-[#2E6EAB]">{currency.symbol}</span>
-                <span className="min-w-0 flex-1"><span className="block text-sm font-bold text-slate-800">{currency.code}</span><span className="block truncate text-xs text-slate-500">{currency.name}</span></span>
+                <span className="w-8 text-center text-[14px] font-medium text-[#2E6EAB]">{currency.symbol}</span>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-normal leading-5 text-slate-800">{currency.name} ({currency.code})</span>
                 {selected.code === currency.code ? <Check className="h-4 w-4 text-[#2E6EAB]" /> : null}
               </button>
             ))}

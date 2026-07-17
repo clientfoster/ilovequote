@@ -45,7 +45,7 @@ function SectionCard({ title, subtitle, children }: { title: string; subtitle?: 
   return (
     <section className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
       <div className="mb-4 flex items-center gap-2">
-        <h3 className="text-xl font-black tracking-[-0.03em] text-slate-900">{title}</h3>
+        <h3 className="text-[16px] font-semibold leading-5 tracking-normal text-slate-900">{title}</h3>
         {subtitle ? <span className="text-sm font-medium text-slate-500">{subtitle}</span> : null}
       </div>
       {children}
@@ -813,7 +813,7 @@ export default function CreateInvoicePage() {
   };
 
   return (
-    <div className="min-h-full bg-[#F8FAFF] px-3 py-4 md:px-5 md:py-6">
+    <div className="invoice-ui min-h-full bg-[#F8FAFF] px-3 py-4 md:px-5 md:py-6">
       <div className="mx-auto max-w-[1380px] space-y-4 md:space-y-5">
         <section className="rounded-2xl border border-slate-200 bg-white/95 px-3 py-2.5 shadow-sm md:px-6 md:py-4">
           <div className="md:hidden">
@@ -1093,7 +1093,7 @@ export default function CreateInvoicePage() {
                           <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-3">
                             <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                               <div className="space-y-0.5">
-                                <h4 className="text-sm font-black tracking-[-0.02em] text-slate-900">Custom Fields</h4>
+                                <h4 className="text-[16px] font-semibold leading-5 tracking-normal text-slate-900">Custom Fields</h4>
                                 <p className="text-xs leading-4 text-slate-500">Add labels such as Client ID, GST Number, PO Number, or Vehicle No.</p>
                               </div>
                               <button
@@ -1169,17 +1169,27 @@ export default function CreateInvoicePage() {
                 labels={draft.lineItemColumnLabels}
                 formulas={draft.lineItemFormulas}
                 onCurrencyChange={(currency) => updateDraft({ currency })}
-                onGSTApply={(settings) => setDraft((current) => ({
-                  ...current,
-                  showTax: settings.enabled,
-                  taxType: settings.taxType,
-                  gstType: settings.type,
-                  placeOfSupply: settings.placeOfSupply,
-                  reverseCharge: settings.reverseCharge,
-                  cessEnabled: settings.cessEnabled,
-                  cessRate: settings.cessRate,
-                  lineItems: current.lineItems.map((item) => ({ ...item, tax: settings.rate })),
-                }))}
+                onGSTApply={(settings) => setDraft((current) => {
+                  const nonGstTax = settings.enabled && settings.taxType !== 'GST (India)';
+                  return {
+                    ...current,
+                    showTax: settings.enabled,
+                    taxType: settings.taxType,
+                    gstType: nonGstTax ? 'IGST' : settings.type,
+                    placeOfSupply: settings.placeOfSupply,
+                    reverseCharge: settings.reverseCharge,
+                    cessEnabled: nonGstTax ? false : settings.cessEnabled,
+                    cessRate: nonGstTax ? 0 : settings.cessRate,
+                    lineItemColumnLabels: {
+                      ...current.lineItemColumnLabels,
+                      gstRate: nonGstTax ? `${settings.taxType} Rate` : 'GST Rate',
+                      cgst: 'CGST',
+                      sgst: 'SGST',
+                      igst: nonGstTax ? settings.taxType : 'IGST',
+                    },
+                    lineItems: current.lineItems.map((item) => ({ ...item, tax: settings.rate })),
+                  };
+                })}
                 onColumnsApply={(lineItemColumns, lineItemColumnOrder, customLineItemColumns, lineItemColumnLabels, lineItemFormulas) => updateDraft({ lineItemColumns, lineItemColumnOrder, customLineItemColumns, lineItemColumnLabels, lineItemFormulas })}
               />
               <InvoiceTable draft={draft} onChange={updateDraft} />

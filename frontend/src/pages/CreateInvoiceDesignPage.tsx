@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, ChevronLeft, ChevronRight, Download, MoreHorizontal, ShieldCheck, Upload, X } from 'lucide-react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { formatInvoiceCurrency, getInvoiceTotal, getLineItemAmount, saveInvoiceDraft, useInvoiceDraft } from '../invoiceDraft';
+import { calculateInvoiceLine, formatInvoiceCurrency, getInvoiceTotal, saveInvoiceDraft, useInvoiceDraft } from '../invoiceDraft';
 import { createInvoice } from '../invoiceApi';
 import { AUTH_STATE_EVENT, isAuthenticated } from '../auth';
 import { downloadElementAsPdf } from '../download';
@@ -28,8 +28,8 @@ export default function CreateInvoiceDesignPage() {
   const visibleAttachments = draft.attachments.filter((attachment) => attachment.name.trim());
   const hasSignature = Boolean(draft.signatureData || draft.signatureName.trim());
   const lineItemGridClass = draft.showTax
-    ? 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.6fr_0.9fr]'
-    : 'grid-cols-[0.85fr_2.8fr_0.55fr_0.8fr_0.9fr]';
+    ? 'grid-cols-[minmax(0,0.8fr)_minmax(0,1.7fr)_minmax(52px,0.55fr)_minmax(82px,0.9fr)_minmax(72px,0.8fr)_minmax(92px,1fr)]'
+    : 'grid-cols-[minmax(0,0.8fr)_minmax(0,1.8fr)_minmax(52px,0.55fr)_minmax(82px,0.9fr)_minmax(92px,1fr)]';
 
   useEffect(() => {
     const syncAuth = () => setIsAuthed(isAuthenticated());
@@ -301,20 +301,21 @@ export default function CreateInvoiceDesignPage() {
               </div>
 
               <div className="mt-10 border-t-4 border-slate-300 pt-8">
-                <div className={`grid ${lineItemGridClass} gap-4 px-1 pb-3 text-[15px] font-black uppercase text-[#0F2F59]`}>
-                  <div>Items</div><div>Description</div><div className="text-right">Quantity</div><div className="text-right">Price</div>{draft.showTax ? <div className="text-right">{draft.gstType === 'IGST' ? 'IGST' : 'GST'}</div> : null}<div className="text-right">Amount</div>
+                <div className={`grid ${lineItemGridClass} items-center gap-2 px-1 pb-3 text-[14px] font-semibold uppercase leading-5 text-[#0F2F59]`}>
+                  <div>Items</div><div>Description</div><div className="text-right">Quantity</div><div className="text-right">Price</div>{draft.showTax ? <div className="text-right">{draft.taxType !== 'GST (India)' ? draft.taxType : draft.gstType === 'IGST' ? 'IGST' : 'GST'}</div> : null}<div className="text-right">Amount</div>
                 </div>
                 <div className="space-y-3">
-                  {draft.lineItems.map((row) => (
-                    <div key={row.id} className={`grid ${lineItemGridClass} gap-4`}>
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-xl font-semibold text-[#6E89B4]">{row.name}</div>
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-xl text-[#7E95BA]">{row.description}</div>
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{row.quantity}</div>
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(row.rate, draft.currency)}</div>
-                      {draft.showTax ? <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{row.tax}%</div> : null}
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(getLineItemAmount(row, draft.showTax, draft.lineItemFormulas, draft.gstType), draft.currency)}</div>
-                    </div>
-                  ))}
+                  {draft.lineItems.map((row) => {
+                    const calculated = calculateInvoiceLine(row, draft.lineItemFormulas, draft.gstType, draft.showTax);
+                    return <div key={row.id} className={`grid ${lineItemGridClass} items-center gap-2`}>
+                      <div className="min-w-0 truncate bg-[#F4F7FF] px-2 py-3 text-[14px] font-medium leading-5 text-[#6E89B4]">{row.name}</div>
+                      <div className="min-w-0 truncate bg-[#F4F7FF] px-2 py-3 text-[14px] font-normal leading-5 text-[#7E95BA]">{row.description}</div>
+                      <div className="bg-[#F4F7FF] px-2 py-3 text-right text-[14px] font-normal leading-5 tabular-nums text-[#7E95BA]">{row.quantity}</div>
+                      <div className="whitespace-nowrap bg-[#F4F7FF] px-2 py-3 text-right text-[14px] font-medium leading-5 tabular-nums text-[#7E95BA]">{formatInvoiceCurrency(row.rate, draft.currency)}</div>
+                      {draft.showTax ? <div className="whitespace-nowrap bg-[#F4F7FF] px-2 py-3 text-right text-[14px] font-medium leading-5 tabular-nums text-[#7E95BA]">{formatInvoiceCurrency(calculated.tax, draft.currency)}</div> : null}
+                      <div className="whitespace-nowrap bg-[#F4F7FF] px-2 py-3 text-right text-[14px] font-bold leading-5 tabular-nums text-[#7E95BA]">{formatInvoiceCurrency(calculated.total, draft.currency)}</div>
+                    </div>;
+                  })}
                 </div>
               </div>
             </div>
@@ -371,7 +372,7 @@ export default function CreateInvoiceDesignPage() {
               <div className="bg-[#2E6EAB] px-8 py-6 text-white md:px-10">
                 <div className="ml-auto w-full max-w-[260px]">
                   <div className="text-right text-sm font-black uppercase tracking-[0.16em] text-white/90">Total</div>
-                  <div className="mt-3 rounded-xl bg-[#76A4D6]/70 px-5 py-3 text-right text-5xl font-semibold tracking-[-0.05em]">{formatInvoiceCurrency(total, draft.currency)}</div>
+                  <div className="mt-3 overflow-hidden rounded-xl bg-[#76A4D6]/70 px-4 py-3 text-right text-[clamp(1.5rem,3vw,2.25rem)] font-bold leading-tight tracking-normal tabular-nums whitespace-nowrap">{formatInvoiceCurrency(total, draft.currency)}</div>
                 </div>
                 {hasSignature ? (
                   <div className="mt-8 ml-auto w-full max-w-[300px] text-white">

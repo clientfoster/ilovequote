@@ -1,4 +1,126 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+
+html,
+body,
+#root,
+#root * {
+  font-family: 'Inter', sans-serif !important;
+  letter-spacing: 0;
+}
+
+@layer base {
+  html {
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0;
+  }
+
+  body,
+  button,
+  input,
+  select,
+  textarea {
+    font-family: 'Inter', sans-serif;
+    letter-spacing: 0;
+  }
+
+  label {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  input,
+  select,
+  textarea {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    color: #111827;
+  }
+
+  input::placeholder,
+  textarea::placeholder {
+    color: #9ca3af;
+    font-size: 14px;
+    font-weight: 400;
+    opacity: 1;
+  }
+
+  button {
+    font-size: 14px;
+    font-weight: 500;
+    line-height: 20px;
+  }
+
+  table th {
+    font-size: 14px;
+    font-weight: 600;
+    line-height: 20px;
+    vertical-align: middle;
+  }
+
+  table td {
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
+    vertical-align: middle;
+  }
+}
+
+.invoice-ui {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+.invoice-ui input,
+.invoice-ui select,
+.invoice-ui textarea,
+.invoice-modal input,
+.invoice-modal select,
+.invoice-modal textarea {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+.invoice-ui input:not([type='checkbox']):not([type='radio']),
+.invoice-ui select,
+.invoice-modal input:not([type='checkbox']):not([type='radio']),
+.invoice-modal select {
+  min-height: 40px;
+  border-radius: 6px;
+}
+
+.invoice-ui button,
+.invoice-modal button {
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  letter-spacing: 0;
+}
+
+.invoice-modal h2 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 24px;
+  letter-spacing: 0;
+}
+
+.invoice-modal footer button:not([aria-label]) {
+  min-height: 40px;
+  border-radius: 6px;
+}
+
+.invoice-ui output,
+.invoice-ui input[type='number'] {
+  font-variant-numeric: tabular-nums;
+}
 
 .quote-pdf-surface {
   position: relative;

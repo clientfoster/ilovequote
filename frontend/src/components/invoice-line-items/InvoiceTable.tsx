@@ -58,14 +58,14 @@ export default function InvoiceTable({ draft, onChange }: { draft: InvoiceDraft;
   return (
     <section className="overflow-hidden rounded-2xl border border-slate-200 bg-white">
       <div className="overflow-x-auto">
-        <div className="hidden min-w-[980px] gap-3 bg-[#2E6EAB] px-4 py-4 text-[12px] font-bold text-white md:grid" style={{ gridTemplateColumns: gridTemplate }}>
+        <div className="hidden min-w-[980px] items-center gap-3 bg-[#2E6EAB] px-4 py-3 text-[14px] font-semibold leading-5 tracking-normal text-white md:grid" style={{ gridTemplateColumns: gridTemplate }}>
           <span>#</span><span>Item</span>{displayedOrder.map((key) => <span key={key}>{columnLabel(key)}</span>)}<span />
         </div>
         <div className="space-y-3 bg-slate-100/60 p-3 md:min-w-[980px] md:space-y-0 md:p-0">
           {draft.lineItems.map((item, index) => <InvoiceRow key={item.id} index={index} item={item} currency={draft.currency} gstEnabled={draft.showTax} gstType={draft.gstType} columns={draft.lineItemColumns} columnOrder={draft.lineItemColumnOrder} customColumns={draft.customLineItemColumns} labels={draft.lineItemColumnLabels} formulas={draft.lineItemFormulas} desktop={desktop} gridTemplate={gridTemplate} canDelete={draft.lineItems.length > 1} canMoveUp={index > 0} canMoveDown={index < draft.lineItems.length - 1} onChange={(patch) => updateRow(item.id, patch)} onMoveUp={() => move(index, -1)} onMoveDown={() => move(index, 1)} onInsert={() => insert(index)} onDuplicate={() => duplicate(item, index)} onDelete={() => remove(item.id)} />)}
         </div>
       </div>
-      <div className="border-t border-slate-200 p-4"><button type="button" onClick={add} className="inline-flex min-h-[54px] w-full items-center justify-center gap-2 rounded-xl border border-dashed border-[#B7D4F0] bg-white px-4 text-sm font-semibold text-slate-600 transition hover:bg-[#EAF4FF] hover:text-[#2E6EAB]"><Plus className="h-4 w-4" />Add New Line</button><TotalsCalculator draft={draft} onChange={onChange} /></div>
+      <div className="border-t border-slate-200 p-4"><button type="button" onClick={add} className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-md border border-dashed border-[#B7D4F0] bg-white px-4 text-[14px] font-medium leading-5 text-slate-600 transition hover:bg-[#EAF4FF] hover:text-[#2E6EAB]"><Plus className="h-4 w-4" />Add New Line</button><TotalsCalculator draft={draft} onChange={onChange} /></div>
     </section>
   );
 }

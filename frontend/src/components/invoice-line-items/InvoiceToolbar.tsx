@@ -33,9 +33,9 @@ export default function InvoiceToolbar({
   return (
     <>
       <div className="grid gap-3 md:grid-cols-3 md:items-end">
-        <button type="button" onClick={() => setGstOpen(true)} className="inline-flex min-h-[58px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-[15px] font-semibold text-slate-800 shadow-sm transition hover:border-[#B7D4F0] hover:text-[#2E6EAB]"><Percent className="h-5 w-5 text-[#2E6EAB]" />Edit GST</button>
+        <button type="button" onClick={() => setGstOpen(true)} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-[14px] font-medium leading-5 text-slate-800 shadow-sm transition hover:border-[#B7D4F0] hover:text-[#2E6EAB]"><Percent className="h-4 w-4 text-[#2E6EAB]" />Edit GST</button>
         <CurrencySelector value={currency} onChange={onCurrencyChange} />
-        <button type="button" onClick={() => setColumnsOpen(true)} className="inline-flex min-h-[58px] items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-[15px] font-semibold text-slate-800 shadow-sm transition hover:border-[#B7D4F0] hover:text-[#2E6EAB]"><Columns3 className="h-5 w-5 text-[#2E6EAB]" />Edit Columns/Formulas</button>
+        <button type="button" onClick={() => setColumnsOpen(true)} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-[14px] font-medium leading-5 text-slate-800 shadow-sm transition hover:border-[#B7D4F0] hover:text-[#2E6EAB]"><Columns3 className="h-4 w-4 text-[#2E6EAB]" />Edit Columns/Formulas</button>
       </div>
       <GSTModal open={gstOpen} settings={gstSettings} onClose={() => setGstOpen(false)} onApply={(settings) => { onGSTApply(settings); setGstOpen(false); }} />
       <ColumnEditorModal open={columnsOpen} gstType={gstSettings.type} columns={columns} columnOrder={columnOrder} customColumns={customColumns} labels={labels} formulas={formulas} onOrderChange={(nextOrder, nextCustomColumns) => onColumnsApply(columns, nextOrder, nextCustomColumns, labels, formulas)} onClose={() => setColumnsOpen(false)} onApply={(nextColumns, nextOrder, nextCustomColumns, nextLabels, nextFormulas) => { onColumnsApply(nextColumns, nextOrder, nextCustomColumns, nextLabels, nextFormulas); setColumnsOpen(false); }} />
