@@ -679,21 +679,66 @@ function normalizeCustomerPayload(payload = {}, ownerUserId) {
   };
 }
 
-function normalizeInvoiceLineItem(item = {}) {
-  const quantity = Math.max(0, Number(item.quantity ?? 0) || 0);
+const DEFAULT_INVOICE_FORMULAS = {
+  amount: 'D1 * E1',
+  tax: 'F1 * C1 / 100',
+  cgst: 'F1 * C1 / 200',
+  sgst: 'F1 * C1 / 200',
+  igst: 'F1 * C1 / 100',
+  total: 'F1 + G1 + H1',
+};
+
+function evaluateInvoiceFormula(expression, context) {
+  const numericExpression = String(expression || '')
+    .replace(/[×x]/g, '*')
+    .replace(/÷/g, '/')
+    .replace(/GST%/gi, `(${context.gstRate})`)
+    .replace(/C1/gi, `(${context.gstRate})`)
+    .replace(/D1/gi, `(${context.quantity})`)
+    .replace(/E1/gi, `(${context.rate})`)
+    .replace(/F1/gi, `(${context.amount})`)
+    .replace(/G1/gi, `(${context.cgst || context.igst || 0})`)
+    .replace(/H1/gi, `(${context.sgst || 0})`)
+    .replace(/Quantity/gi, `(${context.quantity})`)
+    .replace(/Discount/gi, `(${context.discount})`)
+    .replace(/Amount/gi, `(${context.amount})`)
+    .replace(/Rate/gi, `(${context.rate})`)
+    .replace(/Tax/gi, `(${context.tax})`);
+  if (!numericExpression.trim() || !/^[\d\s+\-*/().]+$/.test(numericExpression)) return 0;
+  try {
+    const result = Function(`"use strict"; return (${numericExpression});`)();
+    return Number.isFinite(result) ? Math.max(0, result) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function normalizeInvoiceLineItem(item = {}, formulas = DEFAULT_INVOICE_FORMULAS, taxEnabled = true, gstType = 'CGST_SGST') {
+  const quantity = Math.max(1, Number(item.quantity ?? 1) || 1);
   const rate = Math.max(0, Number(item.rate ?? 0) || 0);
-  const tax = Math.max(0, Number(item.tax ?? 0) || 0);
-  const subtotal = quantity * rate;
-  const amount = subtotal + subtotal * (tax / 100);
+  const tax = Math.min(100, Math.max(0, Number(item.tax ?? 0) || 0));
+  const discount = Math.max(0, Number(item.discount ?? 0) || 0);
+  const context = { quantity, rate, gstRate: taxEnabled ? tax : 0, discount, amount: 0, tax: 0, cgst: 0, sgst: 0, igst: 0 };
+  context.amount = evaluateInvoiceFormula(formulas.amount, context);
+  context.tax = evaluateInvoiceFormula(formulas.tax, context);
+  context.cgst = taxEnabled && gstType === 'CGST_SGST' ? evaluateInvoiceFormula(formulas.cgst, context) : 0;
+  context.sgst = taxEnabled && gstType === 'CGST_SGST' ? evaluateInvoiceFormula(formulas.sgst, context) : 0;
+  context.igst = taxEnabled && gstType === 'IGST' ? evaluateInvoiceFormula(formulas.igst, context) : 0;
+  const total = evaluateInvoiceFormula(formulas.total, context);
 
   return {
     id: item.id || `invoice_item_${randomUUID()}`,
     name: String(item.name || '').trim(),
     description: String(item.description || '').trim(),
+    hsnSac: String(item.hsnSac || '').trim(),
+    imageName: String(item.imageName || '').trim(),
+    imageData: String(item.imageData || '').trim(),
     quantity,
     rate,
     tax,
-    amount: Number(amount.toFixed(2)),
+    discount,
+    customValues: item.customValues && typeof item.customValues === 'object' && !Array.isArray(item.customValues) ? item.customValues : {},
+    amount: Number(total.toFixed(2)),
   };
 }
 
@@ -709,9 +754,28 @@ function normalizeInvoiceAttachment(attachment = {}) {
 
 function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
   const now = new Date().toISOString();
-  const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems.map(normalizeInvoiceLineItem) : [];
+  const lineItemFormulas = {
+    amount: String(payload.lineItemFormulas?.amount || DEFAULT_INVOICE_FORMULAS.amount),
+    tax: String(payload.lineItemFormulas?.tax || DEFAULT_INVOICE_FORMULAS.tax),
+    cgst: String(payload.lineItemFormulas?.cgst || DEFAULT_INVOICE_FORMULAS.cgst),
+    sgst: String(payload.lineItemFormulas?.sgst || DEFAULT_INVOICE_FORMULAS.sgst),
+    igst: String(payload.lineItemFormulas?.igst || DEFAULT_INVOICE_FORMULAS.igst),
+    total: String(payload.lineItemFormulas?.total || DEFAULT_INVOICE_FORMULAS.total),
+  };
+  const gstType = payload.gstType === 'IGST' ? 'IGST' : 'CGST_SGST';
+  const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems.map((item) => normalizeInvoiceLineItem(item, lineItemFormulas, Boolean(payload.showTax), gstType)) : [];
   const attachments = Array.isArray(payload.attachments) ? payload.attachments.map(normalizeInvoiceAttachment) : [];
-  const subtotal = lineItems.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+  const subtotal = lineItems.reduce((sum, item) => sum + evaluateInvoiceFormula(lineItemFormulas.amount, {
+    quantity: item.quantity,
+    rate: item.rate,
+    gstRate: 0,
+    discount: item.discount,
+    amount: 0,
+    tax: 0,
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+  }), 0);
   const grossTotal = lineItems.reduce((sum, item) => sum + item.amount, 0);
   const discountValue = Math.max(0, Number(payload.discountValue ?? 0) || 0);
   const discountType = payload.discountType === 'Flat' ? 'Flat' : '%';
@@ -733,6 +797,12 @@ function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
     showShippingExtraFields: Boolean(payload.showShippingExtraFields),
     showTaxItemsSection: payload.showTaxItemsSection !== false,
     showTax: Boolean(payload.showTax),
+    taxType: String(payload.taxType || 'GST (India)').trim(),
+    gstType,
+    placeOfSupply: String(payload.placeOfSupply || 'Other Territory').trim(),
+    reverseCharge: Boolean(payload.reverseCharge),
+    cessEnabled: Boolean(payload.cessEnabled),
+    cessRate: Math.min(100, Math.max(0, Number(payload.cessRate ?? 0) || 0)),
     clientId: String(payload.clientId || '').trim(),
     clientName: String(payload.clientName || '').trim(),
     logoName: String(payload.logoName || '').trim(),
@@ -754,6 +824,44 @@ function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
     billedToPostal: String(payload.billedToPostal || '').trim(),
     shippingEnabled: Boolean(payload.shippingEnabled),
     currency: String(payload.currency || 'INR (INR, Rs)').trim(),
+    lineItemColumns: {
+      hsnSac: payload.lineItemColumns?.hsnSac !== false,
+      gstRate: payload.lineItemColumns?.gstRate !== false,
+      quantity: payload.lineItemColumns?.quantity !== false,
+      rate: payload.lineItemColumns?.rate !== false,
+      amount: payload.lineItemColumns?.amount !== false,
+      discount: Boolean(payload.lineItemColumns?.discount),
+      cgst: payload.lineItemColumns?.cgst !== false,
+      sgst: payload.lineItemColumns?.sgst !== false,
+      igst: payload.lineItemColumns?.igst !== false,
+      total: payload.lineItemColumns?.total !== false,
+    },
+    customLineItemColumns: Array.isArray(payload.customLineItemColumns) ? payload.customLineItemColumns.map((column) => ({
+      id: String(column?.id || '').trim(),
+      label: String(column?.label || 'Custom').trim(),
+      type: ['NUMBER', 'CURRENCY'].includes(column?.type) ? column.type : 'TEXT',
+      visible: column?.visible !== false,
+    })).filter((column) => column.id) : [],
+    lineItemColumnOrder: (() => {
+      const defaults = ['hsnSac', 'gstRate', 'quantity', 'rate', 'amount', 'discount', 'cgst', 'sgst', 'igst', 'total'];
+      const customIds = Array.isArray(payload.customLineItemColumns) ? payload.customLineItemColumns.map((column) => String(column?.id || '').trim()).filter(Boolean) : [];
+      const allowed = [...defaults, ...customIds];
+      const supplied = Array.isArray(payload.lineItemColumnOrder) ? payload.lineItemColumnOrder.filter((key) => allowed.includes(key)) : [];
+      return [...new Set([...supplied, ...allowed])].filter((key) => key !== 'total').concat('total');
+    })(),
+    lineItemColumnLabels: {
+      hsnSac: String(payload.lineItemColumnLabels?.hsnSac || 'HSN/SAC'),
+      gstRate: String(payload.lineItemColumnLabels?.gstRate || 'GST Rate'),
+      quantity: String(payload.lineItemColumnLabels?.quantity || 'Quantity'),
+      rate: String(payload.lineItemColumnLabels?.rate || 'Rate'),
+      amount: String(payload.lineItemColumnLabels?.amount || 'Amount'),
+      discount: String(payload.lineItemColumnLabels?.discount || 'Discount'),
+      cgst: String(payload.lineItemColumnLabels?.cgst || 'CGST'),
+      sgst: String(payload.lineItemColumnLabels?.sgst || 'SGST'),
+      igst: String(payload.lineItemColumnLabels?.igst || 'IGST'),
+      total: String(payload.lineItemColumnLabels?.total || 'Total'),
+    },
+    lineItemFormulas,
     lineItems,
     discountValue,
     discountType,

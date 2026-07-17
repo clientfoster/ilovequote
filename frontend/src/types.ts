@@ -131,13 +131,47 @@ export interface InvoiceRecord {
   billedToCountry: string;
   billedToPostal: string;
   currency: string;
+  taxType?: string;
+  gstType?: 'CGST_SGST' | 'IGST';
+  placeOfSupply?: string;
+  reverseCharge?: boolean;
+  cessEnabled?: boolean;
+  cessRate?: number;
+  lineItemColumns?: {
+    hsnSac: boolean;
+    gstRate: boolean;
+    quantity: boolean;
+    rate: boolean;
+    amount: boolean;
+    discount: boolean;
+    cgst: boolean;
+    sgst: boolean;
+    igst: boolean;
+    total: boolean;
+  };
+  lineItemColumnOrder?: string[];
+  customLineItemColumns?: Array<{ id: string; label: string; type: 'TEXT' | 'NUMBER' | 'CURRENCY'; visible: boolean }>;
+  lineItemFormulas?: {
+    amount: string;
+    tax: string;
+    cgst: string;
+    sgst: string;
+    igst: string;
+    total: string;
+  };
+  lineItemColumnLabels?: Record<string, string>;
   lineItems: Array<{
     id: string;
     name: string;
     description: string;
+    hsnSac?: string;
+    imageName?: string;
+    imageData?: string;
+    customValues?: Record<string, string | number>;
     quantity: number;
     rate: number;
     tax: number;
+    discount?: number;
     amount: number;
   }>;
   discountValue: number;

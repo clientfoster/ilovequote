@@ -1,0 +1,12 @@
+import { calculateInvoiceLine, formatInvoiceCurrency, type InvoiceDraft } from '../../invoiceDraft';
+
+export default function TotalsCalculator({ draft, onChange }: { draft: InvoiceDraft; onChange: (patch: Partial<InvoiceDraft>) => void }) {
+  const lines = draft.lineItems.map((item) => calculateInvoiceLine(item, draft.lineItemFormulas, draft.gstType, draft.showTax));
+  const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
+  const tax = lines.reduce((sum, line) => sum + line.tax, 0);
+  const beforeDiscount = lines.reduce((sum, line) => sum + line.total, 0);
+  const discount = draft.discountType === '%' ? subtotal * Math.min(100, Math.max(0, draft.discountValue)) / 100 : Math.min(beforeDiscount, Math.max(0, draft.discountValue));
+  const grandTotal = Math.max(0, beforeDiscount - discount);
+  const money = (value: number) => formatInvoiceCurrency(value, draft.currency);
+  return <aside className="ml-auto mt-4 w-full max-w-[400px] rounded-2xl border border-slate-200 bg-slate-50/70 p-4"><div className="space-y-3 text-sm"><div className="flex justify-between font-semibold text-slate-600"><span>Sub Total</span><span>{money(subtotal)}</span></div>{draft.showTax ? <div className="flex justify-between font-semibold text-slate-600"><span>{draft.gstType === 'IGST' ? 'IGST' : 'GST'}</span><span>{money(tax)}</span></div> : null}<div className="grid grid-cols-[1fr_90px_74px] items-center gap-2"><span className="font-semibold text-slate-600">Discount</span><input type="number" min="0" value={draft.discountValue} onChange={(event) => onChange({ discountValue: Math.max(0, Number(event.target.value) || 0) })} className="min-h-[40px] rounded-xl border border-slate-200 px-3 text-sm outline-none focus:border-[#2E6EAB]" /><select value={draft.discountType} onChange={(event) => onChange({ discountType: event.target.value as '%' | 'Flat' })} className="min-h-[40px] rounded-xl border border-slate-200 px-2 text-sm outline-none focus:border-[#2E6EAB]"><option value="%">%</option><option value="Flat">Flat</option></select></div><div className="flex justify-between font-semibold text-slate-500"><span>Discount amount</span><span>- {money(discount)}</span></div><div className="border-t border-slate-200 pt-3 text-right"><span className="text-xs font-bold uppercase tracking-wide text-slate-400">Grand Total</span><div className="mt-1 text-3xl font-black tracking-tight text-[#2E6EAB]">{money(grandTotal)}</div></div></div></aside>;
+}

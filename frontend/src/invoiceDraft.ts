@@ -5,10 +5,45 @@ export type InvoiceLineItem = {
   id: string;
   name: string;
   description: string;
+  hsnSac?: string;
+  imageName?: string;
+  imageData?: string;
   quantity: number;
   rate: number;
   tax: number;
+  discount?: number;
+  customValues?: Record<string, string | number>;
 };
+
+export type InvoiceGstType = 'CGST_SGST' | 'IGST';
+
+export type InvoiceLineItemColumns = {
+  hsnSac: boolean;
+  gstRate: boolean;
+  quantity: boolean;
+  rate: boolean;
+  amount: boolean;
+  discount: boolean;
+  cgst: boolean;
+  sgst: boolean;
+  igst: boolean;
+  total: boolean;
+};
+
+export type InvoiceFormulaConfig = {
+  amount: string;
+  tax: string;
+  cgst: string;
+  sgst: string;
+  igst: string;
+  total: string;
+};
+
+export type InvoiceColumnLabels = Record<keyof InvoiceLineItemColumns, string>;
+export type InvoiceColumnKey = keyof InvoiceLineItemColumns;
+export type InvoiceCustomColumn = { id: string; label: string; type: 'TEXT' | 'NUMBER' | 'CURRENCY'; visible: boolean };
+export type InvoiceColumnId = string;
+export const DEFAULT_INVOICE_COLUMN_ORDER: InvoiceColumnId[] = ['hsnSac', 'gstRate', 'quantity', 'rate', 'amount', 'discount', 'cgst', 'sgst', 'igst', 'total'];
 
 export type InvoiceTerm = {
   id: string;
@@ -42,6 +77,12 @@ export type InvoiceDraft = {
   showShippingExtraFields: boolean;
   showTaxItemsSection: boolean;
   showTax: boolean;
+  taxType: string;
+  gstType: InvoiceGstType;
+  placeOfSupply: string;
+  reverseCharge: boolean;
+  cessEnabled: boolean;
+  cessRate: number;
   clientId: string;
   clientName: string;
   logoName: string;
@@ -63,6 +104,11 @@ export type InvoiceDraft = {
   billedToPostal: string;
   shippingEnabled: boolean;
   currency: string;
+  lineItemColumns: InvoiceLineItemColumns;
+  lineItemColumnOrder: InvoiceColumnId[];
+  customLineItemColumns: InvoiceCustomColumn[];
+  lineItemColumnLabels: InvoiceColumnLabels;
+  lineItemFormulas: InvoiceFormulaConfig;
   lineItems: InvoiceLineItem[];
   discountValue: number;
   discountType: '%' | 'Flat';
@@ -120,7 +166,13 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   showExtraFields: false,
   showShippingExtraFields: false,
   showTaxItemsSection: true,
-  showTax: false,
+  showTax: true,
+  taxType: 'GST (India)',
+  gstType: 'CGST_SGST',
+  placeOfSupply: 'Other Territory',
+  reverseCharge: false,
+  cessEnabled: false,
+  cessRate: 0,
   clientId: '',
   clientName: '',
   logoName: '',
@@ -142,8 +194,42 @@ export const defaultInvoiceDraft: InvoiceDraft = {
   billedToPostal: '',
   shippingEnabled: false,
   currency: 'INR (INR, Rs)',
+  lineItemColumns: {
+    hsnSac: true,
+    gstRate: true,
+    quantity: true,
+    rate: true,
+    amount: true,
+    discount: false,
+    cgst: true,
+    sgst: true,
+    igst: true,
+    total: true,
+  },
+  lineItemColumnOrder: [...DEFAULT_INVOICE_COLUMN_ORDER],
+  customLineItemColumns: [],
+  lineItemColumnLabels: {
+    hsnSac: 'HSN/SAC',
+    gstRate: 'GST Rate',
+    quantity: 'Quantity',
+    rate: 'Rate',
+    amount: 'Amount',
+    discount: 'Discount',
+    cgst: 'CGST',
+    sgst: 'SGST',
+    igst: 'IGST',
+    total: 'Total',
+  },
+  lineItemFormulas: {
+    amount: 'D1 * E1',
+    tax: 'F1 * C1 / 100',
+    cgst: 'F1 * C1 / 200',
+    sgst: 'F1 * C1 / 200',
+    igst: 'F1 * C1 / 100',
+    total: 'F1 + G1 + H1',
+  },
   lineItems: [
-    { id: makeId('item'), name: '', description: '', quantity: 1, rate: 0, tax: 0 },
+    { id: makeId('item'), name: '', description: '', hsnSac: '', imageName: '', imageData: '', quantity: 1, rate: 0, tax: 18, discount: 0 },
   ],
   discountValue: 0,
   discountType: '%',
@@ -206,11 +292,39 @@ export function loadInvoiceDraft(): InvoiceDraft {
       logoData: typeof parsed.logoData === 'string' ? parsed.logoData : defaultInvoiceDraft.logoData,
       showTaxItemsSection: parsed.showTaxItemsSection ?? defaultInvoiceDraft.showTaxItemsSection,
       showTax: parsed.showTax ?? defaultInvoiceDraft.showTax,
+      taxType: typeof parsed.taxType === 'string' && parsed.taxType.trim() ? parsed.taxType : defaultInvoiceDraft.taxType,
+      gstType: parsed.gstType === 'IGST' ? 'IGST' : 'CGST_SGST',
       notes: hasLegacyNotesSeed ? defaultInvoiceDraft.notes : (typeof parsed.notes === 'string' ? parsed.notes : defaultInvoiceDraft.notes),
       shippingEnabled: isCurrentSchema ? parsed.shippingEnabled ?? defaultInvoiceDraft.shippingEnabled : false,
+      lineItemColumns: {
+        ...defaultInvoiceDraft.lineItemColumns,
+        ...(parsed.lineItemColumns || {}),
+      },
+      customLineItemColumns: Array.isArray(parsed.customLineItemColumns) ? parsed.customLineItemColumns.filter((column) => column && typeof column.id === 'string' && typeof column.label === 'string') : [],
+      lineItemColumnOrder: (() => {
+        const customIds = Array.isArray(parsed.customLineItemColumns) ? parsed.customLineItemColumns.map((column) => column?.id).filter((id): id is string => typeof id === 'string') : [];
+        const allowed = [...DEFAULT_INVOICE_COLUMN_ORDER, ...customIds];
+        const supplied = Array.isArray(parsed.lineItemColumnOrder) ? parsed.lineItemColumnOrder.filter((key): key is string => typeof key === 'string' && allowed.includes(key)) : [];
+        return [...new Set([...supplied, ...allowed])].filter((key) => key !== 'total').concat('total');
+      })(),
+      lineItemColumnLabels: {
+        ...defaultInvoiceDraft.lineItemColumnLabels,
+        ...(parsed.lineItemColumnLabels || {}),
+      },
+      lineItemFormulas: {
+        ...defaultInvoiceDraft.lineItemFormulas,
+        ...(parsed.lineItemFormulas || {}),
+      },
       lineItems:
         Array.isArray(parsed.lineItems) && parsed.lineItems.length > 0 && !hasLegacyDemoItems
-          ? parsed.lineItems
+          ? parsed.lineItems.map((item) => ({
+              ...makeInvoiceLineItem(),
+              ...item,
+              hsnSac: item.hsnSac || '',
+              imageName: item.imageName || '',
+              imageData: item.imageData || '',
+              customValues: item.customValues && typeof item.customValues === 'object' ? item.customValues : {},
+            }))
           : defaultInvoiceDraft.lineItems,
       terms: Array.isArray(parsed.terms) && parsed.terms.length > 0 ? parsed.terms : defaultInvoiceDraft.terms,
       customFields: Array.isArray(parsed.customFields) ? parsed.customFields : defaultInvoiceDraft.customFields,
@@ -270,35 +384,129 @@ export function useInvoiceDraft() {
   return [draft, setDraft] as const;
 }
 
-export function formatInvoiceCurrency(amount: number) {
-  return new Intl.NumberFormat('en-IN', {
-    style: 'currency',
-    currency: 'INR',
-    maximumFractionDigits: 2,
-  }).format(amount);
+export function formatInvoiceCurrency(amount: number, currencyLabel = 'INR') {
+  const currency = currencyLabel.toUpperCase().match(/\b[A-Z]{3}\b/)?.[0] || 'INR';
+  try {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(amount);
+  } catch {
+    return new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 2 }).format(amount);
+  }
 }
 
-export function getLineItemAmount(item: InvoiceLineItem, includeTax = true) {
-  const subtotal = item.quantity * item.rate;
-  return subtotal + subtotal * (includeTax ? item.tax / 100 : 0);
+type InvoiceFormulaContext = {
+  quantity: number;
+  rate: number;
+  gstRate: number;
+  amount: number;
+  tax: number;
+  discount: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+};
+
+export type CalculatedInvoiceLine = {
+  amount: number;
+  tax: number;
+  cgst: number;
+  sgst: number;
+  igst: number;
+  total: number;
+};
+
+function evaluateInvoiceFormula(expression: string, context: InvoiceFormulaContext) {
+  const replacements: Array<[RegExp, number]> = [
+    [/GST%/gi, context.gstRate],
+    [/C1/gi, context.gstRate],
+    [/D1/gi, context.quantity],
+    [/E1/gi, context.rate],
+    [/F1/gi, context.amount],
+    [/G1/gi, context.cgst || context.igst],
+    [/H1/gi, context.sgst],
+    [/Quantity/gi, context.quantity],
+    [/Discount/gi, context.discount],
+    [/Amount/gi, context.amount],
+    [/Rate/gi, context.rate],
+    [/Tax/gi, context.tax],
+  ];
+  const numericExpression = replacements.reduce(
+    (current, [token, value]) => current.replace(token, `(${Number.isFinite(value) ? value : 0})`),
+    expression.replace(/[×x]/g, '*').replace(/÷/g, '/'),
+  );
+  if (!numericExpression.trim() || !/^[\d\s+\-*/().]+$/.test(numericExpression)) return 0;
+  try {
+    const result = Function(`"use strict"; return (${numericExpression});`)() as number;
+    return Number.isFinite(result) ? Math.max(0, result) : 0;
+  } catch {
+    return 0;
+  }
 }
 
-export function getSubTotal(items: InvoiceLineItem[]) {
-  return items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+export function calculateInvoiceLine(
+  item: InvoiceLineItem,
+  formulas: InvoiceFormulaConfig = defaultInvoiceDraft.lineItemFormulas,
+  gstType: InvoiceGstType = 'CGST_SGST',
+  includeTax = true,
+): CalculatedInvoiceLine {
+  const context: InvoiceFormulaContext = {
+    quantity: Math.max(1, Number(item.quantity) || 1),
+    rate: Math.max(0, Number(item.rate) || 0),
+    gstRate: includeTax ? Math.min(100, Math.max(0, Number(item.tax) || 0)) : 0,
+    amount: 0,
+    tax: 0,
+    discount: Math.max(0, Number(item.discount) || 0),
+    cgst: 0,
+    sgst: 0,
+    igst: 0,
+  };
+  context.amount = evaluateInvoiceFormula(formulas.amount, context);
+  context.tax = includeTax ? evaluateInvoiceFormula(formulas.tax, context) : 0;
+  context.cgst = includeTax && gstType === 'CGST_SGST' ? evaluateInvoiceFormula(formulas.cgst, context) : 0;
+  context.sgst = includeTax && gstType === 'CGST_SGST' ? evaluateInvoiceFormula(formulas.sgst, context) : 0;
+  context.igst = includeTax && gstType === 'IGST' ? evaluateInvoiceFormula(formulas.igst, context) : 0;
+  const total = evaluateInvoiceFormula(formulas.total, context);
+  return {
+    amount: context.amount,
+    tax: context.tax,
+    cgst: context.cgst,
+    sgst: context.sgst,
+    igst: context.igst,
+    total,
+  };
+}
+
+export function getLineItemAmount(
+  item: InvoiceLineItem,
+  includeTax = true,
+  formulas: InvoiceFormulaConfig = defaultInvoiceDraft.lineItemFormulas,
+  gstType: InvoiceGstType = 'CGST_SGST',
+) {
+  return calculateInvoiceLine(item, formulas, gstType, includeTax).total;
+}
+
+export function getSubTotal(items: InvoiceLineItem[], formulas: InvoiceFormulaConfig = defaultInvoiceDraft.lineItemFormulas) {
+  return items.reduce((sum, item) => sum + calculateInvoiceLine(item, formulas, 'CGST_SGST', false).amount, 0);
 }
 
 export function getDiscountAmount(draft: InvoiceDraft) {
-  const subtotal = getSubTotal(draft.lineItems);
+  const subtotal = getSubTotal(draft.lineItems, draft.lineItemFormulas);
   return draft.discountType === '%' ? subtotal * (draft.discountValue / 100) : draft.discountValue;
 }
 
 export function getInvoiceTotal(draft: InvoiceDraft, includeTax = true) {
-  const itemsTotal = draft.lineItems.reduce((sum, item) => sum + getLineItemAmount(item, includeTax), 0);
+  const itemsTotal = draft.lineItems.reduce(
+    (sum, item) => sum + getLineItemAmount(item, includeTax, draft.lineItemFormulas, draft.gstType),
+    0,
+  );
   return itemsTotal - getDiscountAmount(draft);
 }
 
 export function makeInvoiceLineItem(): InvoiceLineItem {
-  return { id: makeId('item'), name: '', description: '', quantity: 1, rate: 0, tax: 0 };
+  return { id: makeId('item'), name: '', description: '', hsnSac: '', imageName: '', imageData: '', quantity: 1, rate: 0, tax: 18, discount: 0 };
 }
 
 export function makeInvoiceTerm(): InvoiceTerm {

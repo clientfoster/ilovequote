@@ -302,7 +302,7 @@ export default function CreateInvoiceDesignPage() {
 
               <div className="mt-10 border-t-4 border-slate-300 pt-8">
                 <div className={`grid ${lineItemGridClass} gap-4 px-1 pb-3 text-[15px] font-black uppercase text-[#0F2F59]`}>
-                  <div>Items</div><div>Description</div><div className="text-right">Quantity</div><div className="text-right">Price</div>{draft.showTax ? <div className="text-right">Tax</div> : null}<div className="text-right">Amount</div>
+                  <div>Items</div><div>Description</div><div className="text-right">Quantity</div><div className="text-right">Price</div>{draft.showTax ? <div className="text-right">{draft.gstType === 'IGST' ? 'IGST' : 'GST'}</div> : null}<div className="text-right">Amount</div>
                 </div>
                 <div className="space-y-3">
                   {draft.lineItems.map((row) => (
@@ -310,9 +310,9 @@ export default function CreateInvoiceDesignPage() {
                       <div className="bg-[#F4F7FF] px-3 py-4 text-xl font-semibold text-[#6E89B4]">{row.name}</div>
                       <div className="bg-[#F4F7FF] px-3 py-4 text-xl text-[#7E95BA]">{row.description}</div>
                       <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{row.quantity}</div>
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(row.rate)}</div>
+                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(row.rate, draft.currency)}</div>
                       {draft.showTax ? <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{row.tax}%</div> : null}
-                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(getLineItemAmount(row, draft.showTax))}</div>
+                      <div className="bg-[#F4F7FF] px-3 py-4 text-right text-xl text-[#7E95BA]">{formatInvoiceCurrency(getLineItemAmount(row, draft.showTax, draft.lineItemFormulas, draft.gstType), draft.currency)}</div>
                     </div>
                   ))}
                 </div>
@@ -371,7 +371,7 @@ export default function CreateInvoiceDesignPage() {
               <div className="bg-[#2E6EAB] px-8 py-6 text-white md:px-10">
                 <div className="ml-auto w-full max-w-[260px]">
                   <div className="text-right text-sm font-black uppercase tracking-[0.16em] text-white/90">Total</div>
-                  <div className="mt-3 rounded-xl bg-[#76A4D6]/70 px-5 py-3 text-right text-5xl font-semibold tracking-[-0.05em]">{formatInvoiceCurrency(total)}</div>
+                  <div className="mt-3 rounded-xl bg-[#76A4D6]/70 px-5 py-3 text-right text-5xl font-semibold tracking-[-0.05em]">{formatInvoiceCurrency(total, draft.currency)}</div>
                 </div>
                 {hasSignature ? (
                   <div className="mt-8 ml-auto w-full max-w-[300px] text-white">

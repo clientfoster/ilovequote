@@ -20,17 +20,12 @@ import { createCustomer, fetchCustomers } from '../customerApi';
 import { fetchUserQuotes } from '../quoteApi';
 import { AUTH_STATE_EVENT, getScopedStorageKey, isAuthenticated } from '../auth';
 import SearchableProfileSelect from '../components/SearchableProfileSelect';
+import { InvoiceTable, InvoiceToolbar } from '../components/invoice-line-items';
 import { NEW_DOCUMENT_EVENT } from '../documentReset';
 import {
   clearInvoiceDraftStorage,
   defaultInvoiceDraft,
-  formatInvoiceCurrency,
-  getDiscountAmount,
-  getInvoiceTotal,
-  getLineItemAmount,
-  getSubTotal,
   makeInvoiceExtraField,
-  makeInvoiceLineItem,
   makeInvoiceTerm,
   type InvoiceAttachment,
   type InvoiceDraft,
@@ -45,8 +40,6 @@ const steps = [
   { number: '2', label: 'Your Bank Details', active: false, optional: true, path: '/create-invoice/bank-details' },
   { number: '3', label: 'Select Design & Colors', active: false, subtitle: '(Download or Email Invoice)', path: '/create-invoice/design' },
 ];
-
-const currencyOptions = ['INR (INR, Rs)', 'USD (USD, $)', 'EUR (EUR, €)', 'GBP (GBP, £)'];
 
 function SectionCard({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -304,7 +297,6 @@ export default function CreateInvoicePage() {
   const [draft, setDraft] = useInvoiceDraft();
   const [isAuthed, setIsAuthed] = useState(isAuthenticated());
   const [isBusinessEditing, setIsBusinessEditing] = useState(true);
-  const [isCurrencyMenuOpen, setIsCurrencyMenuOpen] = useState(false);
   const [businessProfiles, setBusinessProfiles] = useState<ProfileOption[]>([]);
   const [clientProfiles, setClientProfiles] = useState<ProfileOption[]>([]);
   const [selectedBusinessProfileId, setSelectedBusinessProfileId] = useState('manual');
@@ -313,7 +305,6 @@ export default function CreateInvoicePage() {
   const [showNotesEditor, setShowNotesEditor] = useState(false);
   const [showAttachmentsEditor, setShowAttachmentsEditor] = useState(false);
   const [showSignatureEditor, setShowSignatureEditor] = useState(false);
-  const currencyMenuRef = useRef<HTMLDivElement | null>(null);
   const notesTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const attachmentInputRef = useRef<HTMLInputElement | null>(null);
   const signatureInputRef = useRef<HTMLInputElement | null>(null);
@@ -321,12 +312,6 @@ export default function CreateInvoicePage() {
   const logoInputRef = useRef<HTMLInputElement | null>(null);
 
   const updateDraft = (patch: Partial<InvoiceDraft>) => setDraft((current) => ({ ...current, ...patch }));
-  const subtotal = getSubTotal(draft.lineItems);
-  const discountAmount = getDiscountAmount(draft);
-  const total = getInvoiceTotal(draft, draft.showTax);
-  const lineItemGridClass = draft.showTax
-    ? 'md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_120px_130px_44px]'
-    : 'md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_130px_44px]';
   const shippingExtraFieldsVisible = draft.showShippingExtraFields || draft.showCustomFields || draft.showExtraFields;
   const updateBusinessDraft = (patch: Partial<InvoiceDraft>) => {
     setSelectedBusinessProfileId('manual');
@@ -466,7 +451,6 @@ export default function CreateInvoicePage() {
     setSelectedBusinessProfileId('manual');
     setSelectedClientProfileId('manual');
     setIsBusinessEditing(true);
-    setIsCurrencyMenuOpen(false);
     setIsMobileStepsOpen(false);
     setShowNotesEditor(false);
     setShowAttachmentsEditor(false);
@@ -672,21 +656,6 @@ export default function CreateInvoicePage() {
       cancelled = true;
     };
   }, [isAuthed]);
-
-  useEffect(() => {
-    if (!isCurrencyMenuOpen) return;
-
-    const handlePointerDown = (event: MouseEvent) => {
-      if (currencyMenuRef.current && !currencyMenuRef.current.contains(event.target as Node)) {
-        setIsCurrencyMenuOpen(false);
-      }
-    };
-
-    document.addEventListener('mousedown', handlePointerDown);
-    return () => {
-      document.removeEventListener('mousedown', handlePointerDown);
-    };
-  }, [isCurrencyMenuOpen]);
 
   const applyBusinessProfile = (profileId: string) => {
     if (profileId === 'manual') {
@@ -1182,146 +1151,38 @@ export default function CreateInvoicePage() {
             </section>
 
             <div className="space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <label className="inline-flex items-center gap-3 text-sm font-bold text-[#2E6EAB]">
-                  <input
-                    type="checkbox"
-                    checked={draft.showTax}
-                    onChange={(event) => updateDraft({ showTax: event.target.checked })}
-                    className="h-4 w-4 rounded border-slate-300 text-[#2E6EAB] focus:ring-[#2E6EAB]"
-                  />
-                  {draft.showTax ? 'Hide Tax' : 'Show Tax'}
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => updateDraft({ showTax: !draft.showTax })}
-                  className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm"
-                >
-                  Configure Tax
-                </button>
-                <div ref={currencyMenuRef} className="relative">
-                  <button
-                    type="button"
-                    onClick={() => setIsCurrencyMenuOpen((current) => !current)}
-                    className="inline-flex min-h-[42px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-semibold text-slate-600 shadow-sm"
-                  >
-                    {draft.currency === 'INR (INR, Rs)' ? 'Choose currency' : draft.currency}
-                    <ChevronDown className="h-4 w-4 text-slate-400" />
-                  </button>
-                  {isCurrencyMenuOpen ? (
-                    <div className="absolute left-0 top-full z-20 mt-2 w-56 overflow-hidden rounded-xl border border-slate-200 bg-white shadow-lg">
-                      {currencyOptions.map((option) => (
-                        <button
-                          key={option}
-                          type="button"
-                          onClick={() => {
-                            updateDraft({ currency: option });
-                            setIsCurrencyMenuOpen(false);
-                          }}
-                          className={`flex w-full items-center justify-between px-4 py-2.5 text-left text-sm font-semibold transition-colors ${
-                            draft.currency === option ? 'bg-[#EAF4FF] text-[#2E6EAB]' : 'text-slate-700 hover:bg-slate-50'
-                          }`}
-                        >
-                          <span>{option}</span>
-                          {draft.currency === option ? <span className="text-xs font-black">v</span> : null}
-                        </button>
-                      ))}
-                    </div>
-                  ) : null}
-                </div>
-              </div>
-
-
-                  <div className="mt-5 overflow-hidden rounded-2xl border border-slate-200">
-                    <div className={`hidden md:grid ${lineItemGridClass} gap-3 bg-slate-50 px-4 py-3 text-[11px] font-bold uppercase tracking-wider text-slate-500`}>
-                      <div>#</div><div>Item / Description</div><div>Quantity</div><div>Rate</div>{draft.showTax ? <div>Tax (%)</div> : null}<div>Amount</div><div />
-                    </div>
-                    <div className="divide-y divide-slate-200">
-                      {draft.lineItems.map((row, index) => {
-                        const amount = getLineItemAmount(row, draft.showTax);
-                        return (
-                          <div key={row.id} className={`grid gap-3 px-4 py-4 ${lineItemGridClass} md:items-center`}>
-                            <div className="text-sm font-bold text-slate-900">{index + 1}</div>
-                            <div className="grid gap-2">
-                              <input
-                                value={row.name}
-                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, name: e.target.value } : item) }))}
-                                placeholder="Enter item name"
-                                className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none placeholder:font-semibold placeholder:text-slate-400"
-                              />
-                              <input
-                                value={row.description}
-                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, description: e.target.value } : item) }))}
-                                placeholder="Enter description"
-                                className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-600 outline-none placeholder:text-slate-400"
-                              />
-                            </div>
-                            <input
-                              type="number"
-                              value={row.quantity || ''}
-                              onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, quantity: Number(e.target.value) || 0 } : item) }))}
-                              placeholder="Qty"
-                              className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
-                            />
-                            <input
-                              type="number"
-                              value={row.rate || ''}
-                              onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, rate: Number(e.target.value) || 0 } : item) }))}
-                              placeholder="Enter rate"
-                              className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
-                            />
-                            {draft.showTax ? (
-                              <input
-                                type="number"
-                                value={row.tax || ''}
-                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))}
-                                placeholder="Tax %"
-                                className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none placeholder:text-slate-400"
-                              />
-                            ) : null}
-                            <div className="flex items-center text-sm font-bold text-slate-900">{formatInvoiceCurrency(amount)}</div>
-                            <button
-                              type="button"
-                              disabled={draft.lineItems.length === 1}
-                              onClick={() => {
-                                if (draft.lineItems.length === 1) return;
-                                setDraft((current) => ({
-                                  ...current,
-                                  lineItems: current.lineItems.filter((item) => item.id !== row.id),
-                                }));
-                              }}
-                              className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent disabled:hover:text-slate-400"
-                              aria-label={draft.lineItems.length === 1 ? 'At least one item is required' : 'Delete line item'}
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="grid gap-4 border-t border-slate-200 bg-white p-4 lg:grid-cols-[minmax(0,1fr)_360px]">
-                      <button type="button" onClick={() => setDraft((current) => ({ ...current, lineItems: [...current.lineItems, makeInvoiceLineItem()] }))} className="inline-flex min-h-[46px] items-center justify-center gap-2 rounded-xl border border-dashed border-[#B7D4F0] bg-[#EAF4FF] px-4 text-sm font-bold text-[#2E6EAB]">
-                        <Plus className="h-4 w-4" />
-                        Add Item
-                      </button>
-                      <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-4">
-                        <div className="space-y-3 text-sm">
-                          <div className="flex items-center justify-between font-semibold text-slate-600"><span>Sub Total</span><span>{formatInvoiceCurrency(subtotal)}</span></div>
-                          <div className="grid gap-2 sm:grid-cols-[1fr_82px_64px] sm:items-center">
-                            <span className="font-semibold text-slate-600">Discount</span>
-                            <input type="number" value={draft.discountValue} onChange={(e) => updateDraft({ discountValue: Number(e.target.value) || 0 })} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                            <select value={draft.discountType} onChange={(e) => updateDraft({ discountType: e.target.value as '%' | 'Flat' })} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none">
-                              <option value="%">%</option>
-                              <option value="Flat">Flat</option>
-                            </select>
-                          </div>
-                          <div className="flex items-center justify-between font-semibold text-slate-600"><span /><span>(-) {formatInvoiceCurrency(discountAmount)}</span></div>
-                            <div className="text-right text-3xl font-black tracking-[-0.04em] text-[#2E6EAB]">{formatInvoiceCurrency(total)}</div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+              <InvoiceToolbar
+                currency={draft.currency}
+                gstSettings={{
+                  enabled: draft.showTax,
+                  taxType: draft.taxType,
+                  type: draft.gstType,
+                  rate: draft.lineItems[0]?.tax ?? 18,
+                  placeOfSupply: draft.placeOfSupply,
+                  reverseCharge: draft.reverseCharge,
+                  cessEnabled: draft.cessEnabled,
+                  cessRate: draft.cessRate,
+                }}
+                columns={draft.lineItemColumns}
+                columnOrder={draft.lineItemColumnOrder}
+                customColumns={draft.customLineItemColumns}
+                labels={draft.lineItemColumnLabels}
+                formulas={draft.lineItemFormulas}
+                onCurrencyChange={(currency) => updateDraft({ currency })}
+                onGSTApply={(settings) => setDraft((current) => ({
+                  ...current,
+                  showTax: settings.enabled,
+                  taxType: settings.taxType,
+                  gstType: settings.type,
+                  placeOfSupply: settings.placeOfSupply,
+                  reverseCharge: settings.reverseCharge,
+                  cessEnabled: settings.cessEnabled,
+                  cessRate: settings.cessRate,
+                  lineItems: current.lineItems.map((item) => ({ ...item, tax: settings.rate })),
+                }))}
+                onColumnsApply={(lineItemColumns, lineItemColumnOrder, customLineItemColumns, lineItemColumnLabels, lineItemFormulas) => updateDraft({ lineItemColumns, lineItemColumnOrder, customLineItemColumns, lineItemColumnLabels, lineItemFormulas })}
+              />
+              <InvoiceTable draft={draft} onChange={updateDraft} />
                 </div>
 
             <div className="flex flex-wrap gap-3">

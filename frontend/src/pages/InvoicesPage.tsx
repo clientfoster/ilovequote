@@ -29,8 +29,8 @@ function calculateInvoiceTotal(invoice: InvoiceRecord) {
     const lineSubtotal = quantity * rate;
     return sum + lineSubtotal + lineSubtotal * (tax / 100);
   }, 0);
-  const discountValue = Number((invoice as Record<string, unknown>).discountValue ?? 0) || 0;
-  const discountType = (invoice as Record<string, unknown>).discountType === 'Flat' ? 'Flat' : '%';
+  const discountValue = Number(invoice.discountValue ?? 0) || 0;
+  const discountType = invoice.discountType === 'Flat' ? 'Flat' : '%';
   const discountAmount = discountType === '%' ? subtotal * (discountValue / 100) : discountValue;
 
   return Number((grossTotal - discountAmount).toFixed(2));
@@ -71,7 +71,12 @@ export default function InvoicesPage() {
     const hydratedDraft = {
       ...defaultInvoiceDraft,
       ...invoice,
+      gstType: invoice.gstType === 'IGST' ? 'IGST' as const : 'CGST_SGST' as const,
+      lineItemColumns: { ...defaultInvoiceDraft.lineItemColumns, ...(invoice.lineItemColumns || {}) },
+      lineItemColumnLabels: { ...defaultInvoiceDraft.lineItemColumnLabels, ...(invoice.lineItemColumnLabels || {}) },
+      lineItemFormulas: { ...defaultInvoiceDraft.lineItemFormulas, ...(invoice.lineItemFormulas || {}) },
       lineItems: invoice.lineItems.map((item) => ({
+        ...item,
         id: item.id,
         name: item.name,
         description: item.description,
@@ -89,7 +94,12 @@ export default function InvoicesPage() {
     saveInvoiceDraft({
       ...defaultInvoiceDraft,
       ...invoice,
+      gstType: invoice.gstType === 'IGST' ? 'IGST' as const : 'CGST_SGST' as const,
+      lineItemColumns: { ...defaultInvoiceDraft.lineItemColumns, ...(invoice.lineItemColumns || {}) },
+      lineItemColumnLabels: { ...defaultInvoiceDraft.lineItemColumnLabels, ...(invoice.lineItemColumnLabels || {}) },
+      lineItemFormulas: { ...defaultInvoiceDraft.lineItemFormulas, ...(invoice.lineItemFormulas || {}) },
       lineItems: invoice.lineItems.map((item) => ({
+        ...item,
         id: item.id,
         name: item.name,
         description: item.description,
