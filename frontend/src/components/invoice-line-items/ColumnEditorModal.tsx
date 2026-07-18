@@ -21,9 +21,10 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { Eye, EyeOff, GripVertical, Lightbulb, LockKeyhole, RotateCcw, X } from 'lucide-react';
-import { DEFAULT_INVOICE_COLUMN_ORDER, type InvoiceColumnId, type InvoiceColumnKey, type InvoiceColumnLabels, type InvoiceCustomColumn, type InvoiceFormulaConfig, type InvoiceGstType, type InvoiceLineItemColumns } from '../../invoiceDraft';
+import { DEFAULT_INVOICE_COLUMN_ORDER, type InvoiceColumnId, type InvoiceColumnKey, type InvoiceColumnLabels, type InvoiceColumnType, type InvoiceColumnTypes, type InvoiceCustomColumn, type InvoiceFormulaConfig, type InvoiceGstType, type InvoiceLineItemColumns } from '../../invoiceDraft';
 
 const DEFAULT_FORMULAS: InvoiceFormulaConfig = {
+  gstRate: '', quantity: '', rate: '', discount: '',
   amount: 'D1 * E1', tax: 'F1 * C1 / 100', cgst: 'F1 * C1 / 200', sgst: 'F1 * C1 / 200', igst: 'F1 * C1 / 100', total: 'F1 + G1 + H1',
 };
 
@@ -41,11 +42,11 @@ type ColumnDefinition = {
 
 const COLUMN_DEFINITIONS: ColumnDefinition[] = [
   { key: 'hsnSac', cell: 'B1', type: 'TEXT' },
-  { key: 'gstRate', cell: 'C1', type: 'NUMBER' },
-  { key: 'quantity', cell: 'D1', type: 'NUMBER' },
-  { key: 'rate', cell: 'E1', type: 'CURRENCY' },
+  { key: 'gstRate', cell: 'C1', type: 'NUMBER', formulaKey: 'gstRate' },
+  { key: 'quantity', cell: 'D1', type: 'NUMBER', formulaKey: 'quantity' },
+  { key: 'rate', cell: 'E1', type: 'CURRENCY', formulaKey: 'rate' },
   { key: 'amount', cell: 'F1', type: 'FORMULA', formulaKey: 'amount', description: 'Quantity × Rate' },
-  { key: 'discount', cell: 'J1', type: 'CURRENCY' },
+  { key: 'discount', cell: 'J1', type: 'CURRENCY', formulaKey: 'discount' },
   { key: 'cgst', cell: 'G1', type: 'FORMULA', formulaKey: 'cgst', description: 'Amount × (GST Rate / 2) / 100' },
   { key: 'sgst', cell: 'H1', type: 'FORMULA', formulaKey: 'sgst', description: 'Amount × (GST Rate / 2) / 100' },
   { key: 'igst', cell: 'G1', type: 'FORMULA', formulaKey: 'igst', description: 'Amount × GST Rate / 100' },
@@ -59,6 +60,9 @@ type RowProps = {
   visible: boolean;
   formulaValue?: string;
   formulaDescription?: string;
+  selectedType: InvoiceColumnType;
+  onTypeChange: (type: InvoiceColumnType) => void;
+  onFormulaChange: (value: string) => void;
   onLabelChange: (value: string) => void;
   onVisibilityChange: () => void;
   locked?: boolean;
@@ -68,16 +72,16 @@ type RowProps = {
   isOver?: boolean;
 };
 
-function ColumnRow({ column, label, visible, formulaValue, formulaDescription, onLabelChange, onVisibilityChange, locked = false, dragHandleProps, dragHandleRef, isDragging = false, isOver = false }: RowProps) {
-  const computed = column.type === 'FORMULA';
+function ColumnRow({ column, label, visible, formulaValue, formulaDescription, selectedType, onTypeChange, onFormulaChange, onLabelChange, onVisibilityChange, locked = false, dragHandleProps, dragHandleRef, isDragging = false, isOver = false }: RowProps) {
+  const computed = selectedType === 'FORMULA';
   return (
     <div className={`grid grid-cols-[22px_34px_minmax(0,1fr)_38px] gap-x-2 border-b py-3 transition-[transform,box-shadow,background-color,opacity] duration-200 sm:grid-cols-[22px_34px_minmax(150px,1fr)_minmax(130px,0.8fr)_38px] sm:items-start ${isDragging ? 'border-[#7FAFD8] bg-[#EAF4FF] opacity-35' : isOver ? 'border-[#2E6EAB] bg-[#EAF4FF] shadow-[inset_0_2px_0_#2E6EAB]' : 'border-slate-100 bg-white'}`}>
       {locked ? <LockKeyhole className="mt-2.5 h-3.5 w-3.5 text-slate-300" aria-label={`${label} position locked`} /> : <button ref={dragHandleRef} type="button" {...dragHandleProps} className="mt-1.5 touch-none rounded p-1 text-slate-400 hover:bg-[#EAF4FF] hover:text-[#2E6EAB] active:cursor-grabbing" aria-label={`Drag ${label} column`}><GripVertical className="h-4 w-4 cursor-grab" /></button>}
       <span className="mt-2.5 text-xs font-semibold text-slate-600">{column.cell}</span>
       <input value={label} onChange={(event) => onLabelChange(event.target.value)} aria-label={`${label} column name`} className="min-h-[38px] rounded-lg border border-slate-200 bg-white px-2.5 text-xs font-semibold text-slate-800 outline-none focus:border-[#2E6EAB]" />
-      {computed ? <div className="col-start-3 mt-2 sm:col-start-4 sm:mt-0"><div className="text-[11px] font-semibold text-slate-600">FORMULA</div><div className="mt-1 text-[10px] leading-4 text-slate-500">({formulaDescription || column.description})</div></div> : <select defaultValue={column.type} aria-label={`${label} column type`} className="col-start-3 mt-2 min-h-[38px] rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-700 outline-none sm:col-start-4 sm:mt-0"><option>{column.type}</option><option>TEXT</option><option>NUMBER</option><option>CURRENCY</option></select>}
+      {column.type === 'FORMULA' ? <div className="col-start-3 mt-2 sm:col-start-4 sm:mt-0"><div className="text-[11px] font-semibold text-slate-600">FORMULA</div><div className="mt-1 text-[10px] leading-4 text-slate-500">({formulaDescription || column.description})</div></div> : <select value={selectedType} onChange={(event) => onTypeChange(event.target.value as InvoiceColumnType)} aria-label={`${label} column type`} className="col-start-3 mt-2 min-h-[38px] rounded-lg border border-slate-200 bg-white px-2.5 text-[11px] font-medium text-slate-700 outline-none sm:col-start-4 sm:mt-0"><option value={column.type}>{column.type}</option>{column.type === 'NUMBER' || column.type === 'CURRENCY' ? <option value="FORMULA">FORMULA</option> : null}</select>}
       <button type="button" onClick={onVisibilityChange} aria-label={`${visible ? 'Hide' : 'Show'} ${label} column`} className="col-start-4 row-start-1 mt-1.5 rounded-lg p-2 text-slate-400 hover:bg-[#EAF4FF] hover:text-[#2E6EAB] sm:col-start-5">{visible ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}</button>
-      {computed && formulaValue ? <div className="relative col-start-3 mt-2 sm:col-span-2 sm:col-start-3"><span className="absolute inset-y-0 left-0 flex w-9 items-center justify-center rounded-l-md border-r border-slate-200 bg-slate-50 text-[12px] italic text-slate-500">fx</span><input readOnly value={`=${formulaValue}`} aria-label={`${label} formula`} className="h-10 w-full rounded-md border border-slate-200 bg-slate-50 pl-11 pr-3 text-[14px] font-normal leading-5 text-slate-700 outline-none" /></div> : null}
+      {computed ? <div className="relative col-start-3 mt-2 sm:col-span-2 sm:col-start-3"><span className="absolute inset-y-0 left-0 flex w-9 items-center justify-center rounded-l-md border-r border-slate-200 bg-slate-50 text-[12px] italic text-slate-500">fx</span><input readOnly={column.type === 'FORMULA'} value={`=${formulaValue || ''}`} onChange={(event) => onFormulaChange(event.target.value.replace(/^=/, ''))} aria-label={`${label} formula`} className={`h-10 w-full rounded-md border border-slate-200 pl-11 pr-3 text-[14px] font-normal leading-5 text-slate-700 outline-none ${column.type === 'FORMULA' ? 'bg-slate-50' : 'bg-white focus:border-[#2E6EAB]'}`} /></div> : null}
     </div>
   );
 }
@@ -95,20 +99,22 @@ function isBuiltInKey(key: InvoiceColumnId): key is InvoiceColumnKey {
   return DEFAULT_INVOICE_COLUMN_ORDER.includes(key);
 }
 
-export default function ColumnEditorModal({ open, gstType, columns, columnOrder, customColumns, labels, formulas, onOrderChange, onApply, onClose }: {
+export default function ColumnEditorModal({ open, gstType, columns, columnOrder, columnTypes, customColumns, labels, formulas, onOrderChange, onApply, onClose }: {
   open: boolean;
   gstType: InvoiceGstType;
   columns: InvoiceLineItemColumns;
   columnOrder: InvoiceColumnId[];
+  columnTypes: InvoiceColumnTypes;
   customColumns: InvoiceCustomColumn[];
   labels: InvoiceColumnLabels;
   formulas: InvoiceFormulaConfig;
   onOrderChange: (order: InvoiceColumnId[], customColumns: InvoiceCustomColumn[]) => void;
-  onApply: (columns: InvoiceLineItemColumns, order: InvoiceColumnId[], customColumns: InvoiceCustomColumn[], labels: InvoiceColumnLabels, formulas: InvoiceFormulaConfig) => void;
+  onApply: (columns: InvoiceLineItemColumns, order: InvoiceColumnId[], columnTypes: InvoiceColumnTypes, customColumns: InvoiceCustomColumn[], labels: InvoiceColumnLabels, formulas: InvoiceFormulaConfig) => void;
   onClose: () => void;
 }) {
   const [nextColumns, setNextColumns] = useState(columns);
   const [nextOrder, setNextOrder] = useState(() => normalizeOrder(columnOrder));
+  const [nextTypes, setNextTypes] = useState(columnTypes);
   const [nextCustomColumns, setNextCustomColumns] = useState(customColumns);
   const [nextLabels, setNextLabels] = useState(labels);
   const [nextFormulas, setNextFormulas] = useState(formulas);
@@ -123,10 +129,11 @@ export default function ColumnEditorModal({ open, gstType, columns, columnOrder,
     if (!open) return;
     setNextColumns(columns);
     setNextOrder(normalizeOrder(columnOrder));
+    setNextTypes(columnTypes);
     setNextCustomColumns(customColumns);
     setNextLabels(labels);
     setNextFormulas(formulas);
-  }, [columnOrder, columns, customColumns, formulas, labels, open]);
+  }, [columnOrder, columnTypes, columns, customColumns, formulas, labels, open]);
 
   const definitions = useMemo(() => {
     const all = [...COLUMN_DEFINITIONS, ...nextCustomColumns.map((column) => ({ key: column.id, cell: '', type: column.type } satisfies ColumnDefinition))];
@@ -161,6 +168,7 @@ export default function ColumnEditorModal({ open, gstType, columns, columnOrder,
     const resetColumns = { hsnSac: true, gstRate: true, quantity: true, rate: true, amount: true, discount: false, cgst: true, sgst: true, igst: true, total: true };
     setNextColumns(resetColumns);
     setNextOrder(order);
+    setNextTypes({ hsnSac: 'TEXT', gstRate: 'NUMBER', quantity: 'NUMBER', rate: 'CURRENCY', amount: 'FORMULA', discount: 'CURRENCY', cgst: 'FORMULA', sgst: 'FORMULA', igst: 'FORMULA', total: 'FORMULA' });
     setNextCustomColumns([]);
     setNextLabels(DEFAULT_LABELS);
     setNextFormulas(DEFAULT_FORMULAS);
@@ -171,6 +179,12 @@ export default function ColumnEditorModal({ open, gstType, columns, columnOrder,
     column,
     label: getLabel(column.key),
     visible: getVisible(column.key),
+    selectedType: isBuiltInKey(column.key) ? nextTypes[column.key] : getCustomColumn(column.key)?.type || 'TEXT',
+    onTypeChange: (type) => {
+      if (isBuiltInKey(column.key)) setNextTypes((current) => ({ ...current, [column.key]: type }));
+      else if (type !== 'FORMULA') setNextCustomColumns((current) => current.map((custom) => custom.id === column.key ? { ...custom, type: type as InvoiceCustomColumn['type'] } : custom));
+    },
+    onFormulaChange: (value) => { if (column.formulaKey) setNextFormulas((current) => ({ ...current, [column.formulaKey!]: value })); },
     formulaValue: column.formulaKey ? nextFormulas[column.formulaKey] : undefined,
     formulaDescription: column.key === 'igst' ? `Amount × ${nextLabels.gstRate} / 100` : column.key === 'cgst' || column.key === 'sgst' ? `Amount × (${nextLabels.gstRate} / 2) / 100` : column.description,
     onLabelChange: (value) => {
@@ -215,7 +229,7 @@ export default function ColumnEditorModal({ open, gstType, columns, columnOrder,
           </DndContext>
           <section className="sticky bottom-0 mt-4 rounded-t-xl bg-[#2E6EAB] px-3 py-3 text-white shadow-[0_-8px_20px_rgba(15,23,42,0.08)]"><p className="mb-2 text-[10px] font-bold uppercase tracking-wider text-blue-100">Live table preview</p><div className="flex min-w-0 items-center gap-3 overflow-hidden text-[10px] font-bold"><span className="min-w-[80px] flex-1">Item</span>{previewColumns.map((column) => <span key={column.key} className="max-w-[72px] truncate">{getLabel(column.key)}</span>)}</div></section>
         </div>
-        <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-3 py-3 sm:px-4"><button type="button" onClick={onClose} className="mr-auto rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">Cancel</button><button type="button" onClick={reset} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600"><RotateCcw className="h-3.5 w-3.5" />Reset to Default</button><button type="button" onClick={() => onApply(nextColumns, normalizeOrder(nextOrder), nextCustomColumns, nextLabels, nextFormulas)} className="rounded-lg bg-[#2E6EAB] px-4 py-2 text-xs font-bold text-white hover:bg-[#245B8F]">Save Changes</button></footer>
+        <footer className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-slate-200 bg-white px-3 py-3 sm:px-4"><button type="button" onClick={onClose} className="mr-auto rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600">Cancel</button><button type="button" onClick={reset} className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 px-3 py-2 text-xs font-bold text-slate-600"><RotateCcw className="h-3.5 w-3.5" />Reset to Default</button><button type="button" onClick={() => onApply(nextColumns, normalizeOrder(nextOrder), nextTypes, nextCustomColumns, nextLabels, nextFormulas)} className="rounded-lg bg-[#2E6EAB] px-4 py-2 text-xs font-bold text-white hover:bg-[#245B8F]">Save Changes</button></footer>
       </div>
     </div>
   );

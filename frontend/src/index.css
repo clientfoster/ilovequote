@@ -122,6 +122,17 @@ body,
   font-variant-numeric: tabular-nums;
 }
 
+.invoice-tax-rate-input {
+  appearance: textfield;
+  -moz-appearance: textfield;
+}
+
+.invoice-tax-rate-input::-webkit-inner-spin-button,
+.invoice-tax-rate-input::-webkit-outer-spin-button {
+  margin: 0;
+  -webkit-appearance: none;
+}
+
 .quote-pdf-surface {
   position: relative;
   width: 100%;

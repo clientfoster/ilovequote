@@ -306,7 +306,7 @@ export default function CreateInvoiceDesignPage() {
                 </div>
                 <div className="space-y-3">
                   {draft.lineItems.map((row) => {
-                    const calculated = calculateInvoiceLine(row, draft.lineItemFormulas, draft.gstType, draft.showTax);
+                    const calculated = calculateInvoiceLine(row, draft.lineItemFormulas, draft.gstType, draft.showTax, draft.lineItemColumnTypes);
                     return <div key={row.id} className={`grid ${lineItemGridClass} items-center gap-2`}>
                       <div className="min-w-0 truncate bg-[#F4F7FF] px-2 py-3 text-[14px] font-medium leading-5 text-[#6E89B4]">{row.name}</div>
                       <div className="min-w-0 truncate bg-[#F4F7FF] px-2 py-3 text-[14px] font-normal leading-5 text-[#7E95BA]">{row.description}</div>

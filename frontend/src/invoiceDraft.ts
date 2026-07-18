@@ -31,6 +31,10 @@ export type InvoiceLineItemColumns = {
 };
 
 export type InvoiceFormulaConfig = {
+  gstRate: string;
+  quantity: string;
+  rate: string;
+  discount: string;
   amount: string;
   tax: string;
   cgst: string;
@@ -38,6 +42,9 @@ export type InvoiceFormulaConfig = {
   igst: string;
   total: string;
 };
+
+export type InvoiceColumnType = 'TEXT' | 'NUMBER' | 'CURRENCY' | 'FORMULA';
+export type InvoiceColumnTypes = Record<keyof InvoiceLineItemColumns, InvoiceColumnType>;
 
 export type InvoiceColumnLabels = Record<keyof InvoiceLineItemColumns, string>;
 export type InvoiceColumnKey = keyof InvoiceLineItemColumns;
@@ -108,6 +115,7 @@ export type InvoiceDraft = {
   lineItemColumnOrder: InvoiceColumnId[];
   customLineItemColumns: InvoiceCustomColumn[];
   lineItemColumnLabels: InvoiceColumnLabels;
+  lineItemColumnTypes: InvoiceColumnTypes;
   lineItemFormulas: InvoiceFormulaConfig;
   lineItems: InvoiceLineItem[];
   discountValue: number;
@@ -220,7 +228,12 @@ export const defaultInvoiceDraft: InvoiceDraft = {
     igst: 'IGST',
     total: 'Total',
   },
+  lineItemColumnTypes: { hsnSac: 'TEXT', gstRate: 'NUMBER', quantity: 'NUMBER', rate: 'CURRENCY', amount: 'FORMULA', discount: 'CURRENCY', cgst: 'FORMULA', sgst: 'FORMULA', igst: 'FORMULA', total: 'FORMULA' },
   lineItemFormulas: {
+    gstRate: '',
+    quantity: '',
+    rate: '',
+    discount: '',
     amount: 'D1 * E1',
     tax: 'F1 * C1 / 100',
     cgst: 'F1 * C1 / 200',
@@ -310,6 +323,10 @@ export function loadInvoiceDraft(): InvoiceDraft {
       lineItemColumnLabels: {
         ...defaultInvoiceDraft.lineItemColumnLabels,
         ...(parsed.lineItemColumnLabels || {}),
+      },
+      lineItemColumnTypes: {
+        ...defaultInvoiceDraft.lineItemColumnTypes,
+        ...(parsed.lineItemColumnTypes || {}),
       },
       lineItemFormulas: {
         ...defaultInvoiceDraft.lineItemFormulas,
@@ -410,6 +427,10 @@ type InvoiceFormulaContext = {
 };
 
 export type CalculatedInvoiceLine = {
+  quantity: number;
+  rate: number;
+  gstRate: number;
+  discount: number;
   amount: number;
   tax: number;
   cgst: number;
@@ -451,6 +472,7 @@ export function calculateInvoiceLine(
   formulas: InvoiceFormulaConfig = defaultInvoiceDraft.lineItemFormulas,
   gstType: InvoiceGstType = 'CGST_SGST',
   includeTax = true,
+  columnTypes: InvoiceColumnTypes = defaultInvoiceDraft.lineItemColumnTypes,
 ): CalculatedInvoiceLine {
   const context: InvoiceFormulaContext = {
     quantity: Math.max(1, Number(item.quantity) || 1),
@@ -463,6 +485,10 @@ export function calculateInvoiceLine(
     sgst: 0,
     igst: 0,
   };
+  if (columnTypes.quantity === 'FORMULA' && formulas.quantity.trim()) context.quantity = Math.max(1, evaluateInvoiceFormula(formulas.quantity, context));
+  if (columnTypes.rate === 'FORMULA' && formulas.rate.trim()) context.rate = evaluateInvoiceFormula(formulas.rate, context);
+  if (columnTypes.gstRate === 'FORMULA' && formulas.gstRate.trim()) context.gstRate = includeTax ? Math.min(100, evaluateInvoiceFormula(formulas.gstRate, context)) : 0;
+  if (columnTypes.discount === 'FORMULA' && formulas.discount.trim()) context.discount = evaluateInvoiceFormula(formulas.discount, context);
   context.amount = evaluateInvoiceFormula(formulas.amount, context);
   context.tax = includeTax ? evaluateInvoiceFormula(formulas.tax, context) : 0;
   context.cgst = includeTax && gstType === 'CGST_SGST' ? evaluateInvoiceFormula(formulas.cgst, context) : 0;
@@ -470,6 +496,10 @@ export function calculateInvoiceLine(
   context.igst = includeTax && gstType === 'IGST' ? evaluateInvoiceFormula(formulas.igst, context) : 0;
   const total = evaluateInvoiceFormula(formulas.total, context);
   return {
+    quantity: context.quantity,
+    rate: context.rate,
+    gstRate: context.gstRate,
+    discount: context.discount,
     amount: context.amount,
     tax: context.tax,
     cgst: context.cgst,
@@ -484,22 +514,23 @@ export function getLineItemAmount(
   includeTax = true,
   formulas: InvoiceFormulaConfig = defaultInvoiceDraft.lineItemFormulas,
   gstType: InvoiceGstType = 'CGST_SGST',
+  columnTypes: InvoiceColumnTypes = defaultInvoiceDraft.lineItemColumnTypes,
 ) {
-  return calculateInvoiceLine(item, formulas, gstType, includeTax).total;
+  return calculateInvoiceLine(item, formulas, gstType, includeTax, columnTypes).total;
 }
 
-export function getSubTotal(items: InvoiceLineItem[], formulas: InvoiceFormulaConfig = defaultInvoiceDraft.lineItemFormulas) {
-  return items.reduce((sum, item) => sum + calculateInvoiceLine(item, formulas, 'CGST_SGST', false).amount, 0);
+export function getSubTotal(items: InvoiceLineItem[], formulas: InvoiceFormulaConfig = defaultInvoiceDraft.lineItemFormulas, columnTypes: InvoiceColumnTypes = defaultInvoiceDraft.lineItemColumnTypes) {
+  return items.reduce((sum, item) => sum + calculateInvoiceLine(item, formulas, 'CGST_SGST', false, columnTypes).amount, 0);
 }
 
 export function getDiscountAmount(draft: InvoiceDraft) {
-  const subtotal = getSubTotal(draft.lineItems, draft.lineItemFormulas);
+  const subtotal = getSubTotal(draft.lineItems, draft.lineItemFormulas, draft.lineItemColumnTypes);
   return draft.discountType === '%' ? subtotal * (draft.discountValue / 100) : draft.discountValue;
 }
 
 export function getInvoiceTotal(draft: InvoiceDraft, includeTax = true) {
   const itemsTotal = draft.lineItems.reduce(
-    (sum, item) => sum + getLineItemAmount(item, includeTax, draft.lineItemFormulas, draft.gstType),
+    (sum, item) => sum + getLineItemAmount(item, includeTax, draft.lineItemFormulas, draft.gstType, draft.lineItemColumnTypes),
     0,
   );
   return itemsTotal - getDiscountAmount(draft);

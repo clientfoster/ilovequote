@@ -73,6 +73,7 @@ export default function InvoicesPage() {
       ...invoice,
       gstType: invoice.gstType === 'IGST' ? 'IGST' as const : 'CGST_SGST' as const,
       lineItemColumns: { ...defaultInvoiceDraft.lineItemColumns, ...(invoice.lineItemColumns || {}) },
+      lineItemColumnTypes: { ...defaultInvoiceDraft.lineItemColumnTypes, ...(invoice.lineItemColumnTypes || {}) },
       lineItemColumnLabels: { ...defaultInvoiceDraft.lineItemColumnLabels, ...(invoice.lineItemColumnLabels || {}) },
       lineItemFormulas: { ...defaultInvoiceDraft.lineItemFormulas, ...(invoice.lineItemFormulas || {}) },
       lineItems: invoice.lineItems.map((item) => ({
@@ -96,6 +97,7 @@ export default function InvoicesPage() {
       ...invoice,
       gstType: invoice.gstType === 'IGST' ? 'IGST' as const : 'CGST_SGST' as const,
       lineItemColumns: { ...defaultInvoiceDraft.lineItemColumns, ...(invoice.lineItemColumns || {}) },
+      lineItemColumnTypes: { ...defaultInvoiceDraft.lineItemColumnTypes, ...(invoice.lineItemColumnTypes || {}) },
       lineItemColumnLabels: { ...defaultInvoiceDraft.lineItemColumnLabels, ...(invoice.lineItemColumnLabels || {}) },
       lineItemFormulas: { ...defaultInvoiceDraft.lineItemFormulas, ...(invoice.lineItemFormulas || {}) },
       lineItems: invoice.lineItems.map((item) => ({

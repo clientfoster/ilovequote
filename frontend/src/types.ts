@@ -150,8 +150,13 @@ export interface InvoiceRecord {
     total: boolean;
   };
   lineItemColumnOrder?: string[];
+  lineItemColumnTypes?: Record<string, 'TEXT' | 'NUMBER' | 'CURRENCY' | 'FORMULA'>;
   customLineItemColumns?: Array<{ id: string; label: string; type: 'TEXT' | 'NUMBER' | 'CURRENCY'; visible: boolean }>;
   lineItemFormulas?: {
+    gstRate: string;
+    quantity: string;
+    rate: string;
+    discount: string;
     amount: string;
     tax: string;
     cgst: string;

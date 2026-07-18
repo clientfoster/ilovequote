@@ -680,6 +680,10 @@ function normalizeCustomerPayload(payload = {}, ownerUserId) {
 }
 
 const DEFAULT_INVOICE_FORMULAS = {
+  gstRate: '',
+  quantity: '',
+  rate: '',
+  discount: '',
   amount: 'D1 * E1',
   tax: 'F1 * C1 / 100',
   cgst: 'F1 * C1 / 200',
@@ -713,12 +717,16 @@ function evaluateInvoiceFormula(expression, context) {
   }
 }
 
-function normalizeInvoiceLineItem(item = {}, formulas = DEFAULT_INVOICE_FORMULAS, taxEnabled = true, gstType = 'CGST_SGST') {
-  const quantity = Math.max(1, Number(item.quantity ?? 1) || 1);
-  const rate = Math.max(0, Number(item.rate ?? 0) || 0);
-  const tax = Math.min(100, Math.max(0, Number(item.tax ?? 0) || 0));
-  const discount = Math.max(0, Number(item.discount ?? 0) || 0);
+function normalizeInvoiceLineItem(item = {}, formulas = DEFAULT_INVOICE_FORMULAS, taxEnabled = true, gstType = 'CGST_SGST', columnTypes = {}) {
+  let quantity = Math.max(1, Number(item.quantity ?? 1) || 1);
+  let rate = Math.max(0, Number(item.rate ?? 0) || 0);
+  let tax = Math.min(100, Math.max(0, Number(item.tax ?? 0) || 0));
+  let discount = Math.max(0, Number(item.discount ?? 0) || 0);
   const context = { quantity, rate, gstRate: taxEnabled ? tax : 0, discount, amount: 0, tax: 0, cgst: 0, sgst: 0, igst: 0 };
+  if (columnTypes.quantity === 'FORMULA' && formulas.quantity) context.quantity = quantity = Math.max(1, evaluateInvoiceFormula(formulas.quantity, context));
+  if (columnTypes.rate === 'FORMULA' && formulas.rate) context.rate = rate = evaluateInvoiceFormula(formulas.rate, context);
+  if (columnTypes.gstRate === 'FORMULA' && formulas.gstRate) context.gstRate = tax = taxEnabled ? Math.min(100, evaluateInvoiceFormula(formulas.gstRate, context)) : 0;
+  if (columnTypes.discount === 'FORMULA' && formulas.discount) context.discount = discount = evaluateInvoiceFormula(formulas.discount, context);
   context.amount = evaluateInvoiceFormula(formulas.amount, context);
   context.tax = evaluateInvoiceFormula(formulas.tax, context);
   context.cgst = taxEnabled && gstType === 'CGST_SGST' ? evaluateInvoiceFormula(formulas.cgst, context) : 0;
@@ -755,6 +763,10 @@ function normalizeInvoiceAttachment(attachment = {}) {
 function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
   const now = new Date().toISOString();
   const lineItemFormulas = {
+    gstRate: String(payload.lineItemFormulas?.gstRate || ''),
+    quantity: String(payload.lineItemFormulas?.quantity || ''),
+    rate: String(payload.lineItemFormulas?.rate || ''),
+    discount: String(payload.lineItemFormulas?.discount || ''),
     amount: String(payload.lineItemFormulas?.amount || DEFAULT_INVOICE_FORMULAS.amount),
     tax: String(payload.lineItemFormulas?.tax || DEFAULT_INVOICE_FORMULAS.tax),
     cgst: String(payload.lineItemFormulas?.cgst || DEFAULT_INVOICE_FORMULAS.cgst),
@@ -762,8 +774,17 @@ function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
     igst: String(payload.lineItemFormulas?.igst || DEFAULT_INVOICE_FORMULAS.igst),
     total: String(payload.lineItemFormulas?.total || DEFAULT_INVOICE_FORMULAS.total),
   };
+  const lineItemColumnTypes = {
+    hsnSac: 'TEXT',
+    gstRate: payload.lineItemColumnTypes?.gstRate === 'FORMULA' ? 'FORMULA' : 'NUMBER',
+    quantity: payload.lineItemColumnTypes?.quantity === 'FORMULA' ? 'FORMULA' : 'NUMBER',
+    rate: payload.lineItemColumnTypes?.rate === 'FORMULA' ? 'FORMULA' : 'CURRENCY',
+    amount: 'FORMULA',
+    discount: payload.lineItemColumnTypes?.discount === 'FORMULA' ? 'FORMULA' : 'CURRENCY',
+    cgst: 'FORMULA', sgst: 'FORMULA', igst: 'FORMULA', total: 'FORMULA',
+  };
   const gstType = payload.gstType === 'IGST' ? 'IGST' : 'CGST_SGST';
-  const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems.map((item) => normalizeInvoiceLineItem(item, lineItemFormulas, Boolean(payload.showTax), gstType)) : [];
+  const lineItems = Array.isArray(payload.lineItems) ? payload.lineItems.map((item) => normalizeInvoiceLineItem(item, lineItemFormulas, Boolean(payload.showTax), gstType, lineItemColumnTypes)) : [];
   const attachments = Array.isArray(payload.attachments) ? payload.attachments.map(normalizeInvoiceAttachment) : [];
   const subtotal = lineItems.reduce((sum, item) => sum + evaluateInvoiceFormula(lineItemFormulas.amount, {
     quantity: item.quantity,
@@ -861,6 +882,7 @@ function buildInvoiceFromPayload(payload = {}, ownerUserId = null) {
       igst: String(payload.lineItemColumnLabels?.igst || 'IGST'),
       total: String(payload.lineItemColumnLabels?.total || 'Total'),
     },
+    lineItemColumnTypes,
     lineItemFormulas,
     lineItems,
     discountValue,

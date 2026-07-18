@@ -1,7 +1,7 @@
 import { calculateInvoiceLine, formatInvoiceCurrency, type InvoiceDraft } from '../../invoiceDraft';
 
 export default function TotalsCalculator({ draft, onChange }: { draft: InvoiceDraft; onChange: (patch: Partial<InvoiceDraft>) => void }) {
-  const lines = draft.lineItems.map((item) => calculateInvoiceLine(item, draft.lineItemFormulas, draft.gstType, draft.showTax));
+  const lines = draft.lineItems.map((item) => calculateInvoiceLine(item, draft.lineItemFormulas, draft.gstType, draft.showTax, draft.lineItemColumnTypes));
   const subtotal = lines.reduce((sum, line) => sum + line.amount, 0);
   const tax = lines.reduce((sum, line) => sum + line.tax, 0);
   const beforeDiscount = lines.reduce((sum, line) => sum + line.total, 0);

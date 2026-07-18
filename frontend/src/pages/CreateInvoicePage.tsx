@@ -1165,6 +1165,7 @@ export default function CreateInvoicePage() {
                 }}
                 columns={draft.lineItemColumns}
                 columnOrder={draft.lineItemColumnOrder}
+                columnTypes={draft.lineItemColumnTypes}
                 customColumns={draft.customLineItemColumns}
                 labels={draft.lineItemColumnLabels}
                 formulas={draft.lineItemFormulas}
@@ -1190,7 +1191,7 @@ export default function CreateInvoicePage() {
                     lineItems: current.lineItems.map((item) => ({ ...item, tax: settings.rate })),
                   };
                 })}
-                onColumnsApply={(lineItemColumns, lineItemColumnOrder, customLineItemColumns, lineItemColumnLabels, lineItemFormulas) => updateDraft({ lineItemColumns, lineItemColumnOrder, customLineItemColumns, lineItemColumnLabels, lineItemFormulas })}
+                onColumnsApply={(lineItemColumns, lineItemColumnOrder, lineItemColumnTypes, customLineItemColumns, lineItemColumnLabels, lineItemFormulas) => updateDraft({ lineItemColumns, lineItemColumnOrder, lineItemColumnTypes, customLineItemColumns, lineItemColumnLabels, lineItemFormulas })}
               />
               <InvoiceTable draft={draft} onChange={updateDraft} />
                 </div>

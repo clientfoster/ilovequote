@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Columns3, Percent } from 'lucide-react';
-import type { InvoiceColumnId, InvoiceColumnLabels, InvoiceCustomColumn, InvoiceFormulaConfig, InvoiceLineItemColumns } from '../../invoiceDraft';
+import type { InvoiceColumnId, InvoiceColumnLabels, InvoiceColumnTypes, InvoiceCustomColumn, InvoiceFormulaConfig, InvoiceLineItemColumns } from '../../invoiceDraft';
 import ColumnEditorModal from './ColumnEditorModal';
 import CurrencySelector from './CurrencySelector';
 import GSTModal, { type GSTSettings } from './GSTModal';
@@ -10,6 +10,7 @@ export default function InvoiceToolbar({
   gstSettings,
   columns,
   columnOrder,
+  columnTypes,
   customColumns,
   labels,
   formulas,
@@ -21,12 +22,13 @@ export default function InvoiceToolbar({
   gstSettings: GSTSettings;
   columns: InvoiceLineItemColumns;
   columnOrder: InvoiceColumnId[];
+  columnTypes: InvoiceColumnTypes;
   customColumns: InvoiceCustomColumn[];
   labels: InvoiceColumnLabels;
   formulas: InvoiceFormulaConfig;
   onCurrencyChange: (currency: string) => void;
   onGSTApply: (settings: GSTSettings) => void;
-  onColumnsApply: (columns: InvoiceLineItemColumns, order: InvoiceColumnId[], customColumns: InvoiceCustomColumn[], labels: InvoiceColumnLabels, formulas: InvoiceFormulaConfig) => void;
+  onColumnsApply: (columns: InvoiceLineItemColumns, order: InvoiceColumnId[], columnTypes: InvoiceColumnTypes, customColumns: InvoiceCustomColumn[], labels: InvoiceColumnLabels, formulas: InvoiceFormulaConfig) => void;
 }) {
   const [gstOpen, setGstOpen] = useState(false);
   const [columnsOpen, setColumnsOpen] = useState(false);
@@ -38,7 +40,7 @@ export default function InvoiceToolbar({
         <button type="button" onClick={() => setColumnsOpen(true)} className="inline-flex h-10 items-center justify-center gap-2 rounded-md border border-slate-200 bg-white px-4 text-[14px] font-medium leading-5 text-slate-800 shadow-sm transition hover:border-[#B7D4F0] hover:text-[#2E6EAB]"><Columns3 className="h-4 w-4 text-[#2E6EAB]" />Edit Columns/Formulas</button>
       </div>
       <GSTModal open={gstOpen} settings={gstSettings} onClose={() => setGstOpen(false)} onApply={(settings) => { onGSTApply(settings); setGstOpen(false); }} />
-      <ColumnEditorModal open={columnsOpen} gstType={gstSettings.type} columns={columns} columnOrder={columnOrder} customColumns={customColumns} labels={labels} formulas={formulas} onOrderChange={(nextOrder, nextCustomColumns) => onColumnsApply(columns, nextOrder, nextCustomColumns, labels, formulas)} onClose={() => setColumnsOpen(false)} onApply={(nextColumns, nextOrder, nextCustomColumns, nextLabels, nextFormulas) => { onColumnsApply(nextColumns, nextOrder, nextCustomColumns, nextLabels, nextFormulas); setColumnsOpen(false); }} />
+      <ColumnEditorModal open={columnsOpen} gstType={gstSettings.type} columns={columns} columnOrder={columnOrder} columnTypes={columnTypes} customColumns={customColumns} labels={labels} formulas={formulas} onOrderChange={(nextOrder, nextCustomColumns) => onColumnsApply(columns, nextOrder, columnTypes, nextCustomColumns, labels, formulas)} onClose={() => setColumnsOpen(false)} onApply={(nextColumns, nextOrder, nextTypes, nextCustomColumns, nextLabels, nextFormulas) => { onColumnsApply(nextColumns, nextOrder, nextTypes, nextCustomColumns, nextLabels, nextFormulas); setColumnsOpen(false); }} />
     </>
   );
 }
