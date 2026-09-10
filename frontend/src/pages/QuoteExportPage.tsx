@@ -14,7 +14,7 @@ function mapQuoteItems(items: Quote['items']): ItemQuoteItem[] {
     complimentary: false,
     quantity: Number(item.quantity || 1),
     unit: 'Unit',
-    discountType: item.discountType || 'None',
+    discountType: item.discountType === 'Percentage' || item.discountType === 'Flat' ? item.discountType : 'None',
     discountValue: Number(item.discountValue || 0),
     gstRate: Number(item.gstRate || 0),
     taxInclusive: Boolean(item.taxInclusive),

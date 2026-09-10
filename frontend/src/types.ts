@@ -37,6 +37,12 @@ export interface QuoteItem {
   quantity: number;
   unitPrice: number;
   total: number;
+  discountType?: 'Percentage' | 'Flat' | 'None' | string;
+  discountValue?: number;
+  gstRate?: number;
+  taxInclusive?: boolean;
+  icon?: string;
+  name?: string;
 }
 
 export interface ClientDetails {

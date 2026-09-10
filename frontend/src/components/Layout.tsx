@@ -62,6 +62,16 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
   useEffect(() => {
     setIsDesktopMenuOpen(false);
     setIsMobileMenuOpen(false);
+
+    try {
+      const flash = sessionStorage.getItem('ilovequote_flash_toast');
+      if (flash) {
+        sessionStorage.removeItem('ilovequote_flash_toast');
+        triggerToast(flash);
+      }
+    } catch {
+      // ignore
+    }
   }, [location.pathname]);
 
   const navItems = [
@@ -132,14 +142,14 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
               ) : (
                 <div className="flex items-center gap-2">
                   <Link
-                    to="/login?mode=login"
+                    to={`/login?mode=login${location.pathname === '/create-quote' ? `&returnUrl=${encodeURIComponent(location.pathname + location.search)}` : ''}`}
                     className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-[13px] font-semibold text-slate-700 shadow-sm transition hover:bg-slate-50"
                   >
                     <LogIn className="h-4 w-4" />
                     Login
                   </Link>
                   <Link
-                    to="/login?mode=signup"
+                    to={`/login?mode=signup${location.pathname === '/create-quote' ? `&returnUrl=${encodeURIComponent(location.pathname + location.search)}` : ''}`}
                     className="inline-flex items-center gap-2 rounded-xl bg-[#1D4ED8] px-4 py-2 text-[13px] font-semibold text-white shadow-sm transition hover:bg-blue-800"
                   >
                     <UserPlus className="h-4 w-4" />
@@ -341,14 +351,14 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
                     ) : (
                       <div className="mt-3 flex gap-2">
                         <Link
-                          to="/login?mode=login"
+                          to={`/login?mode=login${location.pathname === '/create-quote' ? `&returnUrl=${encodeURIComponent(location.pathname + location.search)}` : ''}`}
                           className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 py-2 text-[11px] font-semibold text-slate-700 shadow-sm"
                         >
                           <LogIn className="h-3.5 w-3.5" />
                           Login
                         </Link>
                         <Link
-                          to="/login?mode=signup"
+                          to={`/login?mode=signup${location.pathname === '/create-quote' ? `&returnUrl=${encodeURIComponent(location.pathname + location.search)}` : ''}`}
                           className="inline-flex items-center gap-1.5 rounded-lg bg-[#1D4ED8] px-3 py-2 text-[11px] font-semibold text-white shadow-sm"
                         >
                           <UserPlus className="h-3.5 w-3.5" />

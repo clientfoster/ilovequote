@@ -28,6 +28,11 @@ import {
 import { TermItem } from '../modules/items-module/components/TermsAndConditions';
 import { getScopedStorageKey, isAuthenticated } from '../auth';
 import { createQuote, updateQuote } from '../quoteApi';
+import {
+  savePendingQuote,
+  getPendingQuote,
+  clearPendingQuote,
+} from '../pendingQuote';
 
 const parseTermsStringToList = (termsStr: string): TermItem[] => {
   if (!termsStr) return [];
@@ -47,7 +52,7 @@ const toLegacyQuoteItems = (items: ItemQuoteItem[]) =>
     description: item.name,
     quantity: item.quantity,
     unitPrice: item.price,
-    total: item.price,
+    total: Number(((item.quantity || 1) * (item.price || 0)).toFixed(2)),
   }));
 
 const normalizeClientDraft = (draft: Partial<ClientFormValues> | null | undefined): ClientFormValues => {
@@ -84,6 +89,7 @@ const buildQuotePayload = (
     },
     clientLogo: clientLogo || '',
     items: toLegacyQuoteItems(items),
+    itemsData: items,
     subtotal: totals.subtotal,
     taxRate,
     taxAmount: totals.gstTotal,
@@ -252,6 +258,24 @@ export default function QuoteWizard() {
       const storedEditingQuoteId = localStorage.getItem(EDITING_QUOTE_ID_KEY);
       if (storedEditingQuoteId) {
         setEditingQuoteId(storedEditingQuoteId);
+      }
+
+      if (isAuthenticated()) {
+        const pending = getPendingQuote();
+        if (pending?.payload) {
+          saveQuoteToApi(pending.payload)
+            .then((savedQuote) => {
+              clearPendingQuote();
+              onTriggerToast(`Quote ${savedQuote.quoteNumber} saved to your account!`);
+              if (pending.intent === 'draft') {
+                setEditingQuoteId(savedQuote.id);
+                localStorage.setItem(EDITING_QUOTE_ID_KEY, savedQuote.id);
+              }
+            })
+            .catch(() => {
+              // ignore
+            });
+        }
       }
     } catch {
       // keep defaults
@@ -498,6 +522,58 @@ export default function QuoteWizard() {
     }
   };
 
+  const handleRedirectToAuth = (authMode: 'signup' | 'login') => {
+    const intent = authPromptIntent || 'final';
+    const status = intent === 'draft' ? 'Draft' : 'Completed';
+    const payload = buildCurrentPayload(status);
+
+    const currentBusiness: BusinessFormValues = {
+      ...DEFAULT_BUSINESS_VALUES,
+      ...businessData,
+      ...watchedBusinessValues,
+    };
+    const currentClient: ClientFormValues = {
+      ...DEFAULT_CLIENT_VALUES,
+      ...clientData,
+      ...watchedClientValues,
+    };
+
+    savePendingQuote({
+      intent,
+      payload,
+      draftState: {
+        businessData: currentBusiness,
+        clientData: currentClient,
+        itemsData,
+        quotationMeta,
+        termsList,
+        logoUrl,
+        taxRate,
+        termsAndConditions,
+        editingQuoteId,
+        currentStep,
+      },
+      returnUrl: intent === 'draft' ? '/create-quote' : '/quotes',
+      suggestedEmail: currentBusiness.email || currentClient.email || '',
+      suggestedName: currentBusiness.companyName || currentClient.contactPerson || '',
+      createdAt: Date.now(),
+    });
+
+    const queryParams = new URLSearchParams();
+    queryParams.set('mode', authMode);
+    const emailToSuggest = currentBusiness.email || currentClient.email;
+    if (emailToSuggest) {
+      queryParams.set('email', emailToSuggest);
+    }
+    const nameToSuggest = currentBusiness.companyName || currentClient.contactPerson;
+    if (nameToSuggest) {
+      queryParams.set('name', nameToSuggest);
+    }
+    queryParams.set('returnUrl', intent === 'draft' ? '/create-quote' : '/quotes');
+
+    navigate(`/login?${queryParams.toString()}`);
+  };
+
   return (
     <div className="quote-wizard-shell min-h-dvh overflow-x-hidden bg-slate-50 text-slate-900">
       <AnimatePresence>
@@ -545,14 +621,14 @@ export default function QuoteWizard() {
               <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <button
                   type="button"
-                  onClick={() => navigate('/login?mode=signup')}
+                  onClick={() => handleRedirectToAuth('signup')}
                   className="inline-flex min-h-[50px] items-center justify-center rounded-2xl bg-[#2457F0] px-5 text-[15px] font-bold text-white shadow-[0_14px_28px_rgba(36,87,240,0.24)] transition hover:bg-[#1d4ed8]"
                 >
                   Create Account
                 </button>
                 <button
                   type="button"
-                  onClick={() => navigate('/login?mode=login')}
+                  onClick={() => handleRedirectToAuth('login')}
                   className="inline-flex min-h-[50px] items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 text-[15px] font-bold text-slate-900 transition hover:bg-slate-50"
                 >
                   Sign In
@@ -560,7 +636,7 @@ export default function QuoteWizard() {
               </div>
 
               <p className="mt-4 text-center text-[12px] font-medium text-slate-400">
-                Your quote will only be added to history after you log in.
+                Your quote will be automatically saved to your account once you log in or sign up.
               </p>
             </motion.div>
           </div>

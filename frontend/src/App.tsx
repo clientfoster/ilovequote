@@ -35,6 +35,15 @@ function RequireAuth({ isAuthed, children }: { isAuthed: boolean; children: Reac
   return isAuthed ? children : <Navigate to="/login?mode=login" replace />;
 }
 
+function getLoginRedirect() {
+  if (typeof window === 'undefined') return '/dashboard';
+  const hash = window.location.hash;
+  const queryIdx = hash.indexOf('?');
+  const queryString = queryIdx !== -1 ? hash.substring(queryIdx) : window.location.search;
+  const params = new URLSearchParams(queryString);
+  return params.get('returnUrl') || '/dashboard';
+}
+
 export default function App() {
   const [isAuthed, setIsAuthed] = useState(() => isAuthenticated());
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(() => getStoredAuthUser());
@@ -92,7 +101,7 @@ export default function App() {
           path="/login"
           element={
             isAuthed ? (
-              <Navigate to="/dashboard" replace />
+              <Navigate to={getLoginRedirect()} replace />
             ) : (
               <LoginPage
                 onLogin={(user) => {

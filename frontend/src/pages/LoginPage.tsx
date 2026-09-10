@@ -18,6 +18,7 @@ import { apiRequest } from '../api';
 import { isFirebasePhoneConfigured, requestPhoneOtp } from '../firebasePhoneAuth';
 import { signInWithSocialProvider, type SocialProviderName } from '../firebaseSocialAuth';
 import { ConfirmationResult } from 'firebase/auth';
+import { processPendingQuoteAfterAuth, getPendingQuote } from '../pendingQuote';
 
 interface LoginPageProps {
   onLogin?: (user: AuthUser) => void;
@@ -145,8 +146,14 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     const params = new URLSearchParams(location.search);
     return params.get('resetToken') ? 'reset' : 'password';
   });
-  const [email, setEmail] = useState('you@business.com');
-  const [name, setName] = useState('');
+  const [email, setEmail] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('email') || getPendingQuote()?.suggestedEmail || '';
+  });
+  const [name, setName] = useState(() => {
+    const params = new URLSearchParams(location.search);
+    return params.get('name') || getPendingQuote()?.suggestedName || '';
+  });
   const [otp, setOtp] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -173,10 +180,50 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
   const [resetPhoneConfirmation, setResetPhoneConfirmation] = useState<ConfirmationResult | null>(null);
   const [phoneBusy, setPhoneBusy] = useState(false);
 
+  const finishAuth = async (authToken: string, user: AuthUser) => {
+    setBusy(true);
+    signIn(authToken, user);
+
+    let destination = '/dashboard';
+    try {
+      const result = await processPendingQuoteAfterAuth(user);
+      if (result.redirectUrl) {
+        destination = result.redirectUrl;
+      }
+    } catch (saveErr) {
+      console.error('Error auto-saving quote after login:', saveErr);
+    }
+
+    const params = new URLSearchParams(location.search);
+    const returnUrl = params.get('returnUrl');
+    if (returnUrl && destination === '/dashboard') {
+      destination = returnUrl;
+    }
+
+    onLogin?.(user);
+    navigate(destination, { replace: true });
+  };
+
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const modeParam = params.get('mode');
     const tokenParam = params.get('resetToken') || '';
+    const emailParam = params.get('email');
+    const nameParam = params.get('name');
+
+    if (emailParam) {
+      setEmail(emailParam);
+    } else if (!email) {
+      const suggestedEmail = getPendingQuote()?.suggestedEmail;
+      if (suggestedEmail) setEmail(suggestedEmail);
+    }
+
+    if (nameParam) {
+      setName(nameParam);
+    } else if (!name) {
+      const suggestedName = getPendingQuote()?.suggestedName;
+      if (suggestedName) setName(suggestedName);
+    }
 
     if (modeParam === 'login' || modeParam === 'signup') {
       setMode(modeParam);
@@ -193,7 +240,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
     }
 
     if (modeParam === 'login') {
-    setLoginView((current) => (current === 'otp' || current === 'forgot' || current === 'resetOtp' || current === 'reset' ? 'password' : current));
+      setLoginView((current) => (current === 'otp' || current === 'forgot' || current === 'resetOtp' || current === 'reset' ? 'password' : current));
     } else if (modeParam === 'signup') {
       setLoginView('password');
     }
@@ -302,9 +349,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           }),
         },
       );
-      signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      await finishAuth(result.authToken, result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not create account');
     } finally {
@@ -329,9 +374,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           }),
         },
       );
-      signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      await finishAuth(result.authToken, result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not sign in');
     } finally {
@@ -399,9 +442,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
             body: JSON.stringify({ idToken }),
           },
         );
-        signIn(result.authToken, result.user);
-        onLogin?.(result.user);
-        navigate('/dashboard');
+        await finishAuth(result.authToken, result.user);
         return;
       }
 
@@ -412,9 +453,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           body: JSON.stringify({ email, sessionId: loginOtpSessionId, otp: loginOtp }),
         },
       );
-      signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      await finishAuth(result.authToken, result.user);
     } catch (err) {
       setError(friendlyFirebasePhoneError(err));
     } finally {
@@ -599,9 +638,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
         },
       );
 
-      signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      await finishAuth(result.authToken, result.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Could not reset password');
     } finally {
@@ -649,9 +686,7 @@ export default function LoginPage({ onLogin }: LoginPageProps) {
           body: JSON.stringify(social),
         },
       );
-      signIn(result.authToken, result.user);
-      onLogin?.(result.user);
-      navigate('/dashboard');
+      await finishAuth(result.authToken, result.user);
     } catch (err) {
       setError(friendlyFirebasePhoneError(err));
     } finally {

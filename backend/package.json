@@ -4,8 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "node server.js",
-    "start": "node server.js"
+    "dev": "node --experimental-require-module server.js",
+    "start": "node --experimental-require-module server.js"
   },
   "dependencies": {
     "express": "^4.21.2",

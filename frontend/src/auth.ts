@@ -21,12 +21,22 @@ export interface AuthUser {
   }>;
 }
 
-function normalizeScope(value: string) {
+export function normalizeScope(value: string) {
   return String(value || 'guest')
     .trim()
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, '_')
     .replace(/^_+|_+$/g, '') || 'guest';
+}
+
+export function getUserScope(user?: AuthUser | string | null): string {
+  if (!user) return 'guest';
+  const scope = typeof user === 'string'
+    ? user
+    : isInternalPhoneEmail(user?.email)
+      ? user?.phone || user?.username || user?.id
+      : user?.email || user?.phone || user?.username || user?.id;
+  return normalizeScope(scope || (typeof user === 'object' ? user?.name : '') || 'signed_in');
 }
 
 export function isInternalPhoneEmail(value?: string) {
@@ -112,6 +122,6 @@ export function getDisplayAuthUser() {
   };
 }
 
-export function getScopedStorageKey(baseKey: string) {
-  return `${baseKey}:${getAuthScope()}`;
+export function getScopedStorageKey(baseKey: string, scopeOverride?: string) {
+  return `${baseKey}:${scopeOverride || getAuthScope()}`;
 }

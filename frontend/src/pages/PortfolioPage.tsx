@@ -164,8 +164,8 @@ export default function PortfolioPage() {
               <h3 className="text-[20px] font-semibold tracking-[-0.02em] text-slate-900">Top Clients</h3>
               <div className="mt-4 space-y-3">
                 {Array.from(
-                  new Map(
-                    quotes.map((quote) => [quote.clientDetails?.name || 'Client', quote.totalAmount]),
+                  new Map<string, number>(
+                    quotes.map((quote) => [quote.clientDetails?.name || 'Client', Number(quote.totalAmount || 0)]),
                   ).entries(),
                 )
                   .slice(0, 5)
