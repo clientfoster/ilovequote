@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { UseFormRegister, Control, FieldErrors, UseFormWatch, UseFormSetValue } from 'react-hook-form';
 import { 
   Building, 
@@ -8,7 +8,11 @@ import {
   Globe, 
   Sparkles, 
   Link2,
-  Lock
+  Lock,
+  ChevronDown,
+  MapPin,
+  Percent,
+  Share2,
 } from 'lucide-react';
 import { BusinessFormValues } from '../types';
 import BusinessLogoUpload from './BusinessLogoUpload';
@@ -25,6 +29,29 @@ interface BusinessFormProps {
 }
 
 export default function BusinessForm({ register, control, errors, watch, setValue }: BusinessFormProps) {
+  // Accordion states: closed by default
+  const [isAddressOpen, setIsAddressOpen] = useState(false);
+  const [isTaxOpen, setIsTaxOpen] = useState(false);
+  const [isSocialOpen, setIsSocialOpen] = useState(false);
+
+  // Auto-expand accordion if any field inside has validation errors
+  useEffect(() => {
+    if (errors.address || errors.city || errors.state || errors.zipCode || errors.country) {
+      setIsAddressOpen(true);
+    }
+  }, [errors.address, errors.city, errors.state, errors.zipCode, errors.country]);
+
+  useEffect(() => {
+    if (errors.taxType || errors.taxId) {
+      setIsTaxOpen(true);
+    }
+  }, [errors.taxType, errors.taxId]);
+
+  useEffect(() => {
+    if (errors.socialLinks) {
+      setIsSocialOpen(true);
+    }
+  }, [errors.socialLinks]);
   // Watch Logo and Company Name to automatically update custom parameters
   const logoValue = watch('logo');
   const companyName = watch('companyName');
@@ -226,19 +253,103 @@ export default function BusinessForm({ register, control, errors, watch, setValu
         </div>
       </div>
 
-      {/* SECTION 2: Business Address Info */}
-      <div className="bg-white rounded-2xl border border-slate-150 p-6 md:p-8 shadow-xs">
-        <BusinessAddress register={register} errors={errors} />
+      {/* SECTION 2: Business Address Info (Accordion) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden transition-all hover:border-slate-300/80" id="address-section">
+        <button
+          type="button"
+          id="toggle-business-address"
+          onClick={() => setIsAddressOpen((prev) => !prev)}
+          className="w-full flex items-center justify-between p-4 sm:p-5 text-left transition-colors hover:bg-slate-50/50 cursor-pointer select-none"
+          aria-expanded={isAddressOpen}
+          aria-controls="business-address-content"
+        >
+          <div className="flex items-center gap-3">
+            <MapPin className="w-5 h-5 text-[#1D4ED8] shrink-0" />
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-snug">
+                Business Address <span className="text-slate-400 font-normal sm:font-medium text-xs sm:text-sm normal-case">(Optional)</span>
+              </h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">Add your complete business address</p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-5 h-5 text-slate-700 transition-transform duration-200 shrink-0 ${
+              isAddressOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        <div
+          id="business-address-content"
+          className={isAddressOpen ? 'px-4 pb-5 sm:px-6 sm:pb-6 pt-3 border-t border-slate-100' : 'hidden'}
+        >
+          <BusinessAddress register={register} errors={errors} hideHeader={true} />
+        </div>
       </div>
 
-      {/* SECTION 3: Tax Information */}
-      <div className="bg-white rounded-2xl border border-slate-150 p-6 md:p-8 shadow-xs">
-        <BusinessTaxInfo register={register} errors={errors} watch={watch} />
+      {/* SECTION 3: Tax Information (Accordion) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden transition-all hover:border-slate-300/80" id="tax-section">
+        <button
+          type="button"
+          id="toggle-business-tax"
+          onClick={() => setIsTaxOpen((prev) => !prev)}
+          className="w-full flex items-center justify-between p-4 sm:p-5 text-left transition-colors hover:bg-slate-50/50 cursor-pointer select-none"
+          aria-expanded={isTaxOpen}
+          aria-controls="business-tax-content"
+        >
+          <div className="flex items-center gap-3">
+            <Percent className="w-5 h-5 text-[#1D4ED8] shrink-0" />
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-snug">
+                Tax Information <span className="text-slate-400 font-normal sm:font-medium text-xs sm:text-sm normal-case">(Optional)</span>
+              </h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">Add your tax details if applicable</p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-5 h-5 text-slate-700 transition-transform duration-200 shrink-0 ${
+              isTaxOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        <div
+          id="business-tax-content"
+          className={isTaxOpen ? 'px-4 pb-5 sm:px-6 sm:pb-6 pt-3 border-t border-slate-100' : 'hidden'}
+        >
+          <BusinessTaxInfo register={register} errors={errors} watch={watch} hideHeader={true} />
+        </div>
       </div>
 
-      {/* SECTION 4: Social Accounts with unlimited capabilities */}
-      <div className="bg-white rounded-2xl border border-slate-150 p-6 md:p-8 shadow-xs">
-        <BusinessSocialLinks control={control} register={register} errors={errors} />
+      {/* SECTION 4: Business Social Links (Accordion) */}
+      <div className="bg-white rounded-xl border border-slate-200 shadow-xs overflow-hidden transition-all hover:border-slate-300/80" id="social-links-section">
+        <button
+          type="button"
+          id="toggle-business-social"
+          onClick={() => setIsSocialOpen((prev) => !prev)}
+          className="w-full flex items-center justify-between p-4 sm:p-5 text-left transition-colors hover:bg-slate-50/50 cursor-pointer select-none"
+          aria-expanded={isSocialOpen}
+          aria-controls="business-social-content"
+        >
+          <div className="flex items-center gap-3">
+            <Share2 className="w-5 h-5 text-[#1D4ED8] shrink-0" />
+            <div>
+              <h3 className="text-sm sm:text-base font-bold text-slate-800 leading-snug">
+                Business Social Links <span className="text-slate-400 font-normal sm:font-medium text-xs sm:text-sm normal-case">(Optional)</span>
+              </h3>
+              <p className="text-xs text-slate-400 font-medium mt-0.5">Add links to your social media or other profiles</p>
+            </div>
+          </div>
+          <ChevronDown
+            className={`w-5 h-5 text-slate-700 transition-transform duration-200 shrink-0 ${
+              isSocialOpen ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+        <div
+          id="business-social-content"
+          className={isSocialOpen ? 'px-4 pb-5 sm:px-6 sm:pb-6 pt-3 border-t border-slate-100' : 'hidden'}
+        >
+          <BusinessSocialLinks control={control} register={register} errors={errors} hideHeader={true} />
+        </div>
       </div>
 
     </div>

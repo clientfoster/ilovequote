@@ -4,7 +4,6 @@ import { FieldErrors, UseFormRegister, UseFormSetValue } from 'react-hook-form';
 import { ClientFormValues } from '../types';
 import ClientForm from './ClientForm';
 import LivePreview from './LivePreview';
-import ShortcutCards from './ShortcutCards';
 import FeatureSection from './FeatureSection';
 
 interface ClientStepProps {
@@ -47,7 +46,7 @@ export default function ClientStep({
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        <div className="lg:col-span-6 xl:col-span-5">
+        <div className="lg:col-span-7">
           <ClientForm
             register={register}
             errors={errors}
@@ -58,12 +57,8 @@ export default function ClientStep({
           />
         </div>
 
-        <div className="lg:col-span-3 xl:col-span-4 lg:sticky lg:top-24">
+        <div className="lg:col-span-5 lg:sticky lg:top-24">
           <LivePreview formData={formData} logoUrl={logoUrl} />
-        </div>
-
-        <div className="lg:col-span-3 lg:sticky lg:top-24">
-          <ShortcutCards />
         </div>
       </div>
 

@@ -81,45 +81,42 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
   return (
     <div className="space-y-3" id="logo-upload-group">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <label className="text-[13px] font-bold text-slate-700 tracking-wider uppercase flex items-center gap-1.5">
+        <label className="text-xs font-extrabold text-slate-700 tracking-wider uppercase flex items-center gap-1.5">
           <ImageIcon className="w-4 h-4 text-slate-400" />
-          Business Logo <span className="text-slate-400">(Optional)</span>
+          Business Logo <span className="text-slate-400 font-normal normal-case">(Optional)</span>
         </label>
-        <span className="text-xs text-slate-400 font-medium font-mono">PNG, JPG (Recommended: 200x200px)</span>
+        <span className="text-[11px] text-slate-400 font-medium">Recommended 200x200px (PNG, JPG, SVG)</span>
       </div>
 
       {value ? (
         <div
-          className="border border-slate-100 bg-slate-50/50 rounded-xl p-4 flex flex-col sm:flex-row items-center gap-4 relative transition-all"
+          className="border border-slate-150 bg-slate-50/50 rounded-2xl p-4 flex flex-col sm:flex-row items-center gap-4 relative transition-all"
           id="logo-preview-card"
         >
-          <div className="relative w-24 h-24 bg-white rounded-xl shadow-xs border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 group">
+          <div className="relative w-20 h-20 bg-white rounded-xl shadow-xs border border-slate-100 flex items-center justify-center overflow-hidden shrink-0 group">
             <img
               src={value}
               alt="Uploaded Business Logo"
               className="max-w-full max-h-full object-contain p-2"
               referrerPolicy="no-referrer"
             />
-            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
-              <span className="text-[10px] text-white font-medium uppercase tracking-wider">Preview logo</span>
-            </div>
           </div>
 
-          <div className="flex-1 text-center sm:text-left space-y-2">
-            <h4 className="text-sm font-bold text-slate-800 flex items-center justify-center sm:justify-start gap-1">
-              Logo uploaded successfully
-              <Sparkles className="w-3.5 h-3.5 text-[#1D4ED8] fill-[#1D4ED8]/20" />
+          <div className="flex-1 text-center sm:text-left space-y-1.5">
+            <h4 className="text-xs font-bold text-slate-800 flex items-center justify-center sm:justify-start gap-1">
+              Logo uploaded
+              <Sparkles className="w-3.5 h-3.5 text-[#2563EB]" />
             </h4>
-            <p className="text-xs text-slate-400 font-medium">
-              Your logo has been embedded inside the layout system and live-syncs with your invoice preview.
+            <p className="text-[11px] text-slate-400 font-medium">
+              Your logo is synced and will appear on your quotation.
             </p>
 
-            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2.5 pt-1">
+            <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 pt-1">
               <button
                 type="button"
                 id="btn-change-logo"
                 onClick={triggerInput}
-                className="inline-flex min-h-[44px] items-center gap-1.5 px-3 py-2 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-xs focus:ring-2 focus:ring-blue-105"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-semibold rounded-lg transition-colors cursor-pointer shadow-2xs"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
                 Change Logo
@@ -128,10 +125,10 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
                 type="button"
                 id="btn-remove-logo"
                 onClick={removeLogo}
-                className="inline-flex min-h-[44px] items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100/70 border border-red-100 text-red-600 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-red-50 hover:bg-red-100/70 border border-red-100 text-red-600 text-xs font-semibold rounded-lg transition-colors cursor-pointer"
               >
                 <X className="w-3.5 h-3.5" />
-                Remove Logo
+                Remove
               </button>
             </div>
           </div>
@@ -143,20 +140,33 @@ export default function BusinessLogoUpload({ value, onChange }: BusinessLogoUplo
           onDragLeave={handleDragLeave}
           onDrop={handleDrop}
           onClick={triggerInput}
-          className={`border-2 border-dashed rounded-xl p-4 sm:p-5 cursor-pointer transition-all duration-200 ${
+          className={`border-2 border-dashed rounded-2xl p-6 cursor-pointer transition-all duration-200 text-center ${
             isDragging
-              ? 'border-[#1D4ED8] bg-blue-50/30'
-              : 'border-slate-200 hover:border-[#1D4ED8] hover:bg-slate-50/50'
+              ? 'border-[#2563EB] bg-blue-50/40'
+              : 'border-slate-200 hover:border-[#2563EB] hover:bg-slate-50/50 bg-white'
           }`}
         >
-          <div className="flex items-center gap-3 text-left">
-            <div className="w-11 h-11 rounded-xl bg-blue-50 flex items-center justify-center text-[#1D4ED8] shrink-0">
+          <div className="flex flex-col items-center justify-center">
+            <div className="w-11 h-11 rounded-2xl bg-blue-50 text-[#2563EB] flex items-center justify-center mb-2">
               <Upload className="w-5 h-5 stroke-[2.2]" />
             </div>
-            <div className="min-w-0">
-              <p className="text-sm font-bold text-slate-800">Upload Logo</p>
-              <p className="text-[11px] leading-4 text-slate-400 font-medium">PNG, JPG (Recommended: 200x200px)</p>
-            </div>
+            <p className="text-xs font-bold text-slate-800">
+              Drag & drop your logo here
+            </p>
+            <span className="text-[11px] text-slate-400 font-medium my-1">or</span>
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                triggerInput();
+              }}
+              className="px-4 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-2xs transition-colors cursor-pointer"
+            >
+              Browse Files
+            </button>
+            <p className="text-[10px] text-slate-400 font-medium mt-2">
+              PNG, JPG, SVG up to 2MB
+            </p>
           </div>
         </div>
       )}

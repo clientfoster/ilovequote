@@ -7,6 +7,7 @@ interface BusinessSocialLinksProps {
   control: Control<BusinessFormValues>;
   register: UseFormRegister<BusinessFormValues>;
   errors: FieldErrors<BusinessFormValues>;
+  hideHeader?: boolean;
 }
 
 const PREDEFINED_PLATFORMS = [
@@ -18,7 +19,7 @@ const PREDEFINED_PLATFORMS = [
   'WhatsApp'
 ];
 
-export default function BusinessSocialLinks({ control, register, errors }: BusinessSocialLinksProps) {
+export default function BusinessSocialLinks({ control, register, errors, hideHeader = false }: BusinessSocialLinksProps) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'socialLinks',
@@ -30,21 +31,23 @@ export default function BusinessSocialLinks({ control, register, errors }: Busin
 
   return (
     <div className="space-y-4" id="social-links-section">
-      <div className="flex items-center justify-between pb-1 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <Share2 className="w-5 h-5 text-[#1D4ED8]" />
-          <h3 className="text-base font-bold text-slate-800 font-sans">Business Social Links</h3>
+      {!hideHeader && (
+        <div className="flex items-center justify-between pb-1 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Share2 className="w-5 h-5 text-[#1D4ED8]" />
+            <h3 className="text-base font-bold text-slate-800 font-sans">Business Social Links</h3>
+          </div>
+          <button
+            type="button"
+            id="btn-add-social"
+            onClick={handleAddSocial}
+            className="inline-flex items-center gap-1 text-[#1D4ED8] hover:text-blue-800 font-extrabold text-sm transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            + Add More
+          </button>
         </div>
-        <button
-          type="button"
-          id="btn-add-social"
-          onClick={handleAddSocial}
-          className="inline-flex items-center gap-1 text-[#1D4ED8] hover:text-blue-800 font-extrabold text-sm transition-colors cursor-pointer"
-        >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          + Add More
-        </button>
-      </div>
+      )}
 
       <div className="space-y-3" id="social-links-list">
         {fields.map((field, index) => {
@@ -120,8 +123,20 @@ export default function BusinessSocialLinks({ control, register, errors }: Busin
           <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/35" id="social-empty">
             <HelpCircle className="w-8 h-8 text-slate-350 mx-auto stroke-[1.5] mb-1.5" />
             <p className="text-xs text-slate-500 font-medium">No social links configured yet.</p>
-            <p className="text-[10px] text-slate-400 mt-1">Click "+ Add Social Link" to start linking your online web catalogs.</p>
+            <p className="text-[10px] text-slate-400 mt-1">Click "+ Add More" to add social profiles.</p>
           </div>
+        )}
+
+        {hideHeader && (
+          <button
+            type="button"
+            id="btn-add-social-inline"
+            onClick={handleAddSocial}
+            className="w-full inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[#1D4ED8] hover:bg-blue-50 font-extrabold text-sm transition-colors cursor-pointer"
+          >
+            <Plus className="w-4 h-4 stroke-[2.5]" />
+            Add More
+          </button>
         )}
       </div>
     </div>

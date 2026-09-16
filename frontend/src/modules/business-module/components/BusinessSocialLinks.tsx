@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFieldArray, Control, UseFormRegister, FieldErrors, UseFormWatch } from 'react-hook-form';
-import { Share2, Plus, Trash2, HelpCircle, Linkedin, Instagram, Facebook, Twitter, Youtube, MessageCircle } from 'lucide-react';
+import { Share2, Plus, Trash2, HelpCircle, Linkedin, Instagram, Facebook, Twitter, Youtube, MessageCircle, Globe, ChevronDown } from 'lucide-react';
 import { BusinessFormValues } from '../../../types';
 
 interface BusinessSocialLinksProps {
@@ -8,18 +8,25 @@ interface BusinessSocialLinksProps {
   register: UseFormRegister<BusinessFormValues>;
   errors: FieldErrors<BusinessFormValues>;
   watch: UseFormWatch<BusinessFormValues>;
+  hideHeader?: boolean;
 }
 
 const PREDEFINED_PLATFORMS = [
+  'Website',
   'LinkedIn',
   'Instagram',
   'Facebook',
-  'X (Twitter)',
   'YouTube',
   'WhatsApp',
+  'X (Twitter)',
 ];
 
 const PLATFORM_CONFIG: Record<string, { icon: React.ReactNode; accent: string; placeholder: string }> = {
+  Website: {
+    icon: <Globe className="w-4 h-4" />,
+    accent: 'text-[#2563EB] bg-blue-50',
+    placeholder: 'e.g. https://yourbusiness.com',
+  },
   LinkedIn: {
     icon: <Linkedin className="w-4 h-4" />,
     accent: 'text-[#0A66C2] bg-[#E8F1FB]',
@@ -35,11 +42,6 @@ const PLATFORM_CONFIG: Record<string, { icon: React.ReactNode; accent: string; p
     accent: 'text-[#1877F2] bg-[#EAF2FD]',
     placeholder: 'e.g. https://facebook.com/semixon',
   },
-  'X (Twitter)': {
-    icon: <Twitter className="w-4 h-4" />,
-    accent: 'text-slate-900 bg-slate-100',
-    placeholder: 'e.g. https://x.com/semixon',
-  },
   YouTube: {
     icon: <Youtube className="w-4 h-4" />,
     accent: 'text-[#FF0000] bg-[#FEECEC]',
@@ -50,28 +52,66 @@ const PLATFORM_CONFIG: Record<string, { icon: React.ReactNode; accent: string; p
     accent: 'text-[#25D366] bg-[#EAFBF0]',
     placeholder: 'e.g. https://wa.me/919876543210',
   },
+  'X (Twitter)': {
+    icon: <Twitter className="w-4 h-4" />,
+    accent: 'text-slate-900 bg-slate-100',
+    placeholder: 'e.g. https://x.com/semixon',
+  },
 };
 
-export default function BusinessSocialLinks({ control, register, errors: _errors, watch }: BusinessSocialLinksProps) {
+export default function BusinessSocialLinks({ control, register, errors: _errors, watch, hideHeader = false }: BusinessSocialLinksProps) {
   const { fields, append, remove } = useFieldArray({
     control,
     name: 'socialLinks',
   });
 
+  const handleAddPlatform = (platform: string) => {
+    append({ platform, url: '' });
+  };
+
   const handleAddSocial = () => {
     append({ platform: 'LinkedIn', url: '' });
   };
 
+  const quickPlatforms = ['Website', 'LinkedIn', 'Instagram', 'Facebook', 'YouTube', 'WhatsApp'];
+
   return (
     <div className="space-y-4" id="social-links-section">
-      <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100">
-        <div className="flex items-center gap-2">
-          <Share2 className="w-5 h-5 text-[#1D4ED8]" />
-          <div>
-            <h3 className="text-base font-bold text-slate-800 font-sans">Business Social Links <span className="text-slate-400 font-medium">(Optional)</span></h3>
-            <p className="text-xs text-slate-400 font-medium">Add links to your social media or other profiles</p>
+      {!hideHeader && (
+        <div className="flex flex-wrap items-center justify-between gap-2 pb-1 border-b border-slate-100">
+          <div className="flex items-center gap-2">
+            <Share2 className="w-5 h-5 text-[#2563EB]" />
+            <div>
+              <h3 className="text-base font-bold text-slate-800 font-sans">Social Links <span className="text-slate-400 font-medium">(Optional)</span></h3>
+              <p className="text-xs text-slate-400 font-medium">Add links to your social media or other profiles</p>
+            </div>
           </div>
         </div>
+      )}
+
+      {/* 6 Quick platform tiles matching AFTER mockup */}
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-1">
+        {quickPlatforms.map((plat) => {
+          const cfg = PLATFORM_CONFIG[plat];
+          return (
+            <button
+              key={plat}
+              type="button"
+              onClick={() => handleAddPlatform(plat)}
+              className="flex flex-col items-center justify-center p-3 rounded-xl border border-slate-200 hover:border-[#2563EB] hover:bg-blue-50/30 transition-all cursor-pointer bg-white group shadow-2xs"
+            >
+              <div className={`w-8 h-8 rounded-lg ${cfg.accent} flex items-center justify-center mb-1.5 transition-transform group-hover:scale-110`}>
+                {cfg.icon}
+              </div>
+              <span className="text-[11px] font-bold text-slate-700 leading-tight truncate w-full text-center">
+                {plat}
+              </span>
+              <span className="mt-1 text-[11px] text-slate-400 font-bold group-hover:text-[#2563EB]">
+                +
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3" id="social-links-list">
@@ -141,22 +181,27 @@ export default function BusinessSocialLinks({ control, register, errors: _errors
           );
         })}
 
-        {fields.length === 0 && (
-          <div className="text-center py-6 border border-dashed border-slate-200 rounded-xl bg-slate-50/35 sm:col-span-2" id="social-empty">
-            <HelpCircle className="w-8 h-8 text-slate-350 mx-auto stroke-[1.5] mb-1.5" />
-            <p className="text-xs text-slate-500 font-medium">No social links configured yet.</p>
-            <p className="text-[10px] text-slate-400 mt-1">Click "+ Add More" to add social profiles.</p>
-          </div>
+        {fields.length > 0 && (
+          <button
+            type="button"
+            id="btn-add-social-inline"
+            onClick={handleAddSocial}
+            className="sm:col-span-2 inline-flex items-center justify-center gap-1.5 rounded-xl border border-slate-200 bg-white px-4 py-2.5 text-[#2563EB] hover:bg-blue-50 font-bold text-xs transition-colors cursor-pointer shadow-2xs"
+          >
+            <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+            Add Another Link
+          </button>
         )}
+      </div>
 
+      <div className="pt-1">
         <button
           type="button"
-          id="btn-add-social-inline"
           onClick={handleAddSocial}
-          className="sm:col-span-2 inline-flex min-h-[44px] items-center justify-center gap-1 rounded-xl border border-slate-200 bg-white px-4 py-3 text-[#1D4ED8] hover:bg-blue-50 font-extrabold text-sm transition-colors cursor-pointer"
+          className="inline-flex items-center gap-1 text-xs font-bold text-slate-500 hover:text-slate-800 transition-colors cursor-pointer"
         >
-          <Plus className="w-4 h-4 stroke-[2.5]" />
-          Add More
+          <span>More</span>
+          <ChevronDown className="w-3.5 h-3.5" />
         </button>
       </div>
     </div>

@@ -42,9 +42,9 @@ const toolCards: ToolCard[] = [
     route: '/create-quote',
     renderIcon: () => (
       <div className="relative">
-        <FileText className="h-16 w-16 text-[#2563EB]" strokeWidth={1.8} />
-        <div className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-[#2563EB] text-white shadow-sm">
-          <BadgeIndianRupee className="h-4 w-4" strokeWidth={2.1} />
+        <FileText className="h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 text-[#2563EB]" strokeWidth={1.8} />
+        <div className="absolute -bottom-1 -right-1 flex h-5 w-5 sm:h-6 sm:w-6 md:h-7 md:w-7 items-center justify-center rounded-full border-2 border-white bg-[#2563EB] text-white shadow-xs">
+          <BadgeIndianRupee className="h-2.5 w-2.5 sm:h-3 sm:w-3 md:h-3.5 md:w-3.5" strokeWidth={2.1} />
         </div>
       </div>
     ),
@@ -56,7 +56,7 @@ const toolCards: ToolCard[] = [
     iconColor: 'text-[#22C55E]',
     accent: 'text-[#22C55E]',
     route: '/create-invoice',
-    renderIcon: () => <FileSpreadsheet className="h-16 w-16 text-[#22C55E]" strokeWidth={1.8} />,
+    renderIcon: () => <FileSpreadsheet className="h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 text-[#22C55E]" strokeWidth={1.8} />,
   },
   {
     title: 'Estimate',
@@ -65,7 +65,7 @@ const toolCards: ToolCard[] = [
     iconColor: 'text-[#7C3AED]',
     accent: 'text-[#7C3AED]',
     route: '/login?mode=signup',
-    renderIcon: () => <ClipboardList className="h-16 w-16 text-[#7C3AED]" strokeWidth={1.8} />,
+    renderIcon: () => <ClipboardList className="h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 text-[#7C3AED]" strokeWidth={1.8} />,
   },
   {
     title: 'Purchase Order',
@@ -74,7 +74,7 @@ const toolCards: ToolCard[] = [
     iconColor: 'text-[#F59E0B]',
     accent: 'text-[#F59E0B]',
     route: '/login?mode=signup',
-    renderIcon: () => <ScrollText className="h-16 w-16 text-[#F59E0B]" strokeWidth={1.8} />,
+    renderIcon: () => <ScrollText className="h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 text-[#F59E0B]" strokeWidth={1.8} />,
   },
   {
     title: 'Sales Receipt',
@@ -83,7 +83,7 @@ const toolCards: ToolCard[] = [
     iconColor: 'text-[#EC4899]',
     accent: 'text-[#EC4899]',
     route: '/login?mode=signup',
-    renderIcon: () => <ReceiptIndianRupee className="h-16 w-16 text-[#EC4899]" strokeWidth={1.8} />,
+    renderIcon: () => <ReceiptIndianRupee className="h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 text-[#EC4899]" strokeWidth={1.8} />,
   },
   {
     title: 'Receipt',
@@ -92,7 +92,7 @@ const toolCards: ToolCard[] = [
     iconColor: 'text-[#14B8A6]',
     accent: 'text-[#14B8A6]',
     route: '/login?mode=signup',
-    renderIcon: () => <FileCheck2 className="h-16 w-16 text-[#14B8A6]" strokeWidth={1.8} />,
+    renderIcon: () => <FileCheck2 className="h-9 w-9 sm:h-11 sm:w-11 md:h-14 md:w-14 text-[#14B8A6]" strokeWidth={1.8} />,
   },
 ];
 
@@ -100,31 +100,31 @@ const whyCards = [
   {
     title: '100% Free',
     description: 'All tools are completely\nfree to use. Forever.',
-    icon: <Gift className="h-8 w-8 text-[#22C55E]" strokeWidth={1.8} />,
+    icon: <Gift className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-[#22C55E]" strokeWidth={1.8} />,
     iconWrap: 'bg-[#EEFDF4]',
   },
   {
     title: 'No Login Required',
     description: 'Start creating instantly.\nNo sign up or\nlogin needed.',
-    icon: <ShieldCheck className="h-8 w-8 text-[#7C3AED]" strokeWidth={1.8} />,
+    icon: <ShieldCheck className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-[#7C3AED]" strokeWidth={1.8} />,
     iconWrap: 'bg-[#F6EFFF]',
   },
   {
     title: 'Download PDF',
     description: 'Download your documents\nas PDF and print or\nsend easily.',
-    icon: <FileCheck2 className="h-8 w-8 text-[#2563EB]" strokeWidth={1.8} />,
+    icon: <FileCheck2 className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-[#2563EB]" strokeWidth={1.8} />,
     iconWrap: 'bg-[#EEF5FF]',
   },
   {
     title: 'Share Instantly',
     description: 'Share documents with your\nclients using a secure\npublic link.',
-    icon: <Plane className="h-8 w-8 text-[#F59E0B]" strokeWidth={1.8} />,
+    icon: <Plane className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-[#F59E0B]" strokeWidth={1.8} />,
     iconWrap: 'bg-[#FFF7EA]',
   },
   {
     title: 'Mobile Friendly',
     description: 'Works perfectly on\ndesktop, tablet and\nmobile devices.',
-    icon: <Smartphone className="h-8 w-8 text-[#EC4899]" strokeWidth={1.8} />,
+    icon: <Smartphone className="h-6 w-6 sm:h-7 sm:w-7 md:h-8 md:w-8 text-[#EC4899]" strokeWidth={1.8} />,
     iconWrap: 'bg-[#FFF0F7]',
   },
 ];
@@ -239,33 +239,33 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => scrollTools('left')}
-              className="absolute left-0 top-[136px] z-10 flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-[0_3px_10px_rgba(15,23,42,0.08)]"
+              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-[0_3px_10px_rgba(15,23,42,0.08)] cursor-pointer"
               aria-label="Previous tools"
             >
-              <ChevronLeft className="h-5 w-5" />
+              <ChevronLeft className="h-4 w-4 md:h-5 md:w-5" />
             </button>
 
             <div
               ref={toolsScrollerRef}
-              className="flex gap-6 overflow-x-auto scroll-smooth px-14 pb-2 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              className="flex gap-4 md:gap-6 overflow-x-auto scroll-smooth px-9 sm:px-12 md:px-14 pb-2 pt-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
             >
               {toolCards.map((card) => (
                 <article
                   key={card.title}
-                  className={`w-[232px] shrink-0 rounded-[22px] border border-slate-200 bg-gradient-to-b ${card.iconWrap} to-white px-7 pb-6 pt-13 text-center shadow-[0_10px_30px_rgba(15,23,42,0.05)]`}
+                  className={`w-[185px] sm:w-[210px] md:w-[232px] shrink-0 rounded-2xl md:rounded-[22px] border border-slate-200 bg-gradient-to-b ${card.iconWrap} to-white px-4 py-5 sm:px-6 sm:py-6 md:px-7 md:pb-6 md:pt-10 text-center shadow-[0_10px_30px_rgba(15,23,42,0.05)]`}
                 >
-                  <div className="mx-auto flex h-[96px] w-[96px] items-center justify-center rounded-[28px] bg-white shadow-[0_8px_24px_rgba(15,23,42,0.08)]">
+                  <div className="mx-auto flex h-13 w-13 sm:h-16 sm:w-16 md:h-[84px] md:w-[84px] items-center justify-center rounded-2xl md:rounded-[28px] bg-white shadow-[0_6px_18px_rgba(15,23,42,0.07)]">
                     {card.renderIcon()}
                   </div>
-                  <h3 className="mt-5 text-[18px] font-black tracking-[-0.03em] text-[#09143C]">{card.title}</h3>
-                  <p className="mt-4 whitespace-pre-line text-[15px] leading-8 text-slate-700">{card.description}</p>
+                  <h3 className="mt-3.5 sm:mt-4 md:mt-5 text-base md:text-[18px] font-black tracking-[-0.03em] text-[#09143C]">{card.title}</h3>
+                  <p className="mt-2 md:mt-4 whitespace-pre-line text-xs sm:text-[13px] md:text-[15px] leading-relaxed md:leading-8 text-slate-600 md:text-slate-700">{card.description}</p>
                   <button
                     type="button"
                     onClick={() => navigate(card.route)}
-                    className={`mt-6 inline-flex items-center gap-2 text-[15px] font-bold ${card.accent}`}
+                    className={`mt-3.5 sm:mt-4 md:mt-6 inline-flex items-center gap-1.5 text-xs sm:text-[13px] md:text-[15px] font-bold ${card.accent} cursor-pointer`}
                   >
                     Open Tool
-                    <ArrowRight className="h-4.5 w-4.5" />
+                    <ArrowRight className="h-3.5 w-3.5 md:h-4.5 md:w-4.5" />
                   </button>
                 </article>
               ))}
@@ -274,27 +274,27 @@ export default function LandingPage() {
             <button
               type="button"
               onClick={() => scrollTools('right')}
-              className="absolute right-0 top-[136px] z-10 flex h-12 w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-[0_3px_10px_rgba(15,23,42,0.08)]"
+              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 flex h-8 w-8 sm:h-10 sm:w-10 md:h-12 md:w-12 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 shadow-[0_3px_10px_rgba(15,23,42,0.08)] cursor-pointer"
               aria-label="Next tools"
             >
-              <ChevronRight className="h-5 w-5" />
+              <ChevronRight className="h-4 w-4 md:h-5 md:w-5" />
             </button>
           </section>
 
           <section className="mt-8 px-5">
-            <h2 className="text-center text-[32px] font-black tracking-[-0.04em] text-[#08143C]">Why iLoveQuote?</h2>
+            <h2 className="text-center text-[26px] md:text-[32px] font-black tracking-[-0.04em] text-[#08143C]">Why iLoveQuote?</h2>
 
             <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-5">
               {whyCards.map((card, index) => (
                 <div
                   key={card.title}
-                  className={`px-6 text-center xl:px-8 ${index < whyCards.length - 1 ? 'xl:border-r xl:border-slate-200' : ''}`}
+                  className={`px-4 sm:px-6 text-center xl:px-8 ${index < whyCards.length - 1 ? 'xl:border-r xl:border-slate-200' : ''}`}
                 >
-                  <div className={`mx-auto flex h-[78px] w-[78px] items-center justify-center rounded-full ${card.iconWrap}`}>
+                  <div className={`mx-auto flex h-12 w-12 sm:h-14 sm:w-14 md:h-[78px] md:w-[78px] items-center justify-center rounded-full ${card.iconWrap}`}>
                     {card.icon}
                   </div>
-                  <h3 className="mt-4 text-[18px] font-black text-[#08143C]">{card.title}</h3>
-                  <p className="mt-2 whitespace-pre-line text-[15px] leading-7 text-slate-700">{card.description}</p>
+                  <h3 className="mt-3 md:mt-4 text-base md:text-[18px] font-black text-[#08143C]">{card.title}</h3>
+                  <p className="mt-1.5 md:mt-2 whitespace-pre-line text-xs sm:text-[13px] md:text-[15px] leading-relaxed md:leading-7 text-slate-600 md:text-slate-700">{card.description}</p>
                 </div>
               ))}
             </div>

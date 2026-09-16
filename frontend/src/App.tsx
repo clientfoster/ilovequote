@@ -19,6 +19,7 @@ import CreateQuotePage from './pages/CreateQuotePage';
 import CreateInvoicePage from './pages/CreateInvoicePage';
 import CreateInvoiceBankDetailsPage from './pages/CreateInvoiceBankDetailsPage';
 import CreateInvoiceDesignPage from './pages/CreateInvoiceDesignPage';
+import InvoicesPage from './pages/InvoicesPage';
 import SettingsPage from './pages/SettingsPage';
 import PlaceholderPage from './pages/PlaceholderPage';
 import {
@@ -134,9 +135,11 @@ export default function App() {
           <Route path="/create-invoice/design" element={<CreateInvoiceDesignPage />} />
 
           <Route path="/clients" element={<RequireAuth isAuthed={isAuthed}><ClientsPage /></RequireAuth>} />
+          <Route path="/customers" element={<Navigate to="/clients" replace />} />
           <Route path="/items" element={<RequireAuth isAuthed={isAuthed}><ItemsPage /></RequireAuth>} />
 
           <Route path="/quotes" element={<RequireAuth isAuthed={isAuthed}><QuotesPage /></RequireAuth>} />
+          <Route path="/invoices" element={<RequireAuth isAuthed={isAuthed}><InvoicesPage /></RequireAuth>} />
 
           <Route path="/business" element={<RequireAuth isAuthed={isAuthed}><BusinessPage /></RequireAuth>} />
           <Route path="/settings" element={<RequireAuth isAuthed={isAuthed}><SettingsPage /></RequireAuth>} />

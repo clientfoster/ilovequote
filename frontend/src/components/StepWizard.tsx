@@ -16,13 +16,12 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
   ];
 
   return (
-    <div className="w-full rounded-2xl border border-slate-200 bg-white px-4 py-4 md:px-6 md:py-5 shadow-sm mb-6 overflow-hidden" id="wizard-container">
-      <div className="hidden md:flex items-center gap-3 xl:gap-5" id="wizard-desktop">
+    <div className="w-full rounded-2xl border border-slate-200 bg-white px-5 py-3.5 shadow-xs mb-6" id="wizard-container">
+      <div className="hidden md:flex items-center justify-between" id="wizard-desktop">
         {steps.map((step, index) => {
-          const isCompleted = step.status === 'completed';
+          const isCompleted = step.status === 'completed' || (step.id === 1 && currentStep >= 1);
           const isCurrent = step.status === 'current';
-          const isUpcoming = step.status === 'upcoming';
-          const isClickable = !isUpcoming && !!onStepClick;
+          const isClickable = !!onStepClick;
 
           return (
             <React.Fragment key={step.id}>
@@ -31,46 +30,32 @@ export default function StepWizard({ currentStep, onStepClick }: StepWizardProps
                 type="button"
                 onClick={() => onStepClick?.(step.id)}
                 disabled={!isClickable}
-                className="flex min-w-0 flex-1 items-center gap-3 text-left focus:outline-none disabled:cursor-default"
+                className="flex items-center gap-2.5 text-left focus:outline-none cursor-pointer shrink-0"
               >
                 <span
-                  className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-full border-2 text-sm font-bold transition-all duration-300 ${
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold transition-all ${
                     isCompleted
-                      ? 'border-emerald-500 bg-white text-emerald-600 shadow-sm shadow-emerald-100'
+                      ? 'bg-emerald-500 text-white shadow-xs'
                       : isCurrent
-                        ? 'border-[#2563EB] bg-white text-[#2563EB] shadow-md shadow-blue-100 ring-4 ring-blue-50'
-                        : 'border-slate-200 bg-white text-slate-400'
+                        ? 'border-2 border-[#2563EB] bg-white text-[#2563EB]'
+                        : 'border-2 border-slate-300 bg-white text-slate-400'
                   }`}
                 >
-                  {isCompleted ? <Check className="h-5 w-5 stroke-[2.75]" /> : step.id}
+                  {isCompleted ? <Check className="h-3.5 w-3.5 stroke-[3]" /> : step.id}
                 </span>
 
-                <span className="min-w-0">
-                  <span
-                    className={`block text-[17px] font-semibold leading-none ${
-                      isCompleted
-                        ? 'text-emerald-500'
-                        : isCurrent
-                          ? 'text-[#2563EB]'
-                          : 'text-slate-400'
-                    }`}
-                  >
-                    {step.name}
-                  </span>
+                <span
+                  className={`text-xs font-bold ${
+                    isCompleted || isCurrent ? 'text-slate-900' : 'text-slate-400'
+                  }`}
+                >
+                  {step.name}
                 </span>
               </button>
 
               {index < steps.length - 1 && (
-                <div className="flex-1 px-1">
-                  <div
-                    className={`h-0.5 rounded-full transition-colors duration-300 ${
-                      currentStep > step.id
-                        ? 'bg-emerald-500'
-                        : currentStep === step.id
-                          ? 'bg-[#2563EB]'
-                          : 'bg-slate-200'
-                    }`}
-                  />
+                <div className="flex-1 px-3">
+                  <div className="h-px bg-slate-200 w-full" />
                 </div>
               )}
             </React.Fragment>

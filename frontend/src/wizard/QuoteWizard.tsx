@@ -643,87 +643,41 @@ export default function QuoteWizard() {
         ) : null}
       </AnimatePresence>
 
-      <header className="no-print sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur md:relative md:z-30">
-        <div className="mx-auto hidden max-w-7xl items-center justify-between gap-4 px-4 py-3 md:flex md:px-8 md:py-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <BrandMark />
-            <div className="h-10 w-px bg-slate-200" />
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-lg font-extrabold leading-none text-slate-900">Create Quote</h1>
-                <span className="rounded-full border border-amber-200 bg-amber-50 px-2.5 py-0.5 text-[11px] font-extrabold uppercase tracking-wider text-amber-700">
-                  Draft Mode
-                </span>
-              </div>
-              <p className="mt-1 text-xs text-slate-400">Build, style, and send quotation bills in less than 2 minutes.</p>
-            </div>
+      <div className="mx-auto max-w-7xl px-4 py-4 md:px-8 md:py-6">
+        {/* Top Header Row matching AFTER mockup */}
+        <div className="flex items-center justify-between pb-4 flex-wrap gap-3">
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-xl md:text-2xl font-black tracking-tight text-slate-900">Create Quote</h1>
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-600 border border-emerald-200">
+              DRAFT
+            </span>
+            <span className="text-xs font-semibold text-slate-400">
+              {quotationMeta.quotationNumber || 'Q-2026-00021'}
+            </span>
           </div>
 
-          <div className="hidden items-center gap-3 md:flex">
-            <button
-              type="button"
-              className="inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700"
-              aria-label="Theme toggle"
-            >
-              <Moon size={18} />
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl border border-slate-200 bg-white px-5 text-sm font-extrabold text-slate-700 shadow-sm transition-colors hover:bg-slate-50"
-            >
-              Save Draft
-            </button>
+          <div className="flex items-center gap-4">
+            <div className="hidden sm:flex items-center gap-1.5 text-xs font-semibold text-emerald-600">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+              <span>Auto Saved</span>
+              <span className="text-slate-400 font-normal">a sec ago</span>
+            </div>
 
             <button
               type="button"
               onClick={handlePrimaryAction}
               disabled={isFinalizingQuote}
-              className="inline-flex h-11 min-h-[44px] items-center gap-2 rounded-xl bg-[#2F5BFF] px-5 text-sm font-extrabold text-white shadow-lg shadow-blue-100 transition-colors hover:bg-[#244ad9] disabled:cursor-not-allowed disabled:opacity-70"
+              className="inline-flex min-h-[40px] items-center gap-1.5 px-4 py-2 bg-[#2563EB] hover:bg-blue-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all cursor-pointer"
             >
-              {isFinalizingQuote && currentStep === 4 ? <LoaderCircle size={16} className="animate-spin" /> : null}
+              {isFinalizingQuote && currentStep === 4 ? <LoaderCircle size={14} className="animate-spin" /> : null}
               <span>{currentStep === 4 ? (isFinalizingQuote ? 'Saving Quote...' : 'Save Quote') : currentStep === 3 ? 'Next: Preview' : currentStep === 2 ? 'Next: Add Items' : 'Next: Add Client'}</span>
-              {!isFinalizingQuote || currentStep !== 4 ? <ChevronRight size={16} /> : null}
-            </button>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleSaveDraft}
-            className="md:hidden inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
-            aria-label="Save draft"
-            title="Save draft"
-          >
-            <Save size={16} />
-          </button>
-        </div>
-
-        <div className="md:hidden px-4 pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <h1 className="text-[22px] font-extrabold leading-tight text-slate-900">Create Quote</h1>
-              <p className="mt-1 text-[14px] leading-5 text-slate-500">
-                Build, style, and send quotation bills in less than 2 minutes.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="inline-flex h-11 min-h-[44px] w-11 items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-700 shadow-sm"
-              aria-label="Save draft"
-              title="Save draft"
-            >
-              <Save size={16} />
+              <ChevronRight size={14} />
             </button>
           </div>
         </div>
-      </header>
 
-      <div className="mx-auto max-w-7xl px-4 pt-2 pb-28 md:px-8 md:py-6">
-        <div className="no-print rounded-2xl border border-slate-200 bg-white p-4 shadow-sm md:rounded-[28px] md:p-6">
-          <StepWizard currentStep={currentStep} onStepClick={(step) => setCurrentStep(step as 1 | 2 | 3 | 4)} />
-        </div>
+        {/* Stepper matching AFTER mockup */}
+        <StepWizard currentStep={currentStep} onStepClick={(step) => setCurrentStep(step as 1 | 2 | 3 | 4)} />
 
         <AnimatePresence mode="wait">
           <motion.div
@@ -733,7 +687,7 @@ export default function QuoteWizard() {
             exit={{ opacity: 0, y: -14 }}
             transition={{ duration: 0.22 }}
           >
-            <div className="mt-6">
+            <div className="mt-2">
               {currentStep === 1 && (
                 <BusinessStep
                   register={register}
@@ -743,6 +697,9 @@ export default function QuoteWizard() {
                   setValue={setValue}
                   businessValues={watchedBusinessValues}
                   clientValues={watchedClientValues}
+                  quoteNumber={quotationMeta.quotationNumber || 'Q-2026-00021'}
+                  issueDate={quotationMeta.date}
+                  expiryDate={quotationMeta.validUntil}
                   onNext={handleStepNext}
                   onBack={handleBackOrHome}
                   onScrollToSection={() => {}}
