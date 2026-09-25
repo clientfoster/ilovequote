@@ -308,68 +308,68 @@ export default function ManualQuoteGenerator() {
           </div>
 
           {/* 3 Mode Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mt-5">
+          <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-4 sm:mt-5">
             {/* Mode 1: Create Manually */}
             <div
               onClick={() => setActiveMode('manual')}
-              className={`relative rounded-2xl p-4 border-2 cursor-pointer transition-all ${
+              className={`relative rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border-2 cursor-pointer transition-all text-center sm:text-left ${
                 activeMode === 'manual'
                   ? 'border-indigo-600 bg-indigo-50/40 shadow-sm'
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
               {activeMode === 'manual' && (
-                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center">
-                  <Check className="w-3 h-3 stroke-[3]" />
+                <div className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-indigo-600 text-white flex items-center justify-center">
+                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]" />
                 </div>
               )}
-              <div className="w-9 h-9 rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-2.5">
-                <FileText className="w-5 h-5" />
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-indigo-100 text-indigo-700 flex items-center justify-center mb-1.5 sm:mb-2.5 mx-auto sm:mx-0">
+                <FileText className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-sm font-bold text-gray-900">Create Manually</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Enter items and details</p>
+              <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate">Create Manually</h3>
+              <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 hidden xs:block truncate">Enter items & details</p>
             </div>
 
             {/* Mode 2: From Photo */}
             <div
               onClick={() => setActiveMode('photo')}
-              className={`relative rounded-2xl p-4 border-2 cursor-pointer transition-all ${
+              className={`relative rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border-2 cursor-pointer transition-all text-center sm:text-left ${
                 activeMode === 'photo'
                   ? 'border-emerald-600 bg-emerald-50/40 shadow-sm'
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
               {activeMode === 'photo' && (
-                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center">
-                  <Check className="w-3 h-3 stroke-[3]" />
+                <div className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-emerald-600 text-white flex items-center justify-center">
+                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]" />
                 </div>
               )}
-              <div className="w-9 h-9 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-2.5">
-                <Camera className="w-5 h-5" />
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center mb-1.5 sm:mb-2.5 mx-auto sm:mx-0">
+                <Camera className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-sm font-bold text-gray-900">From Photo</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Upload a photo (bill, list, etc.)</p>
+              <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate">From Photo</h3>
+              <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 hidden xs:block truncate">Upload bill/photo</p>
             </div>
 
             {/* Mode 3: From Audio */}
             <div
               onClick={() => setActiveMode('audio')}
-              className={`relative rounded-2xl p-4 border-2 cursor-pointer transition-all ${
+              className={`relative rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border-2 cursor-pointer transition-all text-center sm:text-left ${
                 activeMode === 'audio'
                   ? 'border-amber-600 bg-amber-50/40 shadow-sm'
                   : 'border-gray-200 bg-white hover:border-gray-300'
               }`}
             >
               {activeMode === 'audio' && (
-                <div className="absolute top-3 right-3 w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center">
-                  <Check className="w-3 h-3 stroke-[3]" />
+                <div className="absolute top-1.5 right-1.5 sm:top-3 sm:right-3 w-4 h-4 sm:w-5 sm:h-5 rounded-full bg-amber-600 text-white flex items-center justify-center">
+                  <Check className="w-2.5 h-2.5 sm:w-3 sm:h-3 stroke-[3]" />
                 </div>
               )}
-              <div className="w-9 h-9 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-2.5">
-                <Mic className="w-5 h-5" />
+              <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-1.5 sm:mb-2.5 mx-auto sm:mx-0">
+                <Mic className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-sm font-bold text-gray-900">From Audio</h3>
-              <p className="text-[11px] text-gray-500 mt-0.5">Speak and create a quote</p>
+              <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate">From Audio</h3>
+              <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 hidden xs:block truncate">Speak to create</p>
             </div>
           </div>
 
@@ -794,8 +794,83 @@ export default function ManualQuoteGenerator() {
 
             {openSections.items && (
               <div className="p-4 sm:p-5 pt-0 border-t border-gray-100">
-                {/* Table Layout */}
-                <div className="overflow-x-auto -mx-4 sm:mx-0">
+                {/* Mobile Item Cards View (No horizontal scrolling on phones) */}
+                <div className="block sm:hidden space-y-3">
+                  {quote.items.map((item, index) => (
+                    <div
+                      key={item.id}
+                      className="p-3.5 bg-slate-50/80 rounded-xl border border-gray-200/90 space-y-2.5 shadow-2xs"
+                    >
+                      <div className="flex items-center justify-between">
+                        <span className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                          Item #{index + 1}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveItem(item.id)}
+                          disabled={quote.items.length <= 1}
+                          className="p-1.5 rounded-lg text-gray-400 hover:text-red-500 hover:bg-red-50 disabled:opacity-30 transition-colors"
+                          title="Delete item"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      <div>
+                        <input
+                          type="text"
+                          placeholder="Product or service name"
+                          value={item.name}
+                          onChange={(e) => handleUpdateItem(item.id, 'name', e.target.value)}
+                          className="w-full text-xs font-semibold px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        />
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
+                            Unit Price ({quote.currency.symbol})
+                          </label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="any"
+                            placeholder="0.00"
+                            value={item.unitPrice === 0 ? '' : item.unitPrice}
+                            onChange={(e) =>
+                              handleUpdateItem(item.id, 'unitPrice', parseFloat(e.target.value) || 0)
+                            }
+                            className="w-full text-xs font-mono px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
+                            Quantity
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={item.quantity}
+                            onChange={(e) =>
+                              handleUpdateItem(item.id, 'quantity', parseInt(e.target.value, 10) || 1)
+                            }
+                            className="w-full text-xs font-mono text-center px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 text-xs">
+                        <span className="text-gray-500 font-medium">Line Amount:</span>
+                        <span className="font-bold font-mono text-gray-900 text-sm">
+                          {formatCurrency(item.amount)}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Desktop & Tablet Table Layout */}
+                <div className="hidden sm:block overflow-x-auto -mx-4 sm:mx-0">
                   <table className="w-full text-left text-xs min-w-[550px]">
                     <thead className="bg-slate-50 text-gray-600 font-semibold border-b border-gray-200">
                       <tr>

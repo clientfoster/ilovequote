@@ -395,19 +395,83 @@ export default function CreateInvoicePage() {
                   {draft.lineItems.map((row, index) => {
                     const amount = row.quantity * row.rate * (1 + row.tax / 100);
                     return (
-                      <div key={row.id} className="grid gap-3 px-4 py-4 md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_120px_130px_44px] md:items-center">
-                        <div className="text-sm font-bold text-slate-900">{index + 1}</div>
-                        <div className="grid gap-2">
-                          <input value={row.name} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, name: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none" />
-                          <input value={row.description} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, description: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-500 outline-none" />
+                      <div key={row.id}>
+                        {/* Mobile Item Card View (< md) */}
+                        <div className="md:hidden p-4 space-y-3 bg-white">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">Item #{index + 1}</span>
+                            <button
+                              type="button"
+                              onClick={() => setDraft((current) => ({ ...current, lineItems: current.lineItems.filter((item) => item.id !== row.id) }))}
+                              className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <div className="grid gap-2">
+                            <input
+                              placeholder="Item Name"
+                              value={row.name}
+                              onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, name: e.target.value } : item) }))}
+                              className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none focus:border-[#2E6EAB]"
+                            />
+                            <input
+                              placeholder="Description (Optional)"
+                              value={row.description}
+                              onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, description: e.target.value } : item) }))}
+                              className="rounded-xl border border-slate-200 px-3 py-2 text-xs text-slate-500 outline-none focus:border-[#2E6EAB]"
+                            />
+                          </div>
+                          <div className="grid grid-cols-3 gap-2">
+                            <div>
+                              <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Qty</span>
+                              <input
+                                type="number"
+                                value={row.quantity}
+                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, quantity: Number(e.target.value) || 0 } : item) }))}
+                                className="w-full min-h-[38px] rounded-xl border border-slate-200 px-2 text-center text-xs font-semibold text-slate-700 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Rate</span>
+                              <input
+                                type="number"
+                                value={row.rate}
+                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, rate: Number(e.target.value) || 0 } : item) }))}
+                                className="w-full min-h-[38px] rounded-xl border border-slate-200 px-2 text-right text-xs font-semibold text-slate-700 outline-none"
+                              />
+                            </div>
+                            <div>
+                              <span className="block text-[10px] font-bold text-slate-500 uppercase mb-1">Tax (%)</span>
+                              <input
+                                type="number"
+                                value={row.tax}
+                                onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))}
+                                className="w-full min-h-[38px] rounded-xl border border-slate-200 px-2 text-center text-xs font-semibold text-slate-700 outline-none"
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between pt-2 border-t border-slate-100 text-xs">
+                            <span className="font-medium text-slate-500">Amount:</span>
+                            <span className="text-sm font-bold text-slate-900">{formatInvoiceCurrency(amount)}</span>
+                          </div>
                         </div>
-                        <input type="number" value={row.quantity} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, quantity: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                        <input type="number" value={row.rate} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, rate: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                        <input type="number" value={row.tax} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
-                        <div className="flex items-center text-sm font-bold text-slate-900">{formatInvoiceCurrency(amount)}</div>
-                        <button onClick={() => setDraft((current) => ({ ...current, lineItems: current.lineItems.filter((item) => item.id !== row.id) }))} className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-red-500">
-                          <Trash2 className="h-4 w-4" />
-                        </button>
+
+                        {/* Desktop Table View (>= md) */}
+                        <div className="hidden md:grid gap-3 px-4 py-4 md:grid-cols-[54px_minmax(200px,1.4fr)_110px_120px_120px_130px_44px] md:items-center">
+                          <div className="text-sm font-bold text-slate-900">{index + 1}</div>
+                          <div className="grid gap-2">
+                            <input value={row.name} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, name: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-bold text-slate-900 outline-none" />
+                            <input value={row.description} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, description: e.target.value } : item) }))} className="rounded-xl border border-slate-200 px-3 py-2 text-sm text-slate-500 outline-none" />
+                          </div>
+                          <input type="number" value={row.quantity} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, quantity: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                          <input type="number" value={row.rate} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, rate: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                          <input type="number" value={row.tax} onChange={(e) => setDraft((current) => ({ ...current, lineItems: current.lineItems.map((item) => item.id === row.id ? { ...item, tax: Number(e.target.value) || 0 } : item) }))} className="min-h-[42px] rounded-xl border border-slate-200 px-3 text-sm font-semibold text-slate-700 outline-none" />
+                          <div className="flex items-center text-sm font-bold text-slate-900">{formatInvoiceCurrency(amount)}</div>
+                          <button onClick={() => setDraft((current) => ({ ...current, lineItems: current.lineItems.filter((item) => item.id !== row.id) }))} className="flex h-10 w-10 items-center justify-center rounded-xl text-slate-400 hover:bg-slate-50 hover:text-red-500">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

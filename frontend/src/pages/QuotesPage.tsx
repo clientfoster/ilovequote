@@ -147,7 +147,97 @@ export default function QuotesPage() {
             </div>
           </div>
 
-          <div className="overflow-x-auto">
+          {/* Mobile Quotes Card List (< md) */}
+          <div className="block md:hidden divide-y divide-slate-100">
+            {filtered.length === 0 ? (
+              <div className="p-8 text-center space-y-2">
+                <FileText className="w-8 h-8 text-blue-600 mx-auto" />
+                <p className="text-sm font-bold text-slate-800">No quotes found</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/create-quote')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#2457F0] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Create New Quote
+                </button>
+              </div>
+            ) : (
+              filtered.map((quote) => {
+                const activeStatus = quote.status === 'Completed' ? 'Accepted' : quote.status;
+                return (
+                  <div key={quote.id} className="p-4 space-y-2.5 bg-white">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#2457F0]">
+                          <FileText className="h-4 w-4" />
+                        </div>
+                        <div>
+                          <span className="font-bold text-slate-900 text-sm">
+                            {quote.businessDetails?.companyName || 'Untitled Quote'}
+                          </span>
+                          <p className="text-[11px] text-slate-400 font-mono">{quote.quoteNumber}</p>
+                        </div>
+                      </div>
+                      <span
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                          activeStatus === 'Accepted' ? 'bg-[#E9FCEB] text-[#16A34A]' : 'bg-[#F3F4F6] text-[#475569]'
+                        }`}
+                      >
+                        {activeStatus}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-600 font-medium">{quote.clientDetails?.name || 'Client'}</span>
+                      <span className="font-bold text-sm text-slate-900 font-mono">{formatMoney(quote.totalAmount)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                      <span>Date: {quote.date}</span>
+                      <span>Expires: {quote.expiryDate || '-'}</span>
+                    </div>
+
+                    <div className="flex items-center gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => openQuotePdf(quote.id)}
+                        className="flex-1 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#2457F0] font-semibold text-xs flex items-center justify-center gap-1.5 transition-colors"
+                      >
+                        <Eye className="w-3.5 h-3.5" /> View / PDF
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => shareViaWhatsApp(quote)}
+                        className="p-2 rounded-xl border border-slate-200 text-[#16A34A] hover:bg-green-50 transition-colors"
+                        title="Share on WhatsApp"
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyShareLink(quote)}
+                        className="p-2 rounded-xl border border-slate-200 text-[#7C3AED] hover:bg-purple-50 transition-colors"
+                        title="Copy share link"
+                      >
+                        <Copy className="w-4 h-4" />
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleDelete(quote)}
+                        className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="Delete quote"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          {/* Desktop Table (>= md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-[1320px] w-full border-collapse text-left">
               <thead className="bg-[#FBFCFF]">
                 <tr className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500">

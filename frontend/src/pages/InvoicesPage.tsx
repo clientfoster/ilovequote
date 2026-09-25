@@ -174,8 +174,79 @@ export default function InvoicesPage() {
             </div>
           </div>
 
-          {/* Table */}
-          <div className="overflow-x-auto">
+          {/* Mobile Invoices Card List (< md) */}
+          <div className="block md:hidden divide-y divide-slate-100">
+            {filtered.length === 0 ? (
+              <div className="p-8 text-center space-y-2">
+                <Receipt className="w-8 h-8 text-blue-600 mx-auto" />
+                <p className="text-sm font-bold text-slate-800">No invoices found</p>
+                <button
+                  type="button"
+                  onClick={() => navigate('/create-invoice')}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-[#2457F0] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs"
+                >
+                  <Plus className="w-3.5 h-3.5" /> New Invoice
+                </button>
+              </div>
+            ) : (
+              filtered.map((inv) => (
+                <div key={inv.id} className="p-4 space-y-2.5 bg-white">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-50 text-[#2457F0]">
+                        <FileSpreadsheet className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <span className="font-bold text-slate-900 text-sm">{inv.invoiceNumber}</span>
+                        <p className="text-[11px] text-slate-400">{inv.businessName}</p>
+                      </div>
+                    </div>
+                    <span
+                      className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-bold ${
+                        inv.status === 'Paid'
+                          ? 'bg-emerald-50 text-emerald-600'
+                          : inv.status === 'Sent'
+                          ? 'bg-blue-50 text-blue-600'
+                          : 'bg-slate-100 text-slate-600'
+                      }`}
+                    >
+                      {inv.status}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="text-slate-600 font-medium">{inv.clientName}</span>
+                    <span className="font-bold text-sm text-slate-900 font-mono">{formatMoney(inv.amount)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-slate-100">
+                    <span>Date: {inv.invoiceDate}</span>
+                    <span>Due: {inv.dueDate || '-'}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => navigate('/create-invoice/design')}
+                      className="flex-1 py-2 rounded-xl bg-blue-50 hover:bg-blue-100 text-[#2457F0] font-semibold text-xs text-center transition-colors"
+                    >
+                      View / Export
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteInvoice(inv.id)}
+                      className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          {/* Desktop Table (>= md) */}
+          <div className="hidden md:block overflow-x-auto">
             <table className="min-w-[1100px] w-full border-collapse text-left">
               <thead className="bg-[#FBFCFF]">
                 <tr className="text-[11px] font-semibold uppercase tracking-[0.02em] text-slate-500">
