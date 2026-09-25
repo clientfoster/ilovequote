@@ -535,9 +535,18 @@ function buildQuoteFromPayload(payload = {}, ownerUserId = null) {
     date: quotationMeta.date,
     expiryDate: quotationMeta.validUntil,
     status,
-    businessDetails,
-    clientDetails,
+    businessDetails: {
+      ...businessDetails,
+      preparedBy: payload.business?.preparedBy || payload.businessDetails?.preparedBy || '',
+    },
+    clientDetails: {
+      ...clientDetails,
+      contactPerson: payload.client?.contactPerson || payload.clientDetails?.contactPerson || '',
+    },
     clientLogo: payload.clientLogo || clientDetails.logo || '',
+    poNumber: payload.poNumber || '',
+    currency: payload.currency || { code: 'INR', symbol: '₹', name: 'Indian Rupee' },
+    notes: payload.notes || '',
     items: totals.items.map((item) => ({
       id: item.id,
       description: item.name,
@@ -559,11 +568,20 @@ function buildQuoteFromPayload(payload = {}, ownerUserId = null) {
     taxRate,
     taxAmount: Number((payload.taxAmount ?? totals.taxTotal).toFixed(2)),
     totalAmount: Number((payload.totalAmount ?? totals.totalAmount).toFixed(2)),
+    pricing: payload.pricing || {
+      subtotal: totals.subtotal,
+      discountPercent: Number(payload.discountPercent || 0),
+      discountAmount: Number(payload.discountAmount || 0),
+      taxPercent: taxRate,
+      taxAmount: Number((payload.taxAmount ?? totals.taxTotal).toFixed(2)),
+      totalAmount: Number((payload.totalAmount ?? totals.totalAmount).toFixed(2)),
+    },
     terms,
     quotationMeta,
+    conversion: payload.conversion || { isConverted: false },
     createdAt: payload.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    source: isWizardPayload ? 'wizard' : 'api',
+    source: payload.source || (isWizardPayload ? 'wizard' : 'api'),
     ownerUserId,
   };
 }
@@ -2768,6 +2786,51 @@ app.get('/api/quotes/:id', (req, res) => {
     shareUrl: publicShareUrl(req, quote),
     pdfUrl: `${FRONTEND_BASE_URL.replace(/\/$/, '')}/#/quote-export/${encodeURIComponent(quote.id)}?download=1`,
   });
+});
+
+app.post('/api/quotes/:id/convert-to-invoice', async (req, res) => {
+  try {
+    const user = getAuthenticatedUser(req);
+    const quote = findOwnedQuoteById(req.params.id, user?.id || null);
+    if (!quote) {
+      res.status(404).json({ error: 'Quote not found' });
+      return;
+    }
+
+    const invoiceId = `inv_${randomUUID()}`;
+    const invoiceNumber = `INV-${String(quote.quoteNumber || '').replace(/^QT-?/i, '') || Date.now().toString().slice(-5)}`;
+
+    quote.status = 'Converted';
+    quote.conversion = {
+      isConverted: true,
+      convertedType: 'invoice',
+      convertedId: invoiceId,
+      convertedAt: new Date().toISOString(),
+    };
+    quote.updatedAt = new Date().toISOString();
+    await persistQuotes();
+
+    res.json({
+      ok: true,
+      quote,
+      invoice: {
+        id: invoiceId,
+        invoiceNumber,
+        quoteId: quote.id,
+        businessDetails: quote.businessDetails,
+        clientDetails: quote.clientDetails,
+        items: quote.items,
+        pricing: quote.pricing,
+        notes: quote.notes,
+        terms: quote.terms,
+      },
+    });
+  } catch (error) {
+    res.status(400).json({
+      error: 'Unable to convert quote to invoice',
+      message: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
 });
 
 app.delete('/api/quotes/:id', async (req, res) => {
