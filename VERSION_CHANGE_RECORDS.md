@@ -82,8 +82,56 @@ To guarantee that **every version is 100% backed up and accessible independently
 
 ---
 
+## 📑 Version 3.0 (Completed: 30-Sep-2026)
+
+* **Git Branch / Tag:** `preview3`
+* **Dedicated Route:** `/#/create-quote2` (e.g. `https://test.ilovequote.com/#/create-quote2`)
+* **Primary Focus:** Additional Options Accordion (Shipping Details, GST/Tax Configuration Modal, Column & Formula Customization Modal), Dynamic Items Table & Mobile Cards.
+
+### Key Changes Implemented:
+1. **"Additional Options" Accordion Card (`ManualQuoteGenerator.tsx`):**
+   - Placed seamlessly between **Quote Details** and **Items & Summary** accordions.
+   - Includes **`[ ] Add Shipping Details`** toggle to expand dispatch address, recipient/consignee, transport mode, transporter name, and vehicle/tracking number.
+   - Includes **`% Edit GST`** button and **`📊 Edit Columns/Formulas`** button with purple styling.
+2. **Tax Configuration Modal (`TaxConfigModal.tsx`):**
+   - Numbered step layout matching Refrens specifications:
+     1. **Select Tax Type:** `GST (India)`, `VAT`, `Sales Tax`, `None`.
+     2. **Place of Supply:** Comprehensive Indian States & UTs dropdown (36 states/UTs + Other Territory).
+     3. **GST Type:** Radio selector (`IGST` vs `CGST & SGST`) + **`+ Add Cess`** percentage input.
+     4. **Other Options:** Reverse Charge Mechanism (`RCM`) checkbox.
+3. **Customize Columns & Formulas Modal (`ColumnFormulaModal.tsx`):**
+   - Header with lightbulb icon and **`+ Add New Column`** button.
+   - Drag & drop row controls with editable Column Name, Column Type (`TEXT` or `NUMBER`), and Eye visibility toggle for:
+     - `Item` (Primary/Required)
+     - `HSN/SAC`
+     - `GST Rate`
+     - `Quantity`
+     - Unlimited custom columns with trash/delete action.
+   - `Reset to Default`, `Cancel`, and `Save Changes` actions.
+4. **Dynamic Items Table & Mobile Cards:**
+   - Real-time column visibility toggle in desktop table and mobile cards without horizontal scrolling issues.
+   - Supports custom column data inputs per line item.
+   - Detailed GST breakdown in pricing summary box (CGST, SGST, IGST, Cess %, and RCM status).
+5. **Dedicated Route Registration (`App.tsx`):**
+   - Direct access via `/#/create-quote2` (`https://test.ilovequote.com/#/create-quote2`).
+
+---
+
+## 🗂 File Modification Summary (Version 2.1)
+
+| File | Type | Description |
+| :--- | :--- | :--- |
+| `frontend/src/types/structuredQuote.ts` | Modified | Added `TaxConfiguration`, `QuoteColumnConfig`, `ShippingDetails`, Indian States list, and Cess calculator |
+| `frontend/src/components/quote-generator/TaxConfigModal.tsx` | New | 4-step modal for GST/VAT/Sales Tax, Place of Supply, IGST/CGST, Cess & RCM |
+| `frontend/src/components/quote-generator/ColumnFormulaModal.tsx` | New | Drag handle, column name/type customizer, visibility toggles & add custom column |
+| `frontend/src/components/quote-generator/ManualQuoteGenerator.tsx` | Modified | Added Additional Options accordion, dynamic column rendering, shipping fields, and GST breakdown |
+| `frontend/src/App.tsx` | Modified | Registered dedicated route `/#/create-quote2` |
+| `VERSION_CHANGE_RECORDS.md` | Modified | Backup and change documentation |
+
+---
+
 ## 🔒 Verification & Compliance
 - **Backend Syntax:** Validated with Node.js (`node -c backend/server.js` $\rightarrow$ Exit Code 0).
-- **Frontend Build:** Successfully built with Vite (`✓ built in 14.07s`).
+- **Frontend Build:** Successfully built with Vite (`✓ built in 14.79s`).
 - **Dev Servers:** Both active locally (`http://localhost:3000` and `http://localhost:3001`).
 - **Git Push:** Remote push is held until user authorizes.

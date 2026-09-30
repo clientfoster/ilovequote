@@ -130,6 +130,7 @@ export default function App() {
         >
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/create-quote" element={<CreateQuotePage />} />
+          <Route path="/create-quote2" element={<CreateQuotePage />} />
           <Route path="/create-invoice" element={<CreateInvoicePage />} />
           <Route path="/create-invoice/bank-details" element={<CreateInvoiceBankDetailsPage />} />
           <Route path="/create-invoice/design" element={<CreateInvoiceDesignPage />} />

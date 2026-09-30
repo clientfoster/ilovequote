@@ -16,6 +16,33 @@ export const SUPPORTED_CURRENCIES: CurrencyInfo[] = [
   { code: 'SGD', symbol: 'S$', name: 'Singapore Dollar', flag: '🇸🇬' },
 ];
 
+export interface TaxConfiguration {
+  taxType: 'GST (India)' | 'VAT' | 'Sales Tax' | 'None';
+  placeOfSupply: string;
+  gstType: 'IGST' | 'CGST & SGST';
+  hasCess: boolean;
+  cessPercent: number;
+  isReverseCharge: boolean;
+}
+
+export interface QuoteColumnConfig {
+  id: string;
+  name: string;
+  type: 'TEXT' | 'NUMBER';
+  visible: boolean;
+  isCustom?: boolean;
+}
+
+export interface ShippingDetails {
+  enabled: boolean;
+  shippedFromAddress: string;
+  shippedToName: string;
+  shippedToAddress: string;
+  transportMode: string;
+  transporterName: string;
+  vehicleOrTrackingNumber: string;
+}
+
 export interface StructuredQuoteItem {
   id: string;
   name: string;
@@ -25,6 +52,7 @@ export interface StructuredQuoteItem {
   amount: number;
   hsnSac?: string;
   taxPercent?: number;
+  [customKey: string]: any;
 }
 
 export interface StructuredQuoteBusiness {
@@ -55,6 +83,7 @@ export interface StructuredQuotePricing {
   taxPercent: number;
   taxAmount: number;
   totalAmount: number;
+  cessAmount?: number;
 }
 
 export interface StructuredQuote {
@@ -68,6 +97,9 @@ export interface StructuredQuote {
   source: 'manual' | 'photo' | 'audio';
   business: StructuredQuoteBusiness;
   client: StructuredQuoteClient;
+  shipping?: ShippingDetails;
+  taxConfig?: TaxConfiguration;
+  columns?: QuoteColumnConfig[];
   items: StructuredQuoteItem[];
   pricing: StructuredQuotePricing;
   notes: string;
@@ -81,6 +113,72 @@ export interface StructuredQuote {
   createdAt: string;
   updatedAt: string;
 }
+
+export const DEFAULT_COLUMNS: QuoteColumnConfig[] = [
+  { id: 'col-item', name: 'Item', type: 'TEXT', visible: true, isCustom: false },
+  { id: 'col-hsn', name: 'HSN/SAC', type: 'NUMBER', visible: true, isCustom: false },
+  { id: 'col-gst', name: 'GST Rate', type: 'NUMBER', visible: true, isCustom: false },
+  { id: 'col-qty', name: 'Quantity', type: 'NUMBER', visible: true, isCustom: false },
+];
+
+export const DEFAULT_TAX_CONFIG: TaxConfiguration = {
+  taxType: 'GST (India)',
+  placeOfSupply: 'Other Territory',
+  gstType: 'IGST',
+  hasCess: false,
+  cessPercent: 0,
+  isReverseCharge: false,
+};
+
+export const DEFAULT_SHIPPING_DETAILS: ShippingDetails = {
+  enabled: false,
+  shippedFromAddress: '',
+  shippedToName: '',
+  shippedToAddress: '',
+  transportMode: 'Road',
+  transporterName: '',
+  vehicleOrTrackingNumber: '',
+};
+
+export const INDIAN_STATES_AND_UTS = [
+  'Andhra Pradesh (37)',
+  'Arunachal Pradesh (12)',
+  'Assam (18)',
+  'Bihar (10)',
+  'Chhattisgarh (22)',
+  'Goa (30)',
+  'Gujarat (24)',
+  'Haryana (06)',
+  'Himachal Pradesh (02)',
+  'Jharkhand (20)',
+  'Karnataka (29)',
+  'Kerala (32)',
+  'Madhya Pradesh (23)',
+  'Maharashtra (27)',
+  'Manipur (14)',
+  'Meghalaya (17)',
+  'Mizoram (15)',
+  'Nagaland (13)',
+  'Odisha (21)',
+  'Punjab (03)',
+  'Rajasthan (08)',
+  'Sikkim (11)',
+  'Tamil Nadu (33)',
+  'Telangana (36)',
+  'Tripura (16)',
+  'Uttar Pradesh (09)',
+  'Uttarakhand (05)',
+  'West Bengal (19)',
+  'Andaman and Nicobar Islands (35)',
+  'Chandigarh (04)',
+  'Dadra and Nagar Haveli and Daman and Diu (26)',
+  'Delhi (07)',
+  'Jammu and Kashmir (01)',
+  'Ladakh (38)',
+  'Lakshadweep (31)',
+  'Puducherry (34)',
+  'Other Territory',
+];
 
 export const createDefaultStructuredQuote = (): StructuredQuote => {
   const today = new Date();
@@ -113,11 +211,16 @@ export const createDefaultStructuredQuote = (): StructuredQuote => {
       phone: '',
       email: '',
     },
+    shipping: { ...DEFAULT_SHIPPING_DETAILS },
+    taxConfig: { ...DEFAULT_TAX_CONFIG },
+    columns: DEFAULT_COLUMNS.map((col) => ({ ...col })),
     items: [
       {
         id: `item-${Date.now()}-1`,
         name: '',
         description: '',
+        hsnSac: '',
+        taxPercent: 18,
         unitPrice: 0,
         quantity: 1,
         amount: 0,
@@ -126,6 +229,8 @@ export const createDefaultStructuredQuote = (): StructuredQuote => {
         id: `item-${Date.now()}-2`,
         name: '',
         description: '',
+        hsnSac: '',
+        taxPercent: 18,
         unitPrice: 0,
         quantity: 1,
         amount: 0,
@@ -134,6 +239,8 @@ export const createDefaultStructuredQuote = (): StructuredQuote => {
         id: `item-${Date.now()}-3`,
         name: '',
         description: '',
+        hsnSac: '',
+        taxPercent: 18,
         unitPrice: 0,
         quantity: 1,
         amount: 0,
@@ -143,7 +250,7 @@ export const createDefaultStructuredQuote = (): StructuredQuote => {
       subtotal: 0,
       discountPercent: 0,
       discountAmount: 0,
-      taxPercent: 0,
+      taxPercent: 18,
       taxAmount: 0,
       totalAmount: 0,
     },
@@ -160,7 +267,8 @@ export const createDefaultStructuredQuote = (): StructuredQuote => {
 export function calculateStructuredQuotePricing(
   items: StructuredQuoteItem[],
   discountPercent = 0,
-  taxPercent = 0
+  taxPercent = 0,
+  cessPercent = 0
 ): StructuredQuotePricing {
   const subtotal = items.reduce((sum, item) => {
     const itemAmount = (Number(item.quantity) || 0) * (Number(item.unitPrice) || 0);
@@ -174,7 +282,10 @@ export function calculateStructuredQuotePricing(
   const safeTaxPercent = Math.max(0, Number(taxPercent) || 0);
   const taxAmount = Number(((discountedSubtotal * safeTaxPercent) / 100).toFixed(2));
 
-  const totalAmount = Number((discountedSubtotal + taxAmount).toFixed(2));
+  const safeCessPercent = Math.max(0, Number(cessPercent) || 0);
+  const cessAmount = Number(((discountedSubtotal * safeCessPercent) / 100).toFixed(2));
+
+  const totalAmount = Number((discountedSubtotal + taxAmount + cessAmount).toFixed(2));
 
   return {
     subtotal: Number(subtotal.toFixed(2)),
@@ -182,13 +293,13 @@ export function calculateStructuredQuotePricing(
     discountAmount,
     taxPercent: safeTaxPercent,
     taxAmount,
+    cessAmount,
     totalAmount,
   };
 }
 
 /**
  * Direct 1-to-1 conversion from a Structured Quote to an Invoice Draft (for CreateInvoicePage)
- * Allows conversion without rebuilding or re-entering any data.
  */
 export function convertQuoteToInvoiceDraft(quote: StructuredQuote) {
   return {
@@ -214,9 +325,9 @@ export function convertQuoteToInvoiceDraft(quote: StructuredQuote) {
     billedToCity: '',
     billedToCountry: 'India',
     billedToPostal: '',
-    shippingEnabled: false,
-    transportMode: '',
-    transporter: '',
+    shippingEnabled: quote.shipping?.enabled || false,
+    transportMode: quote.shipping?.transportMode || '',
+    transporter: quote.shipping?.transporterName || '',
     distanceKm: '',
     currency: `${quote.currency.code} (${quote.currency.code}, ${quote.currency.symbol})`,
     lineItems: quote.items

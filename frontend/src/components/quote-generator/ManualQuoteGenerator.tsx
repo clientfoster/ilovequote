@@ -27,6 +27,9 @@ import {
   Printer,
   Sparkles,
   Share2,
+  Settings,
+  Truck,
+  SlidersHorizontal,
 } from 'lucide-react';
 import {
   StructuredQuote,
@@ -36,9 +39,17 @@ import {
   createDefaultStructuredQuote,
   calculateStructuredQuotePricing,
   convertQuoteToInvoiceDraft,
+  TaxConfiguration,
+  QuoteColumnConfig,
+  ShippingDetails,
+  DEFAULT_COLUMNS,
+  DEFAULT_TAX_CONFIG,
+  DEFAULT_SHIPPING_DETAILS,
 } from '../../types/structuredQuote';
 import PhotoQuoteExtractor from './PhotoQuoteExtractor';
 import AudioQuoteExtractor from './AudioQuoteExtractor';
+import TaxConfigModal from './TaxConfigModal';
+import ColumnFormulaModal from './ColumnFormulaModal';
 import BrandMark from '../BrandMark';
 import { isAuthenticated } from '../../auth';
 
@@ -51,7 +62,17 @@ export default function ManualQuoteGenerator() {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        return {
+          ...createDefaultStructuredQuote(),
+          ...parsed,
+          shipping: { ...DEFAULT_SHIPPING_DETAILS, ...(parsed.shipping || {}) },
+          taxConfig: { ...DEFAULT_TAX_CONFIG, ...(parsed.taxConfig || {}) },
+          columns:
+            parsed.columns && parsed.columns.length > 0
+              ? parsed.columns
+              : DEFAULT_COLUMNS.map((col) => ({ ...col })),
+        };
       }
     } catch {
       // Fallback
@@ -61,6 +82,8 @@ export default function ManualQuoteGenerator() {
 
   const [activeMode, setActiveMode] = useState<'manual' | 'photo' | 'audio'>('manual');
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
+  const [showTaxModal, setShowTaxModal] = useState<boolean>(false);
+  const [showColumnModal, setShowColumnModal] = useState<boolean>(false);
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState<boolean>(false);
 
   // Accordion open/close states
@@ -68,12 +91,14 @@ export default function ManualQuoteGenerator() {
     business: boolean;
     client: boolean;
     quoteDetails: boolean;
+    additionalOptions: boolean;
     items: boolean;
     notes: boolean;
   }>({
     business: true,
     client: true,
     quoteDetails: true,
+    additionalOptions: true,
     items: true,
     notes: true,
   });
@@ -105,10 +130,12 @@ export default function ManualQuoteGenerator() {
         return updated;
       });
 
+      const cessPercent = prev.taxConfig?.hasCess ? prev.taxConfig.cessPercent : 0;
       const newPricing = calculateStructuredQuotePricing(
         updatedItems,
         prev.pricing.discountPercent,
-        prev.pricing.taxPercent
+        prev.pricing.taxPercent,
+        cessPercent
       );
 
       return {
@@ -131,10 +158,12 @@ export default function ManualQuoteGenerator() {
         amount: 0,
       };
       const updatedItems = [...prev.items, newItem];
+      const cessPercent = prev.taxConfig?.hasCess ? prev.taxConfig.cessPercent : 0;
       const newPricing = calculateStructuredQuotePricing(
         updatedItems,
         prev.pricing.discountPercent,
-        prev.pricing.taxPercent
+        prev.pricing.taxPercent,
+        cessPercent
       );
       return {
         ...prev,
@@ -147,10 +176,12 @@ export default function ManualQuoteGenerator() {
   const handleRemoveItem = (id: string) => {
     setQuote((prev) => {
       const updatedItems = prev.items.filter((item) => item.id !== id);
+      const cessPercent = prev.taxConfig?.hasCess ? prev.taxConfig.cessPercent : 0;
       const newPricing = calculateStructuredQuotePricing(
         updatedItems,
         prev.pricing.discountPercent,
-        prev.pricing.taxPercent
+        prev.pricing.taxPercent,
+        cessPercent
       );
       return {
         ...prev,
@@ -162,7 +193,13 @@ export default function ManualQuoteGenerator() {
 
   const handleDiscountChange = (val: number) => {
     setQuote((prev) => {
-      const newPricing = calculateStructuredQuotePricing(prev.items, val, prev.pricing.taxPercent);
+      const cessPercent = prev.taxConfig?.hasCess ? prev.taxConfig.cessPercent : 0;
+      const newPricing = calculateStructuredQuotePricing(
+        prev.items,
+        val,
+        prev.pricing.taxPercent,
+        cessPercent
+      );
       return {
         ...prev,
         pricing: newPricing,
@@ -172,12 +209,62 @@ export default function ManualQuoteGenerator() {
 
   const handleTaxChange = (val: number) => {
     setQuote((prev) => {
-      const newPricing = calculateStructuredQuotePricing(prev.items, prev.pricing.discountPercent, val);
+      const cessPercent = prev.taxConfig?.hasCess ? prev.taxConfig.cessPercent : 0;
+      const newPricing = calculateStructuredQuotePricing(
+        prev.items,
+        prev.pricing.discountPercent,
+        val,
+        cessPercent
+      );
       return {
         ...prev,
         pricing: newPricing,
       };
     });
+  };
+
+  const handleToggleShipping = (enabled: boolean) => {
+    setQuote((prev) => ({
+      ...prev,
+      shipping: {
+        ...(prev.shipping || DEFAULT_SHIPPING_DETAILS),
+        enabled,
+      },
+    }));
+  };
+
+  const handleUpdateShipping = (field: keyof ShippingDetails, value: any) => {
+    setQuote((prev) => ({
+      ...prev,
+      shipping: {
+        ...(prev.shipping || DEFAULT_SHIPPING_DETAILS),
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleSaveTaxConfig = (newTaxConfig: TaxConfiguration) => {
+    setQuote((prev) => {
+      const cess = newTaxConfig.hasCess ? newTaxConfig.cessPercent : 0;
+      const updatedPricing = calculateStructuredQuotePricing(
+        prev.items,
+        prev.pricing.discountPercent,
+        prev.pricing.taxPercent,
+        cess
+      );
+      return {
+        ...prev,
+        taxConfig: newTaxConfig,
+        pricing: updatedPricing,
+      };
+    });
+  };
+
+  const handleSaveColumns = (newColumns: QuoteColumnConfig[]) => {
+    setQuote((prev) => ({
+      ...prev,
+      columns: newColumns,
+    }));
   };
 
   const handleSelectCurrency = (currency: CurrencyInfo) => {
@@ -236,6 +323,13 @@ export default function ManualQuoteGenerator() {
       maximumFractionDigits: 2,
     })}`;
   };
+
+  const columns = quote.columns || DEFAULT_COLUMNS;
+  const isColVisible = (colId: string) => {
+    const col = columns.find((c) => c.id === colId);
+    return col ? col.visible : false;
+  };
+  const customColumns = columns.filter((c) => c.isCustom && c.visible);
 
   return (
     <div className="min-h-screen bg-slate-50 py-6 px-3 sm:px-6 lg:px-8">
@@ -770,6 +864,180 @@ export default function ManualQuoteGenerator() {
             )}
           </div>
 
+          {/* Accordion: Additional Options */}
+          <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
+            <div className="p-4 sm:p-5">
+              {/* Top Row: Add Shipping Details Checkbox & Collapse Chevron */}
+              <div className="flex items-center justify-between">
+                <label className="inline-flex items-center gap-2 cursor-pointer select-none text-xs sm:text-sm font-semibold text-gray-700 hover:text-gray-900 transition-colors">
+                  <input
+                    type="checkbox"
+                    checked={quote.shipping?.enabled || false}
+                    onChange={(e) => handleToggleShipping(e.target.checked)}
+                    className="w-4 h-4 rounded text-blue-600 focus:ring-blue-500 accent-blue-600 cursor-pointer"
+                  />
+                  <span>Add Shipping Details</span>
+                </label>
+
+                <button
+                  type="button"
+                  onClick={() => toggleSection('additionalOptions')}
+                  className="p-1 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
+                >
+                  {openSections.additionalOptions ? (
+                    <ChevronUp className="w-5 h-5 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="w-5 h-5 text-gray-400" />
+                  )}
+                </button>
+              </div>
+
+              {/* Header Info */}
+              <div
+                onClick={() => toggleSection('additionalOptions')}
+                className="mt-2.5 flex items-center gap-3 cursor-pointer select-none"
+              >
+                <div className="w-9 h-9 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center shrink-0">
+                  <Settings className="w-5 h-5" />
+                </div>
+                <div>
+                  <h2 className="text-sm sm:text-base font-bold text-gray-900">Additional Options</h2>
+                  <p className="text-xs text-gray-500">Additional settings for shipping, GST and columns</p>
+                </div>
+              </div>
+
+              {openSections.additionalOptions && (
+                <div className="mt-4 space-y-4">
+                  {/* Two Action Buttons: Edit GST & Edit Columns/Formulas */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => setShowTaxModal(true)}
+                      className="w-full py-2.5 px-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50/30 text-gray-800 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-2xs group"
+                    >
+                      <span className="text-sm font-black text-purple-600 group-hover:scale-110 transition-transform">
+                        %
+                      </span>
+                      <span>Edit GST</span>
+                      {quote.taxConfig && (
+                        <span className="text-[10px] font-normal text-purple-700 bg-purple-100/70 px-2 py-0.5 rounded-full ml-1">
+                          {quote.taxConfig.gstType}
+                          {quote.taxConfig.hasCess ? ` + ${quote.taxConfig.cessPercent}% Cess` : ''}
+                        </span>
+                      )}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setShowColumnModal(true)}
+                      className="w-full py-2.5 px-4 rounded-xl border border-gray-200 hover:border-purple-300 hover:bg-purple-50/30 text-gray-800 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-all shadow-2xs group"
+                    >
+                      <SlidersHorizontal className="w-4 h-4 text-purple-600 group-hover:scale-110 transition-transform" />
+                      <span>Edit Columns/Formulas</span>
+                      {quote.columns && (
+                        <span className="text-[10px] font-normal text-purple-700 bg-purple-100/70 px-2 py-0.5 rounded-full ml-1">
+                          {quote.columns.filter((c) => c.visible).length} visible
+                        </span>
+                      )}
+                    </button>
+                  </div>
+
+                  {/* Expandable Shipping Details Section */}
+                  {quote.shipping?.enabled && (
+                    <div className="pt-4 border-t border-gray-100 space-y-3.5 animate-in fade-in slide-in-from-top-2 duration-150">
+                      <div className="flex items-center gap-2 text-xs font-bold text-gray-800 uppercase tracking-wider">
+                        <Truck className="w-4 h-4 text-blue-600" />
+                        <span>Shipping &amp; Transport Information</span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Shipped From Address
+                          </label>
+                          <textarea
+                            rows={2}
+                            placeholder="Dispatch address / warehouse location"
+                            value={quote.shipping.shippedFromAddress}
+                            onChange={(e) => handleUpdateShipping('shippedFromAddress', e.target.value)}
+                            className="w-full text-xs sm:text-sm px-3.5 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 resize-none"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Shipped To Name &amp; Address
+                          </label>
+                          <div className="space-y-1.5">
+                            <input
+                              type="text"
+                              placeholder="Recipient / Consignee Name"
+                              value={quote.shipping.shippedToName}
+                              onChange={(e) => handleUpdateShipping('shippedToName', e.target.value)}
+                              className="w-full text-xs sm:text-sm px-3.5 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            />
+                            <input
+                              type="text"
+                              placeholder="Destination delivery address"
+                              value={quote.shipping.shippedToAddress}
+                              onChange={(e) => handleUpdateShipping('shippedToAddress', e.target.value)}
+                              className="w-full text-xs sm:text-sm px-3.5 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Mode of Transport
+                          </label>
+                          <select
+                            value={quote.shipping.transportMode}
+                            onChange={(e) => handleUpdateShipping('transportMode', e.target.value)}
+                            className="w-full text-xs sm:text-sm px-3 py-2.5 border border-gray-200 rounded-xl bg-white focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 cursor-pointer"
+                          >
+                            <option value="Road">Road</option>
+                            <option value="Rail">Rail</option>
+                            <option value="Air">Air</option>
+                            <option value="Sea">Sea</option>
+                            <option value="Courier">Courier</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Transporter Name
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. VRL Logistics, BlueDart"
+                            value={quote.shipping.transporterName}
+                            onChange={(e) => handleUpdateShipping('transporterName', e.target.value)}
+                            className="w-full text-xs sm:text-sm px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          />
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Vehicle / Tracking No.
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. MH-12-AB-1234 / AWB#88129"
+                            value={quote.shipping.vehicleOrTrackingNumber}
+                            onChange={(e) => handleUpdateShipping('vehicleOrTrackingNumber', e.target.value)}
+                            className="w-full text-xs sm:text-sm px-3.5 py-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
           {/* Accordion 4: Items & Summary */}
           <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm overflow-hidden">
             <div
@@ -843,20 +1111,78 @@ export default function ManualQuoteGenerator() {
                             className="w-full text-xs font-mono px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
                           />
                         </div>
-                        <div>
-                          <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
-                            Quantity
-                          </label>
-                          <input
-                            type="number"
-                            min="1"
-                            value={item.quantity}
-                            onChange={(e) =>
-                              handleUpdateItem(item.id, 'quantity', parseInt(e.target.value, 10) || 1)
-                            }
-                            className="w-full text-xs font-mono text-center px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
-                          />
-                        </div>
+
+                        {isColVisible('col-qty') && (
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
+                              Quantity
+                            </label>
+                            <input
+                              type="number"
+                              min="1"
+                              value={item.quantity}
+                              onChange={(e) =>
+                                handleUpdateItem(item.id, 'quantity', parseInt(e.target.value, 10) || 1)
+                              }
+                              className="w-full text-xs font-mono text-center px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        )}
+
+                        {isColVisible('col-hsn') && (
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
+                              HSN/SAC
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="e.g. 9983"
+                              value={item.hsnSac || ''}
+                              onChange={(e) => handleUpdateItem(item.id, 'hsnSac', e.target.value)}
+                              className="w-full text-xs font-mono px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        )}
+
+                        {isColVisible('col-gst') && (
+                          <div>
+                            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
+                              GST Rate (%)
+                            </label>
+                            <input
+                              type="number"
+                              min="0"
+                              max="100"
+                              placeholder="18"
+                              value={item.taxPercent ?? 18}
+                              onChange={(e) =>
+                                handleUpdateItem(item.id, 'taxPercent', parseFloat(e.target.value) || 0)
+                              }
+                              className="w-full text-xs font-mono text-center px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        )}
+
+                        {customColumns.map((cc) => (
+                          <div key={cc.id} className="col-span-2">
+                            <label className="block text-[10px] font-semibold text-gray-500 uppercase mb-0.5">
+                              {cc.name}
+                            </label>
+                            <input
+                              type={cc.type === 'NUMBER' ? 'number' : 'text'}
+                              placeholder={cc.name}
+                              value={item[cc.id] ?? ''}
+                              onChange={(e) =>
+                                handleUpdateItem(
+                                  item.id,
+                                  cc.id as any,
+                                  cc.type === 'NUMBER' ? parseFloat(e.target.value) || 0 : e.target.value
+                                )
+                              }
+                              className="w-full text-xs px-3 py-2 bg-white border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                          </div>
+                        ))}
                       </div>
 
                       <div className="flex items-center justify-between pt-2 border-t border-gray-200/60 text-xs">
@@ -871,13 +1197,20 @@ export default function ManualQuoteGenerator() {
 
                 {/* Desktop & Tablet Table Layout */}
                 <div className="hidden sm:block overflow-x-auto -mx-4 sm:mx-0">
-                  <table className="w-full text-left text-xs min-w-[550px]">
+                  <table className="w-full text-left text-xs min-w-[620px]">
                     <thead className="bg-slate-50 text-gray-600 font-semibold border-b border-gray-200">
                       <tr>
                         <th className="py-2.5 px-3 w-8 text-center">#</th>
                         <th className="py-2.5 px-3">Item / Description</th>
+                        {isColVisible('col-hsn') && <th className="py-2.5 px-3 w-24 text-left">HSN/SAC</th>}
+                        {isColVisible('col-gst') && <th className="py-2.5 px-3 w-20 text-center">GST %</th>}
                         <th className="py-2.5 px-3 w-28 text-right">Unit Price ({quote.currency.symbol})</th>
-                        <th className="py-2.5 px-3 w-20 text-center">Qty</th>
+                        {isColVisible('col-qty') && <th className="py-2.5 px-3 w-20 text-center">Qty</th>}
+                        {customColumns.map((cc) => (
+                          <th key={cc.id} className="py-2.5 px-3 w-28 text-left">
+                            {cc.name}
+                          </th>
+                        ))}
                         <th className="py-2.5 px-3 w-28 text-right">Amount ({quote.currency.symbol})</th>
                         <th className="py-2.5 px-2 w-10 text-center">Actions</th>
                       </tr>
@@ -895,6 +1228,32 @@ export default function ManualQuoteGenerator() {
                               className="w-full text-xs sm:text-sm px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
                             />
                           </td>
+                          {isColVisible('col-hsn') && (
+                            <td className="p-2.5">
+                              <input
+                                type="text"
+                                placeholder="9983"
+                                value={item.hsnSac || ''}
+                                onChange={(e) => handleUpdateItem(item.id, 'hsnSac', e.target.value)}
+                                className="w-full text-xs sm:text-sm px-2.5 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                              />
+                            </td>
+                          )}
+                          {isColVisible('col-gst') && (
+                            <td className="p-2.5">
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                placeholder="18"
+                                value={item.taxPercent ?? 18}
+                                onChange={(e) =>
+                                  handleUpdateItem(item.id, 'taxPercent', parseFloat(e.target.value) || 0)
+                                }
+                                className="w-full text-xs sm:text-sm px-2 py-2 text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 font-mono"
+                              />
+                            </td>
+                          )}
                           <td className="p-2.5">
                             <input
                               type="number"
@@ -908,17 +1267,36 @@ export default function ManualQuoteGenerator() {
                               className="w-full text-xs sm:text-sm px-3 py-2 text-right border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-mono"
                             />
                           </td>
-                          <td className="p-2.5">
-                            <input
-                              type="number"
-                              min="1"
-                              value={item.quantity}
-                              onChange={(e) =>
-                                handleUpdateItem(item.id, 'quantity', parseInt(e.target.value, 10) || 1)
-                              }
-                              className="w-full text-xs sm:text-sm px-2 py-2 text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-mono"
-                            />
-                          </td>
+                          {isColVisible('col-qty') && (
+                            <td className="p-2.5">
+                              <input
+                                type="number"
+                                min="1"
+                                value={item.quantity}
+                                onChange={(e) =>
+                                  handleUpdateItem(item.id, 'quantity', parseInt(e.target.value, 10) || 1)
+                                }
+                                className="w-full text-xs sm:text-sm px-2 py-2 text-center border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 font-mono"
+                              />
+                            </td>
+                          )}
+                          {customColumns.map((cc) => (
+                            <td key={cc.id} className="p-2.5">
+                              <input
+                                type={cc.type === 'NUMBER' ? 'number' : 'text'}
+                                placeholder={cc.name}
+                                value={item[cc.id] ?? ''}
+                                onChange={(e) =>
+                                  handleUpdateItem(
+                                    item.id,
+                                    cc.id as any,
+                                    cc.type === 'NUMBER' ? parseFloat(e.target.value) || 0 : e.target.value
+                                  )
+                                }
+                                className="w-full text-xs sm:text-sm px-2.5 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-blue-500"
+                              />
+                            </td>
+                          ))}
                           <td className="p-2.5 text-right font-semibold text-gray-900 font-mono text-xs sm:text-sm">
                             {formatCurrency(item.amount)}
                           </td>
@@ -952,7 +1330,7 @@ export default function ManualQuoteGenerator() {
 
                 {/* Calculation Summary Box */}
                 <div className="mt-6 pt-5 border-t border-gray-100 flex justify-end">
-                  <div className="w-full sm:w-80 space-y-3 text-xs sm:text-sm">
+                  <div className="w-full sm:w-84 space-y-3 text-xs sm:text-sm">
                     <div className="flex items-center justify-between text-gray-600">
                       <span>Subtotal</span>
                       <span className="font-semibold text-gray-900 font-mono">
@@ -978,23 +1356,68 @@ export default function ManualQuoteGenerator() {
                       </span>
                     </div>
 
-                    <div className="flex items-center justify-between gap-3 text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <span>Tax %</span>
-                        <input
-                          type="number"
-                          min="0"
-                          max="100"
-                          value={quote.pricing.taxPercent || ''}
-                          placeholder="0"
-                          onChange={(e) => handleTaxChange(parseFloat(e.target.value) || 0)}
-                          className="w-16 px-2 py-1 text-center text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
-                        />
-                      </div>
-                      <span className="font-semibold text-gray-900 font-mono">
-                        {formatCurrency(quote.pricing.taxAmount)}
-                      </span>
-                    </div>
+                    {/* Tax & GST Breakdown */}
+                    {quote.taxConfig?.taxType !== 'None' && (
+                      <>
+                        {quote.taxConfig?.taxType === 'GST (India)' && quote.taxConfig.gstType === 'CGST & SGST' ? (
+                          <>
+                            <div className="flex items-center justify-between gap-3 text-gray-600">
+                              <div className="flex items-center gap-2">
+                                <span>CGST ({Number((quote.pricing.taxPercent / 2).toFixed(1))}%)</span>
+                              </div>
+                              <span className="font-semibold text-gray-900 font-mono">
+                                {formatCurrency(Number((quote.pricing.taxAmount / 2).toFixed(2)))}
+                              </span>
+                            </div>
+                            <div className="flex items-center justify-between gap-3 text-gray-600">
+                              <div className="flex items-center gap-2">
+                                <span>SGST ({Number((quote.pricing.taxPercent / 2).toFixed(1))}%)</span>
+                              </div>
+                              <span className="font-semibold text-gray-900 font-mono">
+                                {formatCurrency(Number((quote.pricing.taxAmount / 2).toFixed(2)))}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex items-center justify-between gap-3 text-gray-600">
+                            <div className="flex items-center gap-2">
+                              <span>
+                                {quote.taxConfig?.taxType === 'GST (India)'
+                                  ? `IGST (${quote.pricing.taxPercent}%)`
+                                  : `Tax (${quote.pricing.taxPercent}%)`}
+                              </span>
+                              <input
+                                type="number"
+                                min="0"
+                                max="100"
+                                value={quote.pricing.taxPercent || ''}
+                                placeholder="0"
+                                onChange={(e) => handleTaxChange(parseFloat(e.target.value) || 0)}
+                                className="w-14 px-1.5 py-0.5 text-center text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-blue-500 font-mono"
+                              />
+                            </div>
+                            <span className="font-semibold text-gray-900 font-mono">
+                              {formatCurrency(quote.pricing.taxAmount)}
+                            </span>
+                          </div>
+                        )}
+
+                        {quote.taxConfig?.hasCess && (
+                          <div className="flex items-center justify-between text-gray-600">
+                            <span>Cess ({quote.taxConfig.cessPercent}%)</span>
+                            <span className="font-semibold text-gray-900 font-mono">
+                              + {formatCurrency(quote.pricing.cessAmount || 0)}
+                            </span>
+                          </div>
+                        )}
+
+                        {quote.taxConfig?.isReverseCharge && (
+                          <div className="py-1 px-2.5 bg-purple-50 rounded-lg border border-purple-200 text-[11px] text-purple-700 font-medium">
+                            Reverse Charge (RCM) Applicable
+                          </div>
+                        )}
+                      </>
+                    )}
 
                     <div className="pt-3 border-t-2 border-gray-900 flex items-center justify-between text-base sm:text-lg font-extrabold text-gray-900">
                       <span>Total</span>
@@ -1158,14 +1581,65 @@ export default function ManualQuoteGenerator() {
                   )}
                 </div>
 
+                {/* Shipping Details in Preview */}
+                {quote.shipping?.enabled && (
+                  <div className="bg-slate-50 p-4 rounded-xl border border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                    <div>
+                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                        Shipping / Dispatch Details
+                      </span>
+                      {quote.shipping.shippedFromAddress && (
+                        <p className="text-gray-600">
+                          <strong className="text-gray-700">Dispatch From:</strong> {quote.shipping.shippedFromAddress}
+                        </p>
+                      )}
+                      {quote.shipping.transportMode && (
+                        <p className="text-gray-600">
+                          <strong className="text-gray-700">Mode:</strong> {quote.shipping.transportMode}
+                        </p>
+                      )}
+                      {quote.shipping.transporterName && (
+                        <p className="text-gray-600">
+                          <strong className="text-gray-700">Transporter:</strong> {quote.shipping.transporterName}
+                        </p>
+                      )}
+                      {quote.shipping.vehicleOrTrackingNumber && (
+                        <p className="text-gray-600">
+                          <strong className="text-gray-700">Vehicle / Tracking:</strong> {quote.shipping.vehicleOrTrackingNumber}
+                        </p>
+                      )}
+                    </div>
+                    {(quote.shipping.shippedToName || quote.shipping.shippedToAddress) && (
+                      <div>
+                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                          Shipped To
+                        </span>
+                        {quote.shipping.shippedToName && (
+                          <div className="font-semibold text-gray-900">{quote.shipping.shippedToName}</div>
+                        )}
+                        {quote.shipping.shippedToAddress && (
+                          <div className="text-gray-600">{quote.shipping.shippedToAddress}</div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Items Table */}
                 <table className="w-full text-left border-collapse">
                   <thead>
                     <tr className="border-b-2 border-gray-900 text-[11px] font-bold text-gray-900">
                       <th className="py-2 w-8">#</th>
                       <th className="py-2">Item Description</th>
+                      {isColVisible('col-hsn') && <th className="py-2 text-left">HSN/SAC</th>}
+                      {isColVisible('col-gst') && <th className="py-2 text-center">GST %</th>}
                       <th className="py-2 text-right">Unit Price</th>
-                      <th className="py-2 text-center w-14">Qty</th>
+                      {isColVisible('col-qty') && <th className="py-2 text-center w-14">Qty</th>}
+                      {customColumns.map((cc) => (
+                        <th key={cc.id} className="py-2 text-left">
+                          {cc.name}
+                        </th>
+                      ))}
                       <th className="py-2 text-right">Amount</th>
                     </tr>
                   </thead>
@@ -1181,8 +1655,21 @@ export default function ManualQuoteGenerator() {
                               <p className="text-[11px] text-gray-500">{item.description}</p>
                             )}
                           </td>
+                          {isColVisible('col-hsn') && (
+                            <td className="py-2.5 font-mono">{item.hsnSac || '-'}</td>
+                          )}
+                          {isColVisible('col-gst') && (
+                            <td className="py-2.5 text-center font-mono">{item.taxPercent ?? 18}%</td>
+                          )}
                           <td className="py-2.5 text-right font-mono">{formatCurrency(item.unitPrice)}</td>
-                          <td className="py-2.5 text-center font-mono">{item.quantity}</td>
+                          {isColVisible('col-qty') && (
+                            <td className="py-2.5 text-center font-mono">{item.quantity}</td>
+                          )}
+                          {customColumns.map((cc) => (
+                            <td key={cc.id} className="py-2.5">
+                              {item[cc.id] ?? '-'}
+                            </td>
+                          ))}
                           <td className="py-2.5 text-right font-mono font-semibold">{formatCurrency(item.amount)}</td>
                         </tr>
                       ))}
@@ -1202,11 +1689,38 @@ export default function ManualQuoteGenerator() {
                         <span className="font-mono">- {formatCurrency(quote.pricing.discountAmount)}</span>
                       </div>
                     )}
-                    {quote.pricing.taxAmount > 0 && (
-                      <div className="flex justify-between text-gray-600">
-                        <span>Tax ({quote.pricing.taxPercent}%):</span>
-                        <span className="font-mono">{formatCurrency(quote.pricing.taxAmount)}</span>
-                      </div>
+                    {quote.taxConfig?.taxType !== 'None' && quote.pricing.taxAmount > 0 && (
+                      <>
+                        {quote.taxConfig?.taxType === 'GST (India)' && quote.taxConfig.gstType === 'CGST & SGST' ? (
+                          <>
+                            <div className="flex justify-between text-gray-600">
+                              <span>CGST ({Number((quote.pricing.taxPercent / 2).toFixed(1))}%):</span>
+                              <span className="font-mono">
+                                {formatCurrency(Number((quote.pricing.taxAmount / 2).toFixed(2)))}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                              <span>SGST ({Number((quote.pricing.taxPercent / 2).toFixed(1))}%):</span>
+                              <span className="font-mono">
+                                {formatCurrency(Number((quote.pricing.taxAmount / 2).toFixed(2)))}
+                              </span>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="flex justify-between text-gray-600">
+                            <span>
+                              {quote.taxConfig?.taxType === 'GST (India)' ? 'IGST' : 'Tax'} ({quote.pricing.taxPercent}%):
+                            </span>
+                            <span className="font-mono">{formatCurrency(quote.pricing.taxAmount)}</span>
+                          </div>
+                        )}
+                        {quote.taxConfig?.hasCess && (quote.pricing.cessAmount || 0) > 0 && (
+                          <div className="flex justify-between text-gray-600">
+                            <span>Cess ({quote.taxConfig.cessPercent}%):</span>
+                            <span className="font-mono">+ {formatCurrency(quote.pricing.cessAmount || 0)}</span>
+                          </div>
+                        )}
+                      </>
                     )}
                     <div className="flex justify-between font-extrabold text-sm text-gray-900 pt-2 border-t border-gray-900">
                       <span>Grand Total:</span>
@@ -1236,6 +1750,22 @@ export default function ManualQuoteGenerator() {
             </div>
           </div>
         )}
+
+        {/* Tax Configuration Modal */}
+        <TaxConfigModal
+          isOpen={showTaxModal}
+          onClose={() => setShowTaxModal(false)}
+          taxConfig={quote.taxConfig || DEFAULT_TAX_CONFIG}
+          onSave={handleSaveTaxConfig}
+        />
+
+        {/* Column & Formula Customization Modal */}
+        <ColumnFormulaModal
+          isOpen={showColumnModal}
+          onClose={() => setShowColumnModal(false)}
+          columns={quote.columns || DEFAULT_COLUMNS}
+          onSave={handleSaveColumns}
+        />
       </div>
     </div>
   );
