@@ -2,7 +2,7 @@ import os
 from docx import Document
 from docx.shared import Inches, Pt, RGBColor
 from docx.enum.text import WD_ALIGN_PARAGRAPH
-from docx.enum.table import WD_TABLE_ALIGNMENT, WD_ALIGN_VERTICAL
+from docx.enum.table import WD_TABLE_ALIGNMENT
 from docx.oxml import OxmlElement, parse_xml
 from docx.oxml.ns import nsdecls, qn
 
@@ -141,20 +141,21 @@ def build_word_document(output_path):
     # Subtitle
     sub_p = doc.add_paragraph()
     sub_p.paragraph_format.space_after = Pt(14)
-    r_sub = sub_p.add_run("Comprehensive Engineering Log across All Reviews (V1, V2, V3 & V4) and Deep Dive on Voice-to-Quote/Invoice Conversion Engine")
+    r_sub = sub_p.add_run("Consolidated Technical Log across All Reviews (V1, V2, V3 & V4) and Deep Dive on Voice-to-Quote & Voice-to-Invoice Conversion Resources")
     r_sub.font.name = "Arial"
     r_sub.font.size = Pt(10.5)
     r_sub.font.color.rgb = RGBColor(100, 116, 139)
     
     # Metadata Block Table
-    meta_tbl = doc.add_table(rows=5, cols=2)
+    meta_tbl = doc.add_table(rows=6, cols=2)
     meta_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     col_w = [Inches(2.2), Inches(4.7)]
     meta_data = [
         ("Client Organization", "Semixon Technologies"),
         ("Project Application", "iLoveQuote (Quotation & Invoicing SaaS Platform)"),
-        ("Active Test Subdomain", "https://test.ilovequote.com"),
-        ("Primary Modules & Routes", "/#/create-quote (V1/V2) | /#/create-quote2 (V3) | /#/page2 (V4 Voice Converter)"),
+        ("Isolated Git Branches", "preview1 (V1) | preview2 (V2) | review3 (V3) | review4 (V4)"),
+        ("Independent Routes", "/#/create-quote (V1/V2) | /#/create-quote2 (V3) | /#/page2 (V4 Voice Converter)"),
+        ("Consolidated Records File", "iLoveQuote_Version_Change_Records_All_Reviews.docx (Master Record)"),
         ("Documentation Date", "06-October-2026"),
     ]
     for idx, (k, v) in enumerate(meta_data):
@@ -182,7 +183,7 @@ def build_word_document(output_path):
         rv.font.name = "Arial"
         rv.font.size = Pt(9.5)
         rv.font.color.rgb = RGBColor(15, 23, 42)
-        if "http" in v or "#" in v:
+        if "http" in v or "#" in v or "preview" in v or "review" in v:
             rv.bold = True
             rv.font.color.rgb = RGBColor(79, 70, 229)
     
@@ -191,34 +192,38 @@ def build_word_document(output_path):
     # ----------------------------------------------------
     # SECTION 1: ARCHITECTURE & BACKUP STRATEGY
     # ----------------------------------------------------
-    add_heading_1(doc, "1. Version Control & Backup Architecture")
+    add_heading_1(doc, "1. Version Control & Strict Code Isolation Architecture")
     add_callout(
         doc,
-        "Zero-Risk Backup Guarantee",
-        "Every client iteration is developed on an isolated Git branch with dedicated version tags. No version overwrites previous work. All historical iterations (Version 1, Version 2, Review 3, and Review 4) remain 100% accessible, isolated, and deployable.",
+        "Strict Code Isolation Policy (No Merging Across Versions)",
+        "Per explicit client requirements from Semixon Technologies, each review version (Review 1, Review 2, Review 3, Review 4) maintains its own independent codebase on a dedicated Git branch. No code from Review 4 is merged into Review 3, Review 2, or Review 1. All historical codebases remain intact and independently deployable. The only consolidated item is this Master Word Document.",
         border_color="10B981",
         bg_color="F0FDF4"
     )
     add_body_p(
         doc,
-        "To satisfy the client requirement for complete version records and separate rollback capabilities, the system uses a dual-layer backup mechanism:\n"
-        "• Git Branch Isolation: Dedicated branches (preview1, preview2, review3/preview3, review4) preserve complete code history.\n"
-        "• Subdomain Routing: Test deployments run under https://test.ilovequote.com, while production remains safe under www.ilovequote.com.\n"
-        "• Route Isolation: Distinct URLs allow side-by-side visual and functional testing without collision:\n"
+        "To guarantee that every version is 100% backed up and accessible separately without risk of regression:\n"
+        "• Git Branch Isolation: Dedicated independent branches preserve each milestone:\n"
+        "    - Branch 'preview1': Version 1.0 baseline (4-step stepper wizard, permanent sidebar)\n"
+        "    - Branch 'preview2': Version 2.0 baseline (single-page instant generator, multi-currency)\n"
+        "    - Branch 'review3': Version 3.0 baseline (Additional Options, Refrens GST modal, column customizer)\n"
+        "    - Branch 'review4': Version 4.0 baseline (Dedicated Audio to Price Converter module on /page2)\n"
+        "• Route Isolation: Routes prevent UI overwriting and allow side-by-side evaluation:\n"
         "    - Version 1 & 2: https://test.ilovequote.com/#/create-quote\n"
         "    - Version 3: https://test.ilovequote.com/#/create-quote2\n"
-        "    - Version 4: https://test.ilovequote.com/#/page2 (and https://test.ilovequote.com/page2)"
+        "    - Version 4: https://test.ilovequote.com/#/page2 (and https://test.ilovequote.com/page2)\n"
+        "• Permanent Vercel Preview URLs: Immutable deployment snapshots allow any historical version to be viewed anytime."
     )
     
     # ----------------------------------------------------
     # SECTION 2: VERSION 1.0 (PREVIEW 1)
     # ----------------------------------------------------
-    add_heading_1(doc, "2. Version 1.0 (Preview 1 / 'preview1')")
+    add_heading_1(doc, "2. Version 1.0 (Review 1 / 'preview1')")
     add_body_p(
         doc,
         "• Release Date: 16-September-2026\n"
-        "• Git Branch: preview1 (Baseline: 0d88a9d)\n"
-        "• Target URL: https://test.ilovequote.com/#/create-quote\n"
+        "• Git Branch: preview1 (Commit 0d88a9d)\n"
+        "• Dedicated Route: /#/create-quote\n"
         "• Primary Focus: Permanent Left Sidebar, 4-Step Quotation Stepper Wizard, Live Preview Board, and Mobile Icon Optimization."
     )
     
@@ -241,12 +246,12 @@ def build_word_document(output_path):
     # ----------------------------------------------------
     # SECTION 3: VERSION 2.0 (PREVIEW 2)
     # ----------------------------------------------------
-    add_heading_1(doc, "3. Version 2.0 (Preview 2 / 'preview2')")
+    add_heading_1(doc, "3. Version 2.0 (Review 2 / 'preview2')")
     add_body_p(
         doc,
         "• Release Date: 25-September-2026\n"
         "• Git Branch: preview2 (Commits: f6e4015, 87c9d20)\n"
-        "• Target URL: https://test.ilovequote.com/#/create-quote\n"
+        "• Dedicated Route: /#/create-quote\n"
         "• Primary Focus: Single-Page Instant Quote Generator (Figma model), Multi-Currency Dropdown, 5 Structured Accordions, JSON Schema, 1-Click Invoice Converter, and Full Mobile Responsiveness."
     )
     
@@ -269,12 +274,12 @@ def build_word_document(output_path):
     # ----------------------------------------------------
     # SECTION 4: VERSION 3.0 (REVIEW 3)
     # ----------------------------------------------------
-    add_heading_1(doc, "4. Version 3.0 (Review 3 / 'review3' & 'preview3')")
+    add_heading_1(doc, "4. Version 3.0 (Review 3 / 'review3')")
     add_body_p(
         doc,
         "• Release Date: 30-September-2026\n"
-        "• Git Branches: review3 & preview3 (Commits: b9e58ed, 8c629ec)\n"
-        "• Target URL: https://test.ilovequote.com/#/create-quote2\n"
+        "• Git Branch: review3 (Commits: b9e58ed, 8c629ec, be62ced)\n"
+        "• Dedicated Route: /#/create-quote2 (e.g. https://test.ilovequote.com/#/create-quote2)\n"
         "• Primary Focus: 'Additional Options' Section, Shipping Details, Refrens Tax Configuration Modal, Column & Formula Customization Modal, and Dynamic Item Table."
     )
     
@@ -301,26 +306,27 @@ def build_word_document(output_path):
     add_body_p(
         doc,
         "• Release Date: 06-October-2026\n"
-        "• Git Branches: review4 (dedicated backup) & review3 (Vercel test subdomain tracking)\n"
-        "• Target URL: https://test.ilovequote.com/#/page2 (and https://test.ilovequote.com/page2)\n"
+        "• Git Branch: review4 (Isolated Branch, Commit: 440c816)\n"
+        "• Dedicated Route: /#/page2 (and /page2)\n"
         "• Client Request from Semixon Technologies:\n"
         "    \"@!! you just work on audio to price converter module. put in test.ilovequote.com/ page2. like this impment in new page. do not deploy in previous design. thanks\"\n"
         "    \"audio to quote making, make it implementation. thanks\"\n"
-        "• Primary Focus: Dedicated Audio-to-Price Converter & Voice-to-Quote Making module mounted strictly on /page2 without altering previous designs."
+        "    \"hi review 4 should diffret code dont merge it with anything else we need sepeerate like 3 2 1..only file we need all\"\n"
+        "• Primary Focus: Dedicated Audio-to-Price Converter & Voice-to-Quote Making module mounted strictly on /page2 without altering or merging into prior reviews."
     )
     
     add_callout(
         doc,
-        "Non-Destructive Isolated Deployment",
-        "Version 4.0 strictly avoids touching or replacing existing pages. /#/create-quote (V1/V2) and /#/create-quote2 (V3) remain completely unchanged. The Audio to Price Converter operates independently on /#/page2.",
+        "Complete Isolation & Zero Overwrite",
+        "Review 4 code is maintained strictly on its own branch 'review4'. It does NOT merge into 'review3', 'preview2', or 'preview1'. All previous designs (/#/create-quote and /#/create-quote2) remain 100% intact. The Voice-to-Quote converter operates exclusively on /#/page2.",
         border_color="D97706",
         bg_color="FFFBEB"
     )
     
     v4_items = [
         ("Dedicated Standalone Page (AudioQuoteConverterPage.tsx)", "Full voice-driven quote creation workstation mounted on /page2 with amber 'Page 2: Audio to Price Converter' badge, currency selector, and reset actions."),
-        ("3 Audio Input Modalities", "1. Live Voice Recording with real-time waveform bars and elapsed timer\n2. Audio File Dropzone (.mp3, .wav, .m4a, .ogg)\n3. Direct Voice Note / Meeting Transcript Text Box with instant Re-Analyze."),
-        ("Quick Voice Scenario Chips", "1-Click test scenario presets: 'Web Design & Hosting' (₹25k + ₹5k), 'Hardware Supply' (3 Laptops ₹65k, 2 Printers ₹18k, 10% disc), 'UI/UX App Dev' (₹35k + ₹95k, 18% GST)."),
+        ("3 Audio Input Modalities", "1. Live Voice Recording with real-time waveform visualizer and elapsed timer\n2. Audio File Dropzone (.mp3, .wav, .m4a, .ogg)\n3. Direct Voice Note / Meeting Transcript Text Box with instant Re-Analyze."),
+        ("Quick Voice Scenario Chips", "1-Click test presets: 'Web Design & Hosting' (₹25k + ₹5k), 'Hardware Supply' (3 Laptops ₹65k, 2 Printers ₹18k, 10% disc), 'UI/UX App Dev' (₹35k + ₹95k, 18% GST)."),
         ("Smart Speech-to-Quote Parsing Engine", "Natural language parsing algorithm converting both numbers ('25000') and spoken words ('twenty five thousand', 'three laptops') into structured line items, quantities, and rates."),
         ("Real-time Quotation Table & Editor", "Full desktop table and mobile card editor allowing instant manual edits to item descriptions, unit rates, quantities, discounts, and taxes with live totals."),
         ("1-Click Invoice Conversion & Print Export", "Interactive Preview Modal, browser print/PDF export, and 1-Click Convert to Invoice mapping voice quote data directly into /create-invoice draft."),
@@ -337,10 +343,10 @@ def build_word_document(output_path):
     # ----------------------------------------------------
     # SECTION 6: TECHNICAL EXPLANATION - VOICE TO INVOICE & QUOTES ENGINE
     # ----------------------------------------------------
-    add_heading_1(doc, "6. Technical Resources & Engine: How Voice Converts to Quotes & Invoices")
+    add_heading_1(doc, "6. Deep Dive: Technical Resources Converting Voice to Quotes & Invoices")
     add_body_p(
         doc,
-        "This section details the exact technical resources, browser APIs, speech recognition pipelines, Natural Language Processing (NLP) parsing logic, and schema conversion models that turn spoken voice dictation into valid business price quotes and legal tax invoices."
+        "Per Semixon Technologies request, this section provides an exhaustive technical explanation of the resources, libraries, browser APIs, speech recognition pipelines, Natural Language Processing (NLP) parsing logic, and schema conversion models that turn spoken voice dictation into valid business price quotes and legal tax invoices."
     )
     
     add_callout(
@@ -372,7 +378,7 @@ def build_word_document(output_path):
     add_heading_2(doc, "6.2. Detailed Breakdown of Spoken Number & Word Translation")
     add_body_p(
         doc,
-        "In voice dictation, users frequently say rates in words rather than digits (e.g. 'twenty five thousand rupees' instead of '25000', or 'three laptops' instead of '3'). The system implements a robust spoken number parsing algorithm:\n\n"
+        "In voice dictation, users frequently speak rates in words rather than digits (e.g. 'twenty five thousand rupees' instead of '25000', or 'three laptops' instead of '3'). The system implements a robust spoken number parsing algorithm:\n\n"
         "1. Tokenization & Normalization: The raw transcript is cleaned of non-alphanumeric punctuation and split into lowercase tokens.\n"
         "2. Spoken Vocabulary Mapping: A dictionary maps basic units (zero through nineteen), tens (twenty through ninety), and multipliers (hundred, thousand, lakh, lac, million, crore).\n"
         "3. Compound Value Accumulation: A sliding accumulator computes multi-word numbers:\n"
@@ -392,7 +398,20 @@ def build_word_document(output_path):
         "• Validity & Terms: Extracts 'valid for [N] days' and dynamically computes the validUntil ISO date from today's system clock."
     )
     
-    add_heading_2(doc, "6.4. Quote to Invoice Transformation Specification")
+    add_heading_2(doc, "6.4. Step-by-Step Practical Voice Workflow")
+    add_body_p(
+        doc,
+        "How a business user actually makes a quote and invoice from voice in practice:\n\n"
+        "1. Open /#/page2: User navigates to the dedicated Audio to Price Converter page.\n"
+        "2. Voice Input: User taps 'Start Recording' and speaks naturally: 'Quote for Nexa Corp. Cloud migration fifty thousand rupees, 2 server firewalls fifteen thousand each, give 5 percent discount and 18 percent GST.'\n"
+        "3. Real-Time Waveform Feedback: Pulsating waveform bars verify audio capture; speech stream appears live on screen.\n"
+        "4. Automatic Extraction: When recording stops, the parsing engine extracts Nexa Corp as client, creates 2 structured items (Cloud migration ₹50,000 x 1 = ₹50,000; Server firewalls ₹15,000 x 2 = ₹30,000), applies 5% discount (-₹4,000), adds 18% GST (+₹13,680), and computes Grand Total ₹89,680.\n"
+        "5. Review & Edit: User reviews the line items in the table, edits any field if desired.\n"
+        "6. Preview / Print PDF: User clicks 'Preview' for a formatted quote modal, then downloads PDF.\n"
+        "7. 1-Click Convert to Invoice: User clicks 'Convert to Invoice'—all data instantly maps into a draft invoice in /create-invoice, complete with tax breakdown and payment instructions!"
+    )
+    
+    add_heading_2(doc, "6.5. Quote to Invoice Transformation Specification")
     add_body_p(
         doc,
         "Once the quote is generated from audio, the user can click 'Convert to Invoice' with 1 click. The conversion engine performs a seamless schema mapping:"
@@ -417,15 +436,34 @@ def build_word_document(output_path):
     
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
     
+    add_heading_2(doc, "6.6. Technical Comparison of Speech-to-Text Engines for Production")
+    
+    stt_cols = [Inches(1.8), Inches(1.8), Inches(1.7), Inches(1.6)]
+    stt_headers = ["Speech Resource", "Latency / Cost", "Accuracy & Accents", "Best Use Case"]
+    stt_data = [
+        ("Web Speech API (Current)", "0 ms network latency\n100% Free (In-browser)", "High in modern Chrome/Edge\nSupports en-IN & regional", "Real-time client-side dictation on mobile & desktop"),
+        ("OpenAI Whisper API", "~1.5s latency\n$0.006 / minute", "State-of-the-art multilingual\nExcellent with background noise", "Audio file uploads (.mp3, .m4a)\nWhatsApp voice notes"),
+        ("Google Cloud Speech-to-Text v2", "~500ms streaming latency\n$0.016 / minute", "Exceptional Indian English & Hindi\nIndustry vocabulary adaptation", "Enterprise call center & high-volume quote dictation"),
+        ("Deepgram Nova-2", "~300ms streaming latency\n$0.0043 / minute", "Ultra-fast streaming WebSocket\nSpecialized number formatting", "Live simultaneous speech transcription"),
+    ]
+    stt_tbl = doc.add_table(rows=len(stt_data) + 1, cols=4)
+    stt_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    format_table_header(stt_tbl.rows[0], stt_cols, stt_headers, bg_color="1E293B")
+    for idx, row_vals in enumerate(stt_data):
+        format_table_row(stt_tbl.rows[idx + 1], stt_cols, row_vals, is_even=(idx % 2 == 1))
+        
+    doc.add_paragraph().paragraph_format.space_after = Pt(10)
+    
     # ----------------------------------------------------
     # SECTION 7: CROSS-VERSION FEATURE COMPARISON MATRIX
     # ----------------------------------------------------
     add_heading_1(doc, "7. Cross-Version Feature Comparison Matrix across All 4 Reviews")
     
     matrix_cols = [Inches(2.3), Inches(1.1), Inches(1.1), Inches(1.2), Inches(1.2)]
-    matrix_headers = ["Capability / Feature", "Version 1.0", "Version 2.0", "Review 3.0", "Review 4.0"]
+    matrix_headers = ["Capability / Feature", "Review 1.0", "Review 2.0", "Review 3.0", "Review 4.0"]
     matrix_data = [
         ("Generation Model", "4-Step Wizard", "Instant Single-Page", "Instant Single-Page", "Audio-Driven Generator"),
+        ("Dedicated Git Branch", "preview1", "preview2", "review3", "review4 (Separate)"),
         ("Dedicated URL Route", "/#/create-quote", "/#/create-quote", "/#/create-quote2", "/#/page2 (and /page2)"),
         ("Multi-Currency Support", "INR only", "8 Currencies (₹, $, €...)", "8 Currencies (₹, $, €...)", "8 Currencies (₹, $, €...)"),
         ("Live Audio Dictation (Mic)", "Not available", "Basic dialog", "Basic dialog", "Dedicated Waveform Studio"),
@@ -436,7 +474,7 @@ def build_word_document(output_path):
         ("GST / Tax Config Modal", "Standard Tax %", "Standard Tax %", "Full Refrens Modal", "Configurable Tax %"),
         ("Custom Columns & Formulas", "Fixed columns", "Fixed columns", "Dynamic Customizer", "Clean Standard Columns"),
         ("Document Print & PDF Export", "Basic", "Formatted Modal", "Formatted Modal", "Instant Print & PDF Modal"),
-        ("Active Test Subdomain", "test.ilovequote.com", "test.ilovequote.com", "test.ilovequote.com", "test.ilovequote.com"),
+        ("Code Merging Status", "Independent", "Independent", "Independent", "Strictly Separate"),
     ]
     
     matrix_tbl = doc.add_table(rows=len(matrix_data) + 1, cols=5)
@@ -478,12 +516,14 @@ def build_word_document(output_path):
     # Footer Links Callout
     add_callout(
         doc,
-        "Live Deployment & Access Links",
-        "• Review 4 Active Target: https://test.ilovequote.com/#/page2 (and https://test.ilovequote.com/page2)\n"
-        "• Review 3 Active Target: https://test.ilovequote.com/#/create-quote2\n"
-        "• Review 1 & 2 Active Target: https://test.ilovequote.com/#/create-quote\n"
+        "Deployment & Access Directory",
+        "• Review 4 Isolated Branch: review4 (Code permanently preserved, never merged into older branches)\n"
+        "• Review 4 Dedicated Route: https://test.ilovequote.com/#/page2 (and https://test.ilovequote.com/page2)\n"
+        "• Review 3 Isolated Branch: review3 / preview3 (Route: https://test.ilovequote.com/#/create-quote2)\n"
+        "• Review 2 Isolated Branch: preview2 (Route: https://test.ilovequote.com/#/create-quote)\n"
+        "• Review 1 Isolated Branch: preview1 (Route: https://test.ilovequote.com/#/create-quote)\n"
         "• Git Repository: https://github.com/clientfoster/ilovequote\n"
-        "• Backup Branches: review4 (V4 Backup), review3 (Active Test Subdomain), preview3 (V3), preview2 (V2), preview1 (V1), main (Production).",
+        "• Consolidated Record: iLoveQuote_Version_Change_Records_All_Reviews.docx",
         border_color="4F46E5",
         bg_color="EEF2FF"
     )
