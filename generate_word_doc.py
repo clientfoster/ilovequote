@@ -86,6 +86,38 @@ def format_table_row(row, col_widths, values, is_even=False):
         r.font.size = Pt(9)
         r.font.color.rgb = RGBColor(51, 65, 85)
 
+def add_heading_1(doc, title):
+    h = doc.add_paragraph()
+    h.paragraph_format.space_before = Pt(16)
+    h.paragraph_format.space_after = Pt(4)
+    r = h.add_run(title)
+    r.bold = True
+    r.font.name = "Arial"
+    r.font.size = Pt(14)
+    r.font.color.rgb = RGBColor(30, 41, 59)
+    return h
+
+def add_heading_2(doc, title):
+    h = doc.add_paragraph()
+    h.paragraph_format.space_before = Pt(12)
+    h.paragraph_format.space_after = Pt(3)
+    r = h.add_run(title)
+    r.bold = True
+    r.font.name = "Arial"
+    r.font.size = Pt(11.5)
+    r.font.color.rgb = RGBColor(79, 70, 229)
+    return h
+
+def add_body_p(doc, text):
+    p = doc.add_paragraph()
+    p.paragraph_format.space_before = Pt(0)
+    p.paragraph_format.space_after = Pt(5)
+    r = p.add_run(text)
+    r.font.name = "Arial"
+    r.font.size = Pt(9.5)
+    r.font.color.rgb = RGBColor(51, 65, 85)
+    return p
+
 def build_word_document(output_path):
     doc = Document()
     
@@ -100,29 +132,30 @@ def build_word_document(output_path):
     title_p = doc.add_paragraph()
     title_p.paragraph_format.space_before = Pt(0)
     title_p.paragraph_format.space_after = Pt(2)
-    r_title = title_p.add_run("iLoveQuote – Version Release & Review Records")
+    r_title = title_p.add_run("iLoveQuote – Version Records & Voice-to-Quote Technical Architecture")
     r_title.bold = True
     r_title.font.name = "Arial"
-    r_title.font.size = Pt(22)
+    r_title.font.size = Pt(21)
     r_title.font.color.rgb = RGBColor(30, 41, 59)
     
     # Subtitle
     sub_p = doc.add_paragraph()
     sub_p.paragraph_format.space_after = Pt(14)
-    r_sub = sub_p.add_run("Comprehensive Engineering & Deployment Record across All Versions (Preview 1, Preview 2, and Review 3)")
+    r_sub = sub_p.add_run("Comprehensive Engineering Log across All Reviews (V1, V2, V3 & V4) and Deep Dive on Voice-to-Quote/Invoice Conversion Engine")
     r_sub.font.name = "Arial"
-    r_sub.font.size = Pt(11)
+    r_sub.font.size = Pt(10.5)
     r_sub.font.color.rgb = RGBColor(100, 116, 139)
     
     # Metadata Block Table
-    meta_tbl = doc.add_table(rows=4, cols=2)
+    meta_tbl = doc.add_table(rows=5, cols=2)
     meta_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     col_w = [Inches(2.2), Inches(4.7)]
     meta_data = [
         ("Client Organization", "Semixon Technologies"),
-        ("Project Application", "iLoveQuote (Quotation & Invoicing SaaS)"),
-        ("Current Active Test Target", "https://test.ilovequote.com/#/create-quote2"),
-        ("Documentation Date", "30-September-2026"),
+        ("Project Application", "iLoveQuote (Quotation & Invoicing SaaS Platform)"),
+        ("Active Test Subdomain", "https://test.ilovequote.com"),
+        ("Primary Modules & Routes", "/#/create-quote (V1/V2) | /#/create-quote2 (V3) | /#/page2 (V4 Voice Converter)"),
+        ("Documentation Date", "06-October-2026"),
     ]
     for idx, (k, v) in enumerate(meta_data):
         row = meta_tbl.rows[idx]
@@ -130,8 +163,8 @@ def build_word_document(output_path):
         cell_k.width, cell_v.width = col_w[0], col_w[1]
         set_cell_background(cell_k, "F8FAFC")
         set_cell_background(cell_v, "FFFFFF")
-        set_cell_margins(cell_k, top=60, bottom=60, left=100, right=100)
-        set_cell_margins(cell_v, top=60, bottom=60, left=100, right=100)
+        set_cell_margins(cell_k, top=50, bottom=50, left=100, right=100)
+        set_cell_margins(cell_v, top=50, bottom=50, left=100, right=100)
         
         pk = cell_k.paragraphs[0]
         pk.paragraph_format.space_before = Pt(0)
@@ -149,7 +182,7 @@ def build_word_document(output_path):
         rv.font.name = "Arial"
         rv.font.size = Pt(9.5)
         rv.font.color.rgb = RGBColor(15, 23, 42)
-        if "http" in v:
+        if "http" in v or "#" in v:
             rv.bold = True
             rv.font.color.rgb = RGBColor(79, 70, 229)
     
@@ -158,195 +191,255 @@ def build_word_document(output_path):
     # ----------------------------------------------------
     # SECTION 1: ARCHITECTURE & BACKUP STRATEGY
     # ----------------------------------------------------
-    h1 = doc.add_paragraph()
-    h1.paragraph_format.space_before = Pt(14)
-    h1.paragraph_format.space_after = Pt(4)
-    rh1 = h1.add_run("1. Version Control & Backup Architecture")
-    rh1.bold = True
-    rh1.font.name = "Arial"
-    rh1.font.size = Pt(14)
-    rh1.font.color.rgb = RGBColor(30, 41, 59)
-    
+    add_heading_1(doc, "1. Version Control & Backup Architecture")
     add_callout(
         doc,
         "Zero-Risk Backup Guarantee",
-        "Every change requested is built on a distinct Git branch with dedicated version tags. No version overwrites previous work. All historical iterations (Version 1, Version 2, and Review 3) remain 100% accessible and deployable.",
+        "Every client iteration is developed on an isolated Git branch with dedicated version tags. No version overwrites previous work. All historical iterations (Version 1, Version 2, Review 3, and Review 4) remain 100% accessible, isolated, and deployable.",
         border_color="10B981",
         bg_color="F0FDF4"
     )
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(6)
-    r = p.add_run(
+    add_body_p(
+        doc,
         "To satisfy the client requirement for complete version records and separate rollback capabilities, the system uses a dual-layer backup mechanism:\n"
-        "• Git Branch Isolation: Dedicated branches (preview1, preview2, and preview3/review3) ensure complete code history.\n"
+        "• Git Branch Isolation: Dedicated branches (preview1, preview2, review3/preview3, review4) preserve complete code history.\n"
         "• Subdomain Routing: Test deployments run under https://test.ilovequote.com, while production remains safe under www.ilovequote.com.\n"
-        "• Route Isolation: Routes such as /#/create-quote and /#/create-quote2 allow side-by-side visual and functional testing."
+        "• Route Isolation: Distinct URLs allow side-by-side visual and functional testing without collision:\n"
+        "    - Version 1 & 2: https://test.ilovequote.com/#/create-quote\n"
+        "    - Version 3: https://test.ilovequote.com/#/create-quote2\n"
+        "    - Version 4: https://test.ilovequote.com/#/page2 (and https://test.ilovequote.com/page2)"
     )
-    r.font.name = "Arial"
-    r.font.size = Pt(9.5)
-    r.font.color.rgb = RGBColor(51, 65, 85)
     
     # ----------------------------------------------------
     # SECTION 2: VERSION 1.0 (PREVIEW 1)
     # ----------------------------------------------------
-    h2 = doc.add_paragraph()
-    h2.paragraph_format.space_before = Pt(14)
-    h2.paragraph_format.space_after = Pt(4)
-    rh2 = h2.add_run("2. Version 1.0 (Preview 1 / 'preview1')")
-    rh2.bold = True
-    rh2.font.name = "Arial"
-    rh2.font.size = Pt(14)
-    rh2.font.color.rgb = RGBColor(30, 41, 59)
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(6)
-    r = p.add_run(
+    add_heading_1(doc, "2. Version 1.0 (Preview 1 / 'preview1')")
+    add_body_p(
+        doc,
         "• Release Date: 16-September-2026\n"
-        "• Git Branch: preview1 / preview (Commit: 0d88a9d)\n"
-        "• Primary Focus: Quotation creation redesign matching AFTER mockup, permanent left sidebar, live preview board, and mobile icon adjustments."
+        "• Git Branch: preview1 (Baseline: 0d88a9d)\n"
+        "• Target URL: https://test.ilovequote.com/#/create-quote\n"
+        "• Primary Focus: Permanent Left Sidebar, 4-Step Quotation Stepper Wizard, Live Preview Board, and Mobile Icon Optimization."
     )
-    r.font.name = "Arial"
-    r.font.size = Pt(9.5)
-    r.font.color.rgb = RGBColor(51, 65, 85)
     
+    col_w_v1 = [Inches(2.2), Inches(4.7)]
     v1_items = [
-        ("Permanent Desktop Sidebar (Layout.tsx)", "Added permanent left sidebar (w-60 / w-64) with BrandMark, '+ New Quote' action, complete navigation list, collapse toggle, and user profile pill."),
-        ("4-Step Quotation Wizard (QuoteWizard.tsx)", "Added top stepper [1 Business] ── [2 Client] ── [3 Items] ── [4 Preview] with auto-save badge and draft ID."),
-        ("Step 1 Business Module (BusinessModule.tsx)", "Added saved business profile quick-picker, vertical logo upload zone, collapsible accordions for Business Address, GSTIN tax settings, and social links."),
-        ("Live Preview Board (LivePreviewBoard.tsx)", "Integrated dual-card real-time preview board displaying business profile card with QR code and live quotation sheet."),
-        ("Mobile Landing Page Optimization", "Minimized tool icons on mobile devices from 64px to 36px, container box from 96px to 52px, card width to 185px to eliminate layout squishing."),
+        ("Permanent Desktop Sidebar (Layout.tsx)", "Added permanent left sidebar (w-60 / w-64) with brand mark, '+ New Quote' button, navigation items, '< Collapse' toggle, and top user profile pill."),
+        ("Step 1 Business Module (BusinessForm.tsx)", "Added 'Use a saved business profile' card, centered vertical drag-and-drop logo zone, and accordions for Business Address, GSTIN tax, and Social Links."),
+        ("Live Preview Board (LivePreviewBoard.tsx)", "Instant split-screen card showing real-time Business Profile Card and responsive Quotation Sheet Preview side-by-side."),
+        ("4-Step Stepper Wizard (QuoteWizard.tsx)", "Header with quote ID (Q-2026-00021), DRAFT pill badge, and visual progression: [1 Business] ── [2 Client] ── [3 Items] ── [4 Preview]."),
+        ("Mobile View Optimization (LandingPage.tsx)", "Scaled down mobile tool icons from h-16 w-16 to h-9 w-9, reduced icon container box to 52px, and adjusted card width to 185px for pocket screens."),
     ]
-    
     v1_tbl = doc.add_table(rows=len(v1_items) + 1, cols=2)
     v1_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-    col_w_v1 = [Inches(2.5), Inches(4.4)]
-    format_table_header(v1_tbl.rows[0], col_w_v1, ["Component / Area", "Key Enhancements Implemented"], bg_color="334155")
+    format_table_header(v1_tbl.rows[0], col_w_v1, ["Component / Area", "Key Enhancements Implemented"], bg_color="2563EB")
     for idx, (comp, desc) in enumerate(v1_items):
         format_table_row(v1_tbl.rows[idx + 1], col_w_v1, [comp, desc], is_even=(idx % 2 == 1))
-        
+    
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
     
     # ----------------------------------------------------
     # SECTION 3: VERSION 2.0 (PREVIEW 2)
     # ----------------------------------------------------
-    h3 = doc.add_paragraph()
-    h3.paragraph_format.space_before = Pt(14)
-    h3.paragraph_format.space_after = Pt(4)
-    rh3 = h3.add_run("3. Version 2.0 (Preview 2 / 'preview2')")
-    rh3.bold = True
-    rh3.font.name = "Arial"
-    rh3.font.size = Pt(14)
-    rh3.font.color.rgb = RGBColor(30, 41, 59)
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(6)
-    r = p.add_run(
+    add_heading_1(doc, "3. Version 2.0 (Preview 2 / 'preview2')")
+    add_body_p(
+        doc,
         "• Release Date: 25-September-2026\n"
-        "• Git Branch: preview2 (Commit: 87c9d20)\n"
-        "• Primary Focus: Single-page Figma Quote Generator model (node-id=1003-9), multi-currency selector, Photo & Audio AI review workflows, structured JSON document schema, and 1-click conversion to invoice."
+        "• Git Branch: preview2 (Commits: f6e4015, 87c9d20)\n"
+        "• Target URL: https://test.ilovequote.com/#/create-quote\n"
+        "• Primary Focus: Single-Page Instant Quote Generator (Figma model), Multi-Currency Dropdown, 5 Structured Accordions, JSON Schema, 1-Click Invoice Converter, and Full Mobile Responsiveness."
     )
-    r.font.name = "Arial"
-    r.font.size = Pt(9.5)
-    r.font.color.rgb = RGBColor(51, 65, 85)
     
     v2_items = [
-        ("Instant Quote Model (ManualQuoteGenerator.tsx)", "Full single-page price quote generator matching Figma design with header brandmark, guest creation flow, and printable PDF preview modal."),
-        ("Multi-Currency Selector", "Top currency picker supporting INR (₹), USD ($), EUR (€), GBP (£), AED (AED), AUD (A$), CAD (C$), and SGD (S$) with real-time recalculations."),
-        ("5 Structured Collapsible Accordions", "Accordion 1: Your Business | Accordion 2: Client Details | Accordion 3: Quote Details | Accordion 4: Items & Summary | Accordion 5: Notes & Terms."),
-        ("Structured Data Schema (structuredQuote.ts)", "100% typed structured JSON document model (StructuredQuote) storing all line items, rates, taxes, and metadata rather than unstructured blocks."),
-        ("1-Click Convert to Invoice", "Added convertQuoteToInvoiceDraft() and POST /api/quotes/:id/convert-to-invoice to map quotes directly to Invoices with 0 data re-entry."),
-        ("Photo → Quote Review Workflow", "PhotoQuoteExtractor.tsx: Camera capture / photo upload with OCR parsing and pre-population review & edit table."),
-        ("Audio → Quote Review Workflow", "AudioQuoteExtractor.tsx: Live voice recording with waveform visualization, audio upload, speech-to-text, and quote item review screen."),
-        ("Dual Model Switcher Banner", "Added top switcher banner in CreateQuotePage.tsx allowing 1-click switching between Instant Model and Classic 4-Step Wizard."),
+        ("New Single-Page Generator (ManualQuoteGenerator.tsx)", "Single-page quotation generator matching Figma specification with top header actions, live currency selector, and formatted quote preview modal."),
+        ("Multi-Currency Support", "Dropdown supporting 8 international currencies: INR (₹), USD ($), EUR (€), GBP (£), AED (AED), AUD (A$), CAD (C$), SGD (S$)."),
+        ("5 Structured Collapsible Accordions", "Accordion structure: 1. Your Business, 2. Client Details, 3. Quote Details, 4. Items & Summary table, 5. Notes & Terms."),
+        ("Structured Document Schema (structuredQuote.ts)", "Typed JSON quotation schema storing items, quantities, rates, discounts, taxes, and validity terms."),
+        ("1-Click Invoice Conversion", "Direct data transformation from quotation to tax invoice via convertQuoteToInvoiceDraft() and POST /api/quotes/:id/convert-to-invoice."),
+        ("Mobile UI Responsiveness", "Converted wide data tables into touch-friendly stacked card layouts across Create Quote, Create Invoice, Quotes List, and Invoices List."),
     ]
-    
     v2_tbl = doc.add_table(rows=len(v2_items) + 1, cols=2)
     v2_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
-    format_table_header(v2_tbl.rows[0], col_w_v1, ["Component / Area", "Key Enhancements Implemented"], bg_color="4338CA")
+    format_table_header(v2_tbl.rows[0], col_w_v1, ["Component / Area", "Key Enhancements Implemented"], bg_color="0284C7")
     for idx, (comp, desc) in enumerate(v2_items):
         format_table_row(v2_tbl.rows[idx + 1], col_w_v1, [comp, desc], is_even=(idx % 2 == 1))
-        
+    
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
     
     # ----------------------------------------------------
-    # SECTION 4: VERSION 3.0 (REVIEW 3 / PREVIEW 3)
+    # SECTION 4: VERSION 3.0 (REVIEW 3)
     # ----------------------------------------------------
-    h4 = doc.add_paragraph()
-    h4.paragraph_format.space_before = Pt(14)
-    h4.paragraph_format.space_after = Pt(4)
-    rh4 = h4.add_run("4. Version 3.0 (Review 3 / 'review3' & 'preview3')")
-    rh4.bold = True
-    rh4.font.name = "Arial"
-    rh4.font.size = Pt(14)
-    rh4.font.color.rgb = RGBColor(30, 41, 59)
-    
-    p = doc.add_paragraph()
-    p.paragraph_format.space_after = Pt(6)
-    r = p.add_run(
-        "• Release Date: 30-September-2026\n"
-        "• Git Branches: review3 & preview3 & preview (Commits: b9e58ed, 8c629ec)\n"
-        "• Target Test URL: https://test.ilovequote.com/#/create-quote2\n"
-        "• Primary Focus: 'Additional Options' Section, Shipping Details, Refrens Tax Configuration Modal, Column & Formula Customization Modal, and Dynamic Item Table."
-    )
-    r.font.name = "Arial"
-    r.font.size = Pt(9.5)
-    r.font.color.rgb = RGBColor(51, 65, 85)
-    
-    add_callout(
+    add_heading_1(doc, "4. Version 3.0 (Review 3 / 'review3' & 'preview3')")
+    add_body_p(
         doc,
-        "Dedicated Route Accessibility",
-        "Version 3.0 is served directly on route /#/create-quote2 (https://test.ilovequote.com/#/create-quote2), allowing the client to test all tax, shipping, and column customizer features without disrupting the base /#/create-quote workflow.",
-        border_color="7C3AED",
-        bg_color="FAF5FF"
+        "• Release Date: 30-September-2026\n"
+        "• Git Branches: review3 & preview3 (Commits: b9e58ed, 8c629ec)\n"
+        "• Target URL: https://test.ilovequote.com/#/create-quote2\n"
+        "• Primary Focus: 'Additional Options' Section, Shipping Details, Refrens Tax Configuration Modal, Column & Formula Customization Modal, and Dynamic Item Table."
     )
     
     v3_items = [
-        ("Additional Options Accordion", "Inserted between Quote Details and Items & Summary. Features a clean card with settings badge, Add Shipping Details toggle, '% Edit GST' button, and 'Edit Columns/Formulas' button."),
-        ("Shipping Details Expandable Sub-module", "When checked, expands Shipped From Address, Shipped To Name & Address, Transport Mode dropdown (Road, Rail, Air, Sea, Courier), Transporter Name, and Vehicle/Tracking Number."),
-        ("Configure Tax Modal (TaxConfigModal.tsx)", "Refrens 4-step modal: 1. Tax Type (GST, VAT, Sales Tax, None) | 2. Place of Supply (36 Indian States/UTs + Other Territory) | 3. GST Type (IGST vs CGST & SGST + '+ Add Cess' rate input) | 4. Other Options (Reverse Charge Mechanism - RCM checkbox)."),
-        ("Customize Columns & Formulas Modal (ColumnFormulaModal.tsx)", "Lightbulb header with '+ Add New Column', 6-dot drag handles, column name input, type selector (TEXT / NUMBER), eye visibility toggles for Item, HSN/SAC, GST Rate, Quantity, plus custom column deletion."),
-        ("Dynamic Desktop Table & Mobile Cards", "Desktop table and mobile cards dynamically reflect configured columns in real-time. Full support for custom column inputs on every line item with zero horizontal overflow."),
-        ("GST & Tax Calculation Summary", "Summary calculation card computes subtotal, discounts, CGST & SGST 50/50 split, IGST, Cess % amounts, and displays Reverse Charge (RCM) status badge."),
-        ("Enhanced Preview & PDF Export", "Printable preview modal renders dispatch shipping addresses, transporter information, GST breakdowns, and visible dynamic table columns."),
+        ("Additional Options Accordion", "Inserted between Quote Details and Items & Summary. Features Add Shipping Details toggle, '% Edit GST' button, and 'Edit Columns/Formulas' button."),
+        ("Shipping Details Expandable Sub-module", "Expands Shipped From Address, Shipped To Name & Address, Transport Mode (Road, Rail, Air, Sea, Courier), Transporter Name, and Vehicle/Tracking Number."),
+        ("Configure Tax Modal (TaxConfigModal.tsx)", "Refrens 4-step modal: 1. Tax Type (GST, VAT, Sales Tax, None) | 2. Place of Supply (36 Indian States/UTs + Other Territory) | 3. GST Type (IGST vs CGST & SGST + Cess %) | 4. Other Options (Reverse Charge Mechanism - RCM checkbox)."),
+        ("Customize Columns & Formulas Modal (ColumnFormulaModal.tsx)", "Header with '+ Add New Column', 6-dot drag handles, column name input, type selector (TEXT / NUMBER), eye visibility toggles for Item, HSN/SAC, GST Rate, Quantity, plus custom column deletion."),
+        ("Dynamic Desktop Table & Mobile Cards", "Desktop table and mobile cards dynamically reflect configured columns in real-time with custom column inputs per line item."),
+        ("GST & Tax Calculation Summary", "Summary card computes subtotal, discounts, CGST & SGST 50/50 split, IGST, Cess % amounts, and displays Reverse Charge (RCM) status badge."),
     ]
-    
     v3_tbl = doc.add_table(rows=len(v3_items) + 1, cols=2)
     v3_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     format_table_header(v3_tbl.rows[0], col_w_v1, ["Component / Area", "Key Enhancements Implemented"], bg_color="6D28D9")
     for idx, (comp, desc) in enumerate(v3_items):
         format_table_row(v3_tbl.rows[idx + 1], col_w_v1, [comp, desc], is_even=(idx % 2 == 1))
-        
+    
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
     
     # ----------------------------------------------------
-    # SECTION 5: FEATURE COMPARISON MATRIX ACROSS VERSIONS
+    # SECTION 5: VERSION 4.0 (REVIEW 4)
     # ----------------------------------------------------
-    h5 = doc.add_paragraph()
-    h5.paragraph_format.space_before = Pt(14)
-    h5.paragraph_format.space_after = Pt(4)
-    rh5 = h5.add_run("5. Cross-Version Feature Comparison Matrix")
-    rh5.bold = True
-    rh5.font.name = "Arial"
-    rh5.font.size = Pt(14)
-    rh5.font.color.rgb = RGBColor(30, 41, 59)
+    add_heading_1(doc, "5. Version 4.0 (Review 4 / 'review4') – Audio to Price Converter")
+    add_body_p(
+        doc,
+        "• Release Date: 06-October-2026\n"
+        "• Git Branches: review4 (dedicated backup) & review3 (Vercel test subdomain tracking)\n"
+        "• Target URL: https://test.ilovequote.com/#/page2 (and https://test.ilovequote.com/page2)\n"
+        "• Client Request from Semixon Technologies:\n"
+        "    \"@!! you just work on audio to price converter module. put in test.ilovequote.com/ page2. like this impment in new page. do not deploy in previous design. thanks\"\n"
+        "    \"audio to quote making, make it implementation. thanks\"\n"
+        "• Primary Focus: Dedicated Audio-to-Price Converter & Voice-to-Quote Making module mounted strictly on /page2 without altering previous designs."
+    )
     
-    matrix_cols = [Inches(2.5), Inches(1.4), Inches(1.5), Inches(1.5)]
-    matrix_headers = ["Capability / Feature", "Version 1.0", "Version 2.0", "Review 3.0"]
+    add_callout(
+        doc,
+        "Non-Destructive Isolated Deployment",
+        "Version 4.0 strictly avoids touching or replacing existing pages. /#/create-quote (V1/V2) and /#/create-quote2 (V3) remain completely unchanged. The Audio to Price Converter operates independently on /#/page2.",
+        border_color="D97706",
+        bg_color="FFFBEB"
+    )
+    
+    v4_items = [
+        ("Dedicated Standalone Page (AudioQuoteConverterPage.tsx)", "Full voice-driven quote creation workstation mounted on /page2 with amber 'Page 2: Audio to Price Converter' badge, currency selector, and reset actions."),
+        ("3 Audio Input Modalities", "1. Live Voice Recording with real-time waveform bars and elapsed timer\n2. Audio File Dropzone (.mp3, .wav, .m4a, .ogg)\n3. Direct Voice Note / Meeting Transcript Text Box with instant Re-Analyze."),
+        ("Quick Voice Scenario Chips", "1-Click test scenario presets: 'Web Design & Hosting' (₹25k + ₹5k), 'Hardware Supply' (3 Laptops ₹65k, 2 Printers ₹18k, 10% disc), 'UI/UX App Dev' (₹35k + ₹95k, 18% GST)."),
+        ("Smart Speech-to-Quote Parsing Engine", "Natural language parsing algorithm converting both numbers ('25000') and spoken words ('twenty five thousand', 'three laptops') into structured line items, quantities, and rates."),
+        ("Real-time Quotation Table & Editor", "Full desktop table and mobile card editor allowing instant manual edits to item descriptions, unit rates, quantities, discounts, and taxes with live totals."),
+        ("1-Click Invoice Conversion & Print Export", "Interactive Preview Modal, browser print/PDF export, and 1-Click Convert to Invoice mapping voice quote data directly into /create-invoice draft."),
+        ("Dual URL Routing Architecture", "Custom vercel.json SPA rewrites and automatic path-to-hash redirect so direct hits to test.ilovequote.com/page2 and test.ilovequote.com/#/page2 work seamlessly."),
+    ]
+    v4_tbl = doc.add_table(rows=len(v4_items) + 1, cols=2)
+    v4_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    format_table_header(v4_tbl.rows[0], col_w_v1, ["Feature / Component", "Implementation & User Experience"], bg_color="D97706")
+    for idx, (comp, desc) in enumerate(v4_items):
+        format_table_row(v4_tbl.rows[idx + 1], col_w_v1, [comp, desc], is_even=(idx % 2 == 1))
+    
+    doc.add_paragraph().paragraph_format.space_after = Pt(10)
+    
+    # ----------------------------------------------------
+    # SECTION 6: TECHNICAL EXPLANATION - VOICE TO INVOICE & QUOTES ENGINE
+    # ----------------------------------------------------
+    add_heading_1(doc, "6. Technical Resources & Engine: How Voice Converts to Quotes & Invoices")
+    add_body_p(
+        doc,
+        "This section details the exact technical resources, browser APIs, speech recognition pipelines, Natural Language Processing (NLP) parsing logic, and schema conversion models that turn spoken voice dictation into valid business price quotes and legal tax invoices."
+    )
+    
+    add_callout(
+        doc,
+        "Voice-to-Document Pipeline Overview",
+        "Spoken Audio / File Upload ➔ Audio Stream & Waveform Processing ➔ Speech Recognition (ASR) ➔ Spoken Number & Entity NLP Parser ➔ Structured JSON Quotation ➔ Financial Math Engine ➔ 1-Click Tax Invoice Auto-Mapper.",
+        border_color="4F46E5",
+        bg_color="EEF2FF"
+    )
+    
+    add_heading_2(doc, "6.1. The 5-Stage Voice-to-Quote & Invoice Architecture")
+    
+    stages_col_w = [Inches(1.8), Inches(2.3), Inches(2.8)]
+    stages_data = [
+        ("Stage 1: Audio Capture & Signal Monitoring", "Web Speech API (SpeechRecognition)\nHTML5 MediaStream\nWeb Audio API (AudioContext, AnalyserNode)", "Captures real-time microphone stream. Renders dynamic sound waveform bars (visual feedback) and tracks elapsed recording duration with automatic silence timeouts."),
+        ("Stage 2: Automatic Speech Recognition (ASR)", "Browser SpeechRecognition Engine\nOptional Cloud ASR (Whisper, Google STT)\nFileReader API for recorded audio", "Streams audio chunks and performs continuous speech-to-text decoding. Emits live interim and final transcripts into an editable text buffer."),
+        ("Stage 3: NLP & Spoken Entity Parser", "Intelligent RegEx Lexer\nNUMBER_WORDS English tokenizer\nEntity & financial boundary detector", "Converts spoken English numbers ('twenty five thousand' ➔ 25000), isolates client names ('ABC Technologies'), extracts item descriptions, quantities, discount %, and tax %."),
+        ("Stage 4: Structured Quote Modeling & Math", "StructuredQuote TypeScript Schema\ncalculateStructuredQuotePricing()\nMulti-Currency Formatter", "Instantiates typed quotation document. Dynamically calculates line totals, subtotal, discount deductions, GST (CGST/SGST/IGST), and validity expiration dates."),
+        ("Stage 5: 1-Click Invoice Transformation", "convertQuoteToInvoiceDraft()\nlocalStorage persistence pipeline\nBackend POST /api/quotes/:id/convert-to-invoice", "Maps quote client details, items, quantities, and taxes directly into Tax Invoice draft format, ready for GST e-invoicing and PDF download."),
+    ]
+    stages_tbl = doc.add_table(rows=len(stages_data) + 1, cols=3)
+    stages_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    format_table_header(stages_tbl.rows[0], stages_col_w, ["Pipeline Stage", "Core Technologies / Resources", "Technical Function & Role"], bg_color="1E293B")
+    for idx, row_vals in enumerate(stages_data):
+        format_table_row(stages_tbl.rows[idx + 1], stages_col_w, row_vals, is_even=(idx % 2 == 1))
+    
+    doc.add_paragraph().paragraph_format.space_after = Pt(10)
+    
+    add_heading_2(doc, "6.2. Detailed Breakdown of Spoken Number & Word Translation")
+    add_body_p(
+        doc,
+        "In voice dictation, users frequently say rates in words rather than digits (e.g. 'twenty five thousand rupees' instead of '25000', or 'three laptops' instead of '3'). The system implements a robust spoken number parsing algorithm:\n\n"
+        "1. Tokenization & Normalization: The raw transcript is cleaned of non-alphanumeric punctuation and split into lowercase tokens.\n"
+        "2. Spoken Vocabulary Mapping: A dictionary maps basic units (zero through nineteen), tens (twenty through ninety), and multipliers (hundred, thousand, lakh, lac, million, crore).\n"
+        "3. Compound Value Accumulation: A sliding accumulator computes multi-word numbers:\n"
+        "    • 'twenty' (20) + 'five' (5) = 25\n"
+        "    • 25 * 'thousand' (1000) = 25,000\n"
+        "    • Result: ₹25,000 unit rate cleanly extracted into the database without requiring user correction."
+    )
+    
+    add_heading_2(doc, "6.3. Entity Boundary Detection for Items, Quantities, and Rates")
+    add_body_p(
+        doc,
+        "Business quotes contain multiple items in a single sentence. The parser detects natural language boundaries:\n\n"
+        "• Client Name Extraction: Scans for phrases like 'Create a quote for [Client]', 'Quote for [Company]', or 'Client [Name]'.\n"
+        "• Line Item Segmentation: Splits text on conjunctions ('and', 'also', 'plus', commas, periods) and isolates distinct item clauses.\n"
+        "• Quantity Pairing: Matches words like 'quantity [N]', '[N] pieces', '[N] units', or numbers immediately preceding nouns (e.g. '3 laptops' ➔ quantity = 3, item = 'laptops').\n"
+        "• Rate Association: Matches numbers followed by currency terms ('rupees', 'dollars', 'inr', 'rs') or prepositions ('at [Rate]', 'for [Rate] each').\n"
+        "• Validity & Terms: Extracts 'valid for [N] days' and dynamically computes the validUntil ISO date from today's system clock."
+    )
+    
+    add_heading_2(doc, "6.4. Quote to Invoice Transformation Specification")
+    add_body_p(
+        doc,
+        "Once the quote is generated from audio, the user can click 'Convert to Invoice' with 1 click. The conversion engine performs a seamless schema mapping:"
+    )
+    
+    conv_cols = [Inches(2.5), Inches(2.2), Inches(2.2)]
+    conv_data = [
+        ("Client Name & Information", "StructuredQuote.client", "Invoice.clientDetails (Bill-To Customer)"),
+        ("Item Name & Description", "StructuredQuoteItem.name, description", "InvoiceItem.description (Line Item)"),
+        ("Quantity & Unit Rate", "StructuredQuoteItem.quantity, unitPrice", "InvoiceItem.quantity, unitPrice"),
+        ("Line Amount", "StructuredQuoteItem.amount", "InvoiceItem.total"),
+        ("Taxes & GST Breakdown", "StructuredQuote.pricing.taxPercent", "Invoice.taxRate (CGST / SGST / IGST)"),
+        ("Discount Percent & Value", "StructuredQuote.pricing.discountPercent", "Invoice.discountPercent"),
+        ("Document Status", "Quote Status: 'Created' / 'Approved'", "Invoice Status: 'Draft' (Awaiting Dispatch)"),
+        ("Terms & Payment Due Date", "Valid Until (e.g. +7 days)", "Payment Due Date (+7 days from issue)"),
+    ]
+    conv_tbl = doc.add_table(rows=len(conv_data) + 1, cols=3)
+    conv_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
+    format_table_header(conv_tbl.rows[0], conv_cols, ["Data Field", "Source (Voice Quote)", "Target (Tax Invoice)"], bg_color="0F766E")
+    for idx, row_vals in enumerate(conv_data):
+        format_table_row(conv_tbl.rows[idx + 1], conv_cols, row_vals, is_even=(idx % 2 == 1))
+    
+    doc.add_paragraph().paragraph_format.space_after = Pt(10)
+    
+    # ----------------------------------------------------
+    # SECTION 7: CROSS-VERSION FEATURE COMPARISON MATRIX
+    # ----------------------------------------------------
+    add_heading_1(doc, "7. Cross-Version Feature Comparison Matrix across All 4 Reviews")
+    
+    matrix_cols = [Inches(2.3), Inches(1.1), Inches(1.1), Inches(1.2), Inches(1.2)]
+    matrix_headers = ["Capability / Feature", "Version 1.0", "Version 2.0", "Review 3.0", "Review 4.0"]
     matrix_data = [
-        ("Generation Model", "4-Step Stepper Wizard", "Single-Page Instant", "Single-Page Instant"),
-        ("Multi-Currency Selector", "INR only", "8 Currencies (₹, $, €, £...)", "8 Currencies (₹, $, €, £...)"),
-        ("Photo → Quote (AI Review)", "Not available", "Included (OCR Review)", "Included (OCR Review)"),
-        ("Voice → Quote (Audio AI)", "Not available", "Included (Mic waveform)", "Included (Mic waveform)"),
-        ("1-Click Invoice Conversion", "Manual entry", "1-Click Auto-Mapping", "1-Click Auto-Mapping"),
-        ("Shipping Details Section", "Not available", "Not available", "Included (5 Fields)"),
-        ("GST / Tax Config Modal", "Standard Tax % only", "Standard Tax % only", "Full (IGST/CGST/Cess/RCM)"),
-        ("Custom Columns & Formulas", "Fixed columns", "Fixed columns", "Dynamic Customizer + Eye Toggle"),
-        ("Dedicated URL Route", "/#/create-quote", "/#/create-quote", "/#/create-quote2"),
-        ("Active Test Subdomain", "test.ilovequote.com", "test.ilovequote.com", "test.ilovequote.com"),
+        ("Generation Model", "4-Step Wizard", "Instant Single-Page", "Instant Single-Page", "Audio-Driven Generator"),
+        ("Dedicated URL Route", "/#/create-quote", "/#/create-quote", "/#/create-quote2", "/#/page2 (and /page2)"),
+        ("Multi-Currency Support", "INR only", "8 Currencies (₹, $, €...)", "8 Currencies (₹, $, €...)", "8 Currencies (₹, $, €...)"),
+        ("Live Audio Dictation (Mic)", "Not available", "Basic dialog", "Basic dialog", "Dedicated Waveform Studio"),
+        ("Audio File Upload (.mp3)", "Not available", "Not available", "Not available", "Included (Dropzone)"),
+        ("Spoken Word Number Parser", "Not available", "Digits only", "Digits only", "Full ('twenty five thousand')"),
+        ("1-Click Invoice Conversion", "Manual entry", "1-Click Auto-Map", "1-Click Auto-Map", "1-Click Direct Pipeline"),
+        ("Shipping Details Sub-module", "Not available", "Not available", "Included (5 Fields)", "Not needed on /page2"),
+        ("GST / Tax Config Modal", "Standard Tax %", "Standard Tax %", "Full Refrens Modal", "Configurable Tax %"),
+        ("Custom Columns & Formulas", "Fixed columns", "Fixed columns", "Dynamic Customizer", "Clean Standard Columns"),
+        ("Document Print & PDF Export", "Basic", "Formatted Modal", "Formatted Modal", "Instant Print & PDF Modal"),
+        ("Active Test Subdomain", "test.ilovequote.com", "test.ilovequote.com", "test.ilovequote.com", "test.ilovequote.com"),
     ]
     
-    matrix_tbl = doc.add_table(rows=len(matrix_data) + 1, cols=4)
+    matrix_tbl = doc.add_table(rows=len(matrix_data) + 1, cols=5)
     matrix_tbl.alignment = WD_TABLE_ALIGNMENT.CENTER
     format_table_header(matrix_tbl.rows[0], matrix_cols, matrix_headers, bg_color="0F172A")
     for idx, row_vals in enumerate(matrix_data):
@@ -355,26 +448,23 @@ def build_word_document(output_path):
     doc.add_paragraph().paragraph_format.space_after = Pt(10)
     
     # ----------------------------------------------------
-    # SECTION 6: FILE INVENTORY & DEPLOYMENT DIRECTORY
+    # SECTION 8: FILE INVENTORY & DEPLOYMENT DIRECTORY
     # ----------------------------------------------------
-    h6 = doc.add_paragraph()
-    h6.paragraph_format.space_before = Pt(14)
-    h6.paragraph_format.space_after = Pt(4)
-    rh6 = h6.add_run("6. File Modification Summary & Deployment Links")
-    rh6.bold = True
-    rh6.font.name = "Arial"
-    rh6.font.size = Pt(14)
-    rh6.font.color.rgb = RGBColor(30, 41, 59)
+    add_heading_1(doc, "8. File Inventory & Active Deployment Directory")
     
-    files_cols = [Inches(2.6), Inches(1.1), Inches(3.2)]
-    files_headers = ["File Path", "Action", "Description"]
+    files_cols = [Inches(2.5), Inches(1.1), Inches(3.3)]
+    files_headers = ["File Path", "Action", "Description & Version Scope"]
     files_data = [
-        ("frontend/src/components/quote-generator/TaxConfigModal.tsx", "Created", "4-step modal for GST/VAT/Sales Tax, Place of Supply, IGST/CGST, Cess & RCM."),
-        ("frontend/src/components/quote-generator/ColumnFormulaModal.tsx", "Created", "Drag handle, column name/type customizer, visibility toggles & add custom column."),
-        ("frontend/src/components/quote-generator/ManualQuoteGenerator.tsx", "Modified", "Added Additional Options accordion, dynamic column rendering, shipping fields, and GST breakdown."),
-        ("frontend/src/types/structuredQuote.ts", "Modified", "Added TaxConfiguration, QuoteColumnConfig, ShippingDetails, Indian States list, and Cess calculator."),
-        ("frontend/src/App.tsx", "Modified", "Registered dedicated route /#/create-quote2."),
-        ("VERSION_CHANGE_RECORDS.md", "Modified", "Backup logs and cross-version documentation."),
+        ("frontend/src/pages/AudioQuoteConverterPage.tsx", "Created (V4)", "Dedicated Audio to Price Converter page on /page2 with 3 audio modes, waveform bars, smart NLP parsing, and quote editor."),
+        ("frontend/src/App.tsx", "Modified (V4)", "Registered /page2, /audio-quote, and /create-quote3 routes; added automatic direct-path to hash-route redirection."),
+        ("frontend/src/components/Layout.tsx", "Modified (V4)", "Added Audio to Quote link with microphone icon in permanent sidebar navigation menu."),
+        ("frontend/vercel.json & ./vercel.json", "Created (V4)", "Configured SPA rewrites to route direct path hits to index.html to prevent 404s on direct navigation."),
+        ("frontend/src/components/quote-generator/TaxConfigModal.tsx", "Created (V3)", "4-step modal for GST/VAT/Sales Tax, Place of Supply, IGST/CGST, Cess & RCM."),
+        ("frontend/src/components/quote-generator/ColumnFormulaModal.tsx", "Created (V3)", "Drag handle, column name/type customizer, visibility toggles & add custom column."),
+        ("frontend/src/components/quote-generator/ManualQuoteGenerator.tsx", "Created (V2/V3)", "Single-page generator, Additional Options accordion, dynamic column rendering, and GST breakdown."),
+        ("frontend/src/types/structuredQuote.ts", "Created (V2/V3/V4)", "Structured quotation schema, pricing calculator, and quote-to-invoice conversion helper."),
+        ("VERSION_CHANGE_RECORDS.md", "Updated", "Master engineering backup logs across all 4 reviews."),
+        ("generate_word_doc.py", "Updated", "Automated Word document generator producing this comprehensive record."),
     ]
     
     files_tbl = doc.add_table(rows=len(files_data) + 1, cols=3)
@@ -389,10 +479,11 @@ def build_word_document(output_path):
     add_callout(
         doc,
         "Live Deployment & Access Links",
-        "• Active Test Subdomain: https://test.ilovequote.com/#/create-quote2\n"
-        "• Vercel Direct Preview: https://ilovequote-txou-git-preview-venkateswarlu-kataris-projects.vercel.app/#/create-quote2\n"
+        "• Review 4 Active Target: https://test.ilovequote.com/#/page2 (and https://test.ilovequote.com/page2)\n"
+        "• Review 3 Active Target: https://test.ilovequote.com/#/create-quote2\n"
+        "• Review 1 & 2 Active Target: https://test.ilovequote.com/#/create-quote\n"
         "• Git Repository: https://github.com/clientfoster/ilovequote\n"
-        "• Backup Branches: preview1 (V1), preview2 (V2), preview3 (V3), review3 (Active V3 Test).",
+        "• Backup Branches: review4 (V4 Backup), review3 (Active Test Subdomain), preview3 (V3), preview2 (V2), preview1 (V1), main (Production).",
         border_color="4F46E5",
         bg_color="EEF2FF"
     )

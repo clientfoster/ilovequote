@@ -2,7 +2,7 @@
 **Client:** Semixon Technologies  
 **Project:** iLoveQuote (Quotation & Invoicing Platform)  
 **Maintained by:** Development Team  
-**Last Updated:** 25-Sep-2026
+**Last Updated:** 06-Oct-2026
 
 ---
 
@@ -10,9 +10,9 @@
 
 To guarantee that **every version is 100% backed up and accessible independently**, we maintain a dual-layer backup system:
 
-1. **Git Branch Isolation:** Every major release has its own isolated Git branch (e.g. `preview` for Version 1, `preview2` for Version 2, `main` for Production).
+1. **Git Branch Isolation:** Every major release has its own isolated Git branch (e.g. `preview1` for Version 1, `preview2` for Version 2, `review3`/`preview3` for Version 3, `review4` for Version 4).
 2. **Permanent Vercel Preview Deployments:** Vercel assigns each branch and each commit a permanent, immutable URL that never gets overwritten.
-3. **In-App Version Support:** Both versions can be viewed, compared, and tested side-by-side.
+3. **Route Isolation:** Dedicated distinct routes (`/#/create-quote` for V1/V2, `/#/create-quote2` for V3, and `/#/page2` for V4) ensure existing workflows are 100% preserved and never overwritten.
 
 ---
 
@@ -117,7 +117,7 @@ To guarantee that **every version is 100% backed up and accessible independently
 
 ---
 
-## 🗂 File Modification Summary (Version 2.1)
+## 🗂 File Modification Summary (Version 3.0 / Review 3)
 
 | File | Type | Description |
 | :--- | :--- | :--- |
@@ -130,8 +130,65 @@ To guarantee that **every version is 100% backed up and accessible independently
 
 ---
 
+## 📑 Version 4.0 (Review 4) (Completed: 06-Oct-2026)
+
+* **Git Branch / Tag:** `review4`
+* **Dedicated Route:** `/#/page2` and `test.ilovequote.com/page2` (Aliases: `/#/audio-quote`, `/#/create-quote3`)
+* **Client Request from Semixon Technologies:**
+  > *"@!! you just work on audio to price converter module. put in test.ilovequote.com/ page2. like this impment in new page. do not deploy in previous design. thanks"*  
+  > *"audio to quote making, make it implementation. thanks"*
+
+### Primary Objectives & Constraints:
+- Implement a comprehensive **Audio to Price Converter / Voice to Quote Making module**.
+- Mount specifically on **`/page2`** (`https://test.ilovequote.com/#/page2` and `test.ilovequote.com/page2`).
+- **Strictly preserve prior versions**: `/#/create-quote` (Version 1 & 2) and `/#/create-quote2` (Version 3) remain 100% untouched and functional.
+
+### Key Changes Implemented:
+1. **Dedicated Standalone Module (`AudioQuoteConverterPage.tsx`):**
+   - High-performance, mobile-responsive layout built specifically for voice-first quotation creation.
+   - Header badge: `Page 2: Audio to Price Converter` with currency switcher and instant reset actions.
+2. **3 Audio Input Modes:**
+   - **Mode A (Live Voice Recording):** Direct in-browser microphone dictation using Web Speech API with real-time waveform bars visualizer, elapsed recording timer, and live transcript streaming.
+   - **Mode B (Audio File Upload):** Drag-and-drop audio file dropzone supporting `.mp3`, `.wav`, `.m4a`, and `.ogg` files.
+   - **Mode C (Voice Note / Transcript Paste):** Direct text box for pasting audio transcripts, WhatsApp voice transcripts, or meeting minutes with instant `Re-Analyze Transcript` action.
+3. **Quick Voice Scenario Chips:**
+   - Pre-configured 1-click test scenarios for testing speech parsing:
+     - 🌐 *Web Design & Hosting* (ABC Tech, ₹25,000 design, ₹5,000 hosting, 7 days validity)
+     - 💻 *Hardware & IT Supply* (Global Traders, 3 Laptops ₹65,000, 2 Printers ₹18,000, 10% discount)
+     - 📱 *UI/UX & App Dev* (NextGen Innovations, Wireframing ₹35,000, App Dev ₹95,000, 18% GST)
+4. **Intelligent Speech-to-Quote Parsing Engine:**
+   - Extracts client name, multiple line items, unit quantities, unit rates (supporting both numeric digits like `25000` and spoken words like *"twenty five thousand"* or *"three laptops"*), discount %, GST tax %, and validity days.
+5. **Interactive Quotation Editor & Financial Calculations:**
+   - Real-time interactive line items table on desktop and native responsive cards on mobile.
+   - Live editable unit prices, quantities, and item titles with automatic amount recalculations.
+   - Financial breakdown: Subtotal, Discount amount & %, GST/tax amount & %, and Grand Total.
+6. **Action Bar & Invoice Integration:**
+   - **👁 Preview Quote Modal:** Formatted quotation document preview with clean printable layout.
+   - **🖨 Print & PDF Export:** One-click document printing and browser PDF saving.
+   - **⚡ 1-Click Convert to Invoice:** Directly maps extracted voice quote items and client details into invoice draft format and navigates to `/create-invoice`.
+7. **Dual URL Routing (Hash & Direct Path):**
+   - Added automatic path-to-hash redirect and SPA rewrites (`vercel.json`) ensuring both `https://test.ilovequote.com/page2` and `https://test.ilovequote.com/#/page2` load seamlessly.
+
+---
+
+## 🗂 File Modification Summary (Version 4.0 / Review 4)
+
+| File | Type | Description |
+| :--- | :--- | :--- |
+| `frontend/src/pages/AudioQuoteConverterPage.tsx` | New | Dedicated Audio to Price Converter page on `/page2` with 3 input modes, audio waveform, AI voice parsing, and quote editor |
+| `frontend/src/App.tsx` | Modified | Registered `/page2`, `/audio-quote`, `/create-quote3` routes & added path-to-hash automatic redirection |
+| `frontend/src/components/Layout.tsx` | Modified | Added `Audio to Quote` link with microphone icon to sidebar navigation menu |
+| `frontend/vercel.json` | New | Configured SPA rewrites to route direct path hits to `index.html` |
+| `vercel.json` | New | Root SPA rewrites configuration |
+| `VERSION_CHANGE_RECORDS.md` | Modified | Added comprehensive Version 4.0 / Review 4 documentation |
+| `generate_word_doc.py` | Modified | Updated Word document generator script for Review 4 |
+| `iLoveQuote_Version_Change_Records_All_Reviews.docx` | Updated | Regenerated official multi-version backup Word document |
+
+---
+
 ## 🔒 Verification & Compliance
-- **Backend Syntax:** Validated with Node.js (`node -c backend/server.js` $\rightarrow$ Exit Code 0).
-- **Frontend Build:** Successfully built with Vite (`✓ built in 14.79s`).
-- **Dev Servers:** Both active locally (`http://localhost:3000` and `http://localhost:3001`).
-- **Git Push:** Remote push is held until user authorizes.
+- **Frontend Compilation:** Vite v6.4.3 production build succeeded with 0 errors (`✓ built in 13.68s`).
+- **Route Isolation:** Verified that `/page2` is isolated; `/#/create-quote` and `/#/create-quote2` are unchanged.
+- **Git Branch:** Dedicated branch `review4` with clean commit history.
+- **Vercel Test Subdomain:** Merged to `review3` to update `test.ilovequote.com`.
+

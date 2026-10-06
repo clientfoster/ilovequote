@@ -16,6 +16,7 @@ import PortfolioPage from './pages/PortfolioPage';
 import QRPortfolioPage from './pages/QRPortfolioPage';
 import QuoteExportPage from './pages/QuoteExportPage';
 import CreateQuotePage from './pages/CreateQuotePage';
+import AudioQuoteConverterPage from './pages/AudioQuoteConverterPage';
 import CreateInvoicePage from './pages/CreateInvoicePage';
 import CreateInvoiceBankDetailsPage from './pages/CreateInvoiceBankDetailsPage';
 import CreateInvoiceDesignPage from './pages/CreateInvoiceDesignPage';
@@ -43,6 +44,19 @@ function getLoginRedirect() {
   const queryString = queryIdx !== -1 ? hash.substring(queryIdx) : window.location.search;
   const params = new URLSearchParams(queryString);
   return params.get('returnUrl') || '/dashboard';
+}
+
+// Automatically redirect path-based routing to hash-based routing when accessing directly
+if (typeof window !== 'undefined') {
+  const pathname = window.location.pathname;
+  if (
+    pathname &&
+    pathname !== '/' &&
+    pathname !== '/index.html' &&
+    (!window.location.hash || window.location.hash === '' || window.location.hash === '#/')
+  ) {
+    window.location.replace('/#' + pathname + window.location.search);
+  }
 }
 
 export default function App() {
@@ -131,6 +145,9 @@ export default function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/create-quote" element={<CreateQuotePage />} />
           <Route path="/create-quote2" element={<CreateQuotePage />} />
+          <Route path="/page2" element={<AudioQuoteConverterPage />} />
+          <Route path="/audio-quote" element={<AudioQuoteConverterPage />} />
+          <Route path="/create-quote3" element={<AudioQuoteConverterPage />} />
           <Route path="/create-invoice" element={<CreateInvoicePage />} />
           <Route path="/create-invoice/bank-details" element={<CreateInvoiceBankDetailsPage />} />
           <Route path="/create-invoice/design" element={<CreateInvoiceDesignPage />} />
