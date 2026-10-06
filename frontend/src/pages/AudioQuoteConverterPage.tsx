@@ -148,6 +148,7 @@ export default function AudioQuoteConverterPage() {
 
   // Refs
   const recognitionRef = useRef<any>(null);
+  const transcriptRef = useRef<string>('');
   const timerRef = useRef<any>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -170,6 +171,7 @@ export default function AudioQuoteConverterPage() {
     setIsRecording(true);
     setRecordingSeconds(0);
     setLiveTranscript('');
+    transcriptRef.current = '';
     setHasExtracted(false);
 
     // Timer
@@ -193,7 +195,9 @@ export default function AudioQuoteConverterPage() {
           for (let i = 0; i < event.results.length; i++) {
             currentSpeech += event.results[i][0].transcript + ' ';
           }
-          setLiveTranscript(currentSpeech.trim());
+          const text = currentSpeech.trim();
+          transcriptRef.current = text;
+          setLiveTranscript(text);
         };
 
         recognition.onerror = () => {
@@ -221,8 +225,14 @@ export default function AudioQuoteConverterPage() {
     }
 
     const transcriptToAnalyze =
+      transcriptRef.current.trim() ||
       liveTranscript.trim() ||
-      'Create a quote for ABC Technologies. Website design twenty five thousand rupees, hosting five thousand rupees, quantity one each. Give them seven days validity.';
+      '';
+
+    if (!transcriptToAnalyze) {
+      setLiveTranscript('No voice speech was detected. Please verify microphone permission or try a sample scenario below.');
+      return;
+    }
 
     processSpeechText(transcriptToAnalyze);
   };
