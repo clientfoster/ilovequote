@@ -1,0 +1,378 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Quote #2 - Created from Voice (Apex Innovations)</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 15mm 15mm 15mm 15mm;
+    }
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    body {
+      background-color: #ffffff;
+      color: #1e293b;
+      font-size: 11pt;
+      line-height: 1.4;
+      padding: 20px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      border-bottom: 2px solid #e2e8f0;
+      padding-bottom: 18px;
+      margin-bottom: 16px;
+    }
+    .logo-box h1 {
+      font-size: 22pt;
+      font-weight: 900;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+    }
+    .logo-box h1 span {
+      color: #2563eb;
+    }
+    .badge {
+      display: inline-block;
+      margin-top: 4px;
+      padding: 3px 10px;
+      background: #fef3c7;
+      color: #92400e;
+      border: 1px solid #fde68a;
+      border-radius: 20px;
+      font-size: 8pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .doc-meta {
+      text-align: right;
+    }
+    .doc-meta h2 {
+      font-size: 16pt;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: 0.5px;
+    }
+    .doc-meta p {
+      font-size: 9pt;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .prompt-box {
+      background: #fffbeb;
+      border-left: 4px solid #f59e0b;
+      border-radius: 6px;
+      padding: 10px 14px;
+      margin-bottom: 18px;
+    }
+    .prompt-box strong {
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #b45309;
+      display: block;
+      margin-bottom: 3px;
+    }
+    .prompt-box p {
+      font-size: 9.5pt;
+      font-style: italic;
+      color: #78350f;
+    }
+    .address-grid {
+      display: flex;
+      justify-content: space-between;
+      gap: 20px;
+      margin-bottom: 20px;
+    }
+    .addr-card {
+      flex: 1;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+    .addr-card h4 {
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #64748b;
+      margin-bottom: 6px;
+      font-weight: 700;
+    }
+    .addr-card .company {
+      font-size: 11pt;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 3px;
+    }
+    .addr-card p {
+      font-size: 9pt;
+      color: #475569;
+      line-height: 1.35;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-bottom: 18px;
+    }
+    th {
+      background: #0f172a;
+      color: #ffffff;
+      font-size: 8.5pt;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 9px 10px;
+      text-align: left;
+    }
+    th.center, td.center {
+      text-align: center;
+    }
+    th.right, td.right {
+      text-align: right;
+    }
+    td {
+      padding: 10px 10px;
+      font-size: 9.5pt;
+      border-bottom: 1px solid #e2e8f0;
+      color: #334155;
+    }
+    tr:nth-child(even) td {
+      background-color: #f8fafc;
+    }
+    .item-title {
+      font-weight: 700;
+      color: #0f172a;
+    }
+    .item-desc {
+      font-size: 8pt;
+      color: #64748b;
+      margin-top: 2px;
+    }
+    .totals-area {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      gap: 20px;
+    }
+    .words-box {
+      flex: 1;
+      padding: 12px 14px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 9pt;
+    }
+    .words-box strong {
+      display: block;
+      color: #64748b;
+      font-size: 8pt;
+      text-transform: uppercase;
+      margin-bottom: 4px;
+    }
+    .words-box p {
+      font-weight: 600;
+      color: #0f172a;
+    }
+    .totals-table {
+      width: 280px;
+      border-collapse: collapse;
+    }
+    .totals-table td {
+      padding: 5px 8px;
+      font-size: 9pt;
+      border-bottom: none;
+    }
+    .totals-table tr.grand-total td {
+      border-top: 2px solid #0f172a;
+      font-size: 11pt;
+      font-weight: 900;
+      color: #0f172a;
+      padding-top: 8px;
+    }
+    .totals-table tr.discount td {
+      color: #059669;
+      font-weight: 600;
+    }
+    .terms-box {
+      border-top: 1px solid #e2e8f0;
+      padding-top: 14px;
+      font-size: 8.5pt;
+      color: #64748b;
+      line-height: 1.45;
+    }
+    .terms-box strong {
+      color: #334155;
+    }
+    .footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      margin-top: 25px;
+      padding-top: 15px;
+    }
+    .signatory {
+      text-align: right;
+    }
+    .signatory .sign-line {
+      width: 180px;
+      border-bottom: 1px dashed #94a3b8;
+      margin-bottom: 5px;
+      display: inline-block;
+    }
+    .signatory p {
+      font-size: 8pt;
+      color: #64748b;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <div class="header">
+    <div class="logo-box">
+      <h1>iLove<span>Quote</span></h1>
+      <span class="badge">🎙️ Processed from Voice Dictation AI</span>
+    </div>
+    <div class="doc-meta">
+      <h2>PRICE QUOTATION</h2>
+      <p><strong>Quote No:</strong> QT-619</p>
+      <p><strong>Date:</strong> 08-Oct-2026</p>
+      <p><strong>Valid Until:</strong> 07-Nov-2026 (30 Days)</p>
+    </div>
+  </div>
+
+  <!-- Audit Trail / Spoken Voice Transcript Box -->
+  <div class="prompt-box">
+    <strong>Spoken Voice Dictation Transcript:</strong>
+    <p>&ldquo;Create a quote for Apex Innovations. UI UX Mobile App Design forty five thousand rupees, Full Stack Web Portal Development ninety five thousand rupees, Cloud DevOps Hosting setup twenty thousand rupees. Give five percent discount, eighteen percent GST. Valid for thirty days.&rdquo;</p>
+  </div>
+
+  <!-- Addresses Grid -->
+  <div class="address-grid">
+    <div class="addr-card">
+      <h4>Quotation Issued By</h4>
+      <div class="company">iLoveQuote Technologies</div>
+      <p>Plot No. 42, Cyber Gateway, HITEC City<br>Hyderabad, Telangana, 500081<br><strong>GSTIN:</strong> 36AAACI1234F1Z8<br><strong>Email:</strong> billing@ilovequote.com</p>
+    </div>
+    <div class="addr-card">
+      <h4>Quotation Prepared For</h4>
+      <div class="company">Apex Innovations</div>
+      <p>Block C, Embassy Tech Village, Outer Ring Road<br>Bengaluru, Karnataka, 560103<br><strong>Attn:</strong> Product &amp; Engineering Team<br><strong>Phone:</strong> +91 99887 76655</p>
+    </div>
+  </div>
+
+  <!-- Items Table -->
+  <table>
+    <thead>
+      <tr>
+        <th class="center" style="width: 35px;">#</th>
+        <th>Item / Service Description</th>
+        <th class="center" style="width: 75px;">SAC Code</th>
+        <th class="center" style="width: 50px;">Qty</th>
+        <th class="right" style="width: 105px;">Unit Rate</th>
+        <th class="right" style="width: 115px;">Amount</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td class="center">1</td>
+        <td>
+          <div class="item-title">UI UX Mobile App Design</div>
+          <div class="item-desc">Figma wireframes, design system, interactive prototypes (iOS &amp; Android)</div>
+        </td>
+        <td class="center">998314</td>
+        <td class="center">1</td>
+        <td class="right">₹45,000.00</td>
+        <td class="right">₹45,000.00</td>
+      </tr>
+      <tr>
+        <td class="center">2</td>
+        <td>
+          <div class="item-title">Full Stack Web Portal Development</div>
+          <div class="item-desc">React.js frontend, Node.js backend APIs, PostgreSQL database architecture</div>
+        </td>
+        <td class="center">998315</td>
+        <td class="center">1</td>
+        <td class="right">₹95,000.00</td>
+        <td class="right">₹95,000.00</td>
+      </tr>
+      <tr>
+        <td class="center">3</td>
+        <td>
+          <div class="item-title">Cloud DevOps Hosting Setup</div>
+          <div class="item-desc">AWS ECS deployment, Dockerized CI/CD pipelines, SSL &amp; monitoring stack</div>
+        </td>
+        <td class="center">998316</td>
+        <td class="center">1</td>
+        <td class="right">₹20,000.00</td>
+        <td class="right">₹20,000.00</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <!-- Totals Section -->
+  <div class="totals-area">
+    <div class="words-box">
+      <strong>Total Amount in Words:</strong>
+      <p>One Lakh Seventy-Nine Thousand Three Hundred Sixty Rupees Only</p>
+      <div style="margin-top: 10px; font-size: 8pt; color: #64748b;">
+        <strong>Payment Bank Details:</strong><br>
+        Bank: HDFC Bank Ltd | A/C: 50200084920192 | IFSC: HDFC0001234
+      </div>
+    </div>
+    <div>
+      <table class="totals-table">
+        <tr>
+          <td>Subtotal:</td>
+          <td class="right" style="font-family: monospace;">₹1,60,000.00</td>
+        </tr>
+        <tr class="discount">
+          <td>Special Project Discount (5%):</td>
+          <td class="right" style="font-family: monospace;">- ₹8,000.00</td>
+        </tr>
+        <tr>
+          <td>Taxable Value:</td>
+          <td class="right" style="font-family: monospace;">₹1,52,000.00</td>
+        </tr>
+        <tr>
+          <td>IGST (18% Interstate):</td>
+          <td class="right" style="font-family: monospace;">+ ₹27,360.00</td>
+        </tr>
+        <tr class="grand-total">
+          <td>Grand Total:</td>
+          <td class="right" style="font-family: monospace; color: #d97706;">₹1,79,360.00</td>
+        </tr>
+      </table>
+    </div>
+  </div>
+
+  <!-- Terms & Signatory -->
+  <div class="terms-box">
+    <strong>Terms &amp; Conditions:</strong><br>
+    1. Quotation is valid for 30 days from date of issue (valid till 07-Nov-2026).<br>
+    2. Milestone Billing: 40% initial kickoff, 30% on beta milestone, 30% upon final acceptance.<br>
+    3. Source code and IP rights transfer upon full receipt of final payment.
+  </div>
+
+  <div class="footer">
+    <div style="font-size: 8pt; color: #94a3b8;">
+      Generated securely via iLoveQuote SaaS Platform • Page 2 AI Voice Studio
+    </div>
+    <div class="signatory">
+      <div class="sign-line"></div>
+      <p><strong>Authorized Signatory</strong></p>
+      <p>iLoveQuote Technologies</p>
+    </div>
+  </div>
+
+</body>
+</html>
