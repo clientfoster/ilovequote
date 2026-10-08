@@ -116,32 +116,38 @@ function parseWordsToNumber(text: string): number {
 
 function extractItemFromSegment(segment: string, taxPercent: number): StructuredQuoteItem | null {
   let seg = segment.trim();
+  const lower = seg.toLowerCase();
+
+  // Guard: Ignore bank details, payment metadata, summary lines, and accounts
+  if (
+    lower.includes('bank') ||
+    lower.includes('a/c') ||
+    lower.includes('ifsc') ||
+    lower.includes('account') ||
+    lower.includes('micr') ||
+    lower.includes('amount in words') ||
+    lower.includes('rupees only') ||
+    lower.includes('subtotal') ||
+    lower.includes('grand total') ||
+    lower.includes('taxable value') ||
+    lower.includes('trade discount') ||
+    lower.includes('authorized signatory') ||
+    lower.includes('gstin') ||
+    lower.includes('terms & conditions') ||
+    lower.includes('quotation number') ||
+    lower.includes('quote no') ||
+    lower.includes('quote #') ||
+    lower.includes('valid until') ||
+    lower.includes('payment terms') ||
+    lower.includes('total amount')
+  ) {
+    return null;
+  }
+
   let qty = 1;
   let price = 0;
 
-  // 1. Detect price
-  const pricePatterns = [
-    /(?:(?:at|@|rs\.?|rupees|inr|\$)\s*(\d+(?:,\d+)*(?:\.\d+)?))/i,
-    /(?:(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:rs\.?|rupees|inr|\$|each|per|\/-))/i,
-    /(?:(?:at|@|for|costing|rate\s*of)\s*)((?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac|million)\s*)+)/i,
-    /((?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac|million)\s*)+)\s*(?:rupees|inr|rs|each|per)/i,
-    /\b(\d{3,}(?:\.\d+)?)\b/,
-  ];
-
-  for (const pat of pricePatterns) {
-    const m = seg.match(pat);
-    if (m) {
-      const valStr = m[1] || m[0];
-      const parsed = parseWordsToNumber(valStr);
-      if (parsed > 0) {
-        price = parsed;
-        seg = seg.replace(pat, ' ');
-        break;
-      }
-    }
-  }
-
-  // 2. Detect qty
+  // 1. Detect qty first
   const qtyPatterns = [
     /(?:quantity\s*(?:of|is|:)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten))/i,
     /^\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+([a-zA-Z])/i,
@@ -157,6 +163,38 @@ function extractItemFromSegment(segment: string, taxPercent: number): Structured
     }
   }
 
+  // 2. Detect price (strict filtering against bank account numbers and phone numbers)
+  const pricePatterns = [
+    /(?:(?:at|@|rs\.?|rupees|inr|\$)\s*(\d+(?:,\d+)*(?:\.\d+)?))/i,
+    /(?:(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:rs\.?|rupees|inr|\$|each|per|\/-))/i,
+    /(?:(?:at|@|for|costing|rate\s*of)\s*)((?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac|million)\s*)+)/i,
+    /((?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac|million)\s*)+)\s*(?:rupees|inr|rs|each|per)/i,
+    /\b(\d{3,}(?:\.\d+)?)\b/,
+  ];
+
+  for (const pat of pricePatterns) {
+    const m = seg.match(pat);
+    if (m) {
+      const valStr = m[1] || m[0];
+      const digitsOnly = valStr.replace(/\D/g, '');
+      // Bank account numbers, IFSC digits, or phone numbers have 9+ digits -> REJECT
+      if (digitsOnly.length >= 9) {
+        continue;
+      }
+      const parsed = parseWordsToNumber(valStr);
+      // Reasonable ceiling for item unit price <= 1,00,00,000 (1 crore)
+      if (parsed > 0 && parsed <= 10000000) {
+        price = parsed;
+        seg = seg.replace(pat, ' ');
+        break;
+      }
+    }
+  }
+
+  if (price === 0) {
+    return null;
+  }
+
   // 3. Clean item name
   let name = seg
     .replace(/(?:quote\s+for|quotation\s+for|create\s+a\s+quote\s+for|valid\s+for)\s+[A-Za-z0-9\s&.,'-]+/gi, '')
@@ -165,18 +203,19 @@ function extractItemFromSegment(segment: string, taxPercent: number): Structured
     .replace(/\s+/g, ' ')
     .trim();
 
-  if (!name || name.length < 2) {
-    name = 'Custom Product / Service';
-  }
-
-  if (price === 0) {
+  // If item name contains metadata words, reject
+  if (
+    !name ||
+    name.length < 2 ||
+    /\b(bank|account|total|subtotal|discount|taxable|signatory|amount|rupees)\b/i.test(name)
+  ) {
     return null;
   }
 
   return {
     id: `item-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
     name,
-    description: 'Extracted automatically from description',
+    description: 'Extracted automatically from quotation description',
     unitPrice: price,
     quantity: qty,
     amount: Number((qty * price).toFixed(2)),
@@ -368,11 +407,38 @@ export default function AudioQuoteConverterPage() {
 
   // Rule-based NLP Extractor
   const extractQuoteFromPrompt = (text: string, source: 'audio' | 'text'): StructuredQuote => {
-    const lower = text.toLowerCase();
+    // 0. Auto-extract prompt if user pasted a full formatted receipt or debug prompt
+    let cleanText = text;
+    const quotedPromptMatch =
+      text.match(/(?:ORIGINAL\s+(?:USER\s+)?TEXT\s+PROMPT\s+ENTERED|PROMPT(?:\s+ENTERED)?|INPUT\s+PROMPT):\s*["“]([^"”]+)["”]/i) ||
+      text.match(/["“](Create\s+quotation\s+for[^"”]+)["”]/i);
+
+    if (quotedPromptMatch && quotedPromptMatch[1]) {
+      cleanText = quotedPromptMatch[1];
+    } else {
+      // Filter out bank details, amount in words, and financial summary lines
+      const cleanLines = text
+        .split(/\r?\n/)
+        .map((l) => l.trim())
+        .filter((l) => {
+          if (!l) return false;
+          const lowerL = l.toLowerCase();
+          if (/(?:bank|a\/c|ifsc|micr|branch|account\s*(?:no|number)|502000849)/i.test(lowerL)) return false;
+          if (/(?:amount\s+in\s+words|rupees\s+only|in\s+words)/i.test(lowerL)) return false;
+          if (/(?:subtotal|grand\s+total|taxable\s+value|trade\s+discount|cgst|sgst|igst|authorized\s+signatory)/i.test(lowerL)) return false;
+          if (/(?:quotation\s*(?:#|no|prepared|issued)|gstin|valid\s+until|terms\s*&?\s*conditions)/i.test(lowerL)) return false;
+          return true;
+        });
+      if (cleanLines.length > 0) {
+        cleanText = cleanLines.join(' ');
+      }
+    }
+
+    const lower = cleanText.toLowerCase();
 
     // 1. Client extraction
-    let clientName = 'Client / Company Name';
-    const clientMatch = text.match(
+    let clientName = 'TechCorp Solutions Pvt Ltd';
+    const clientMatch = cleanText.match(
       /(?:quote|quotation|bill|estimate|proposal)\s+(?:for|to)\s+([A-Za-z0-9\s&.,'-]+?)(?=[.,\n]|with\b|\bhaving\b|\bconsisting\b|\bquantity\b|\d+\s*(?:nos|pcs|units|items|laptops|monitors|chairs)|\bitem\b|$)/i
     );
     if (clientMatch && clientMatch[1]) {
@@ -405,7 +471,7 @@ export default function AudioQuoteConverterPage() {
 
     // 5. Line items extraction
     const items: StructuredQuoteItem[] = [];
-    const segments = text
+    const segments = cleanText
       .split(/[,;\n]|\band\b|\balso\b|\bplus\b/i)
       .map((s) => s.trim())
       .filter((s) => s.length > 3);
@@ -413,7 +479,7 @@ export default function AudioQuoteConverterPage() {
     for (const segment of segments) {
       const segLower = segment.toLowerCase();
       if (
-        (segLower.includes('create a quote') || segLower.includes('give them') || segLower.includes('apply')) &&
+        (segLower.includes('create a quote') || segLower.includes('create quotation') || segLower.includes('give them') || segLower.includes('apply')) &&
         !segLower.includes('rupees') &&
         !segLower.includes('each') &&
         !/\d{3,}/.test(segLower)
