@@ -40,6 +40,41 @@ import {
   convertQuoteToInvoiceDraft,
 } from '../types/structuredQuote';
 import BrandMark from '../components/BrandMark';
+import { downloadElementAsPdf } from '../download';
+
+function numberToIndianWords(num: number): string {
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const intVal = Math.floor(num || 0);
+  if (intVal === 0) return 'Zero Rupees Only';
+
+  const convert2 = (n: number): string => {
+    if (n < 20) return a[n];
+    return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+  };
+
+  const convert3 = (n: number): string => {
+    if (n >= 100) {
+      return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + convert2(n % 100) : '');
+    }
+    return convert2(n);
+  };
+
+  let str = '';
+  let crore = Math.floor(intVal / 10000000);
+  let rem = intVal % 10000000;
+  let lakh = Math.floor(rem / 100000);
+  rem = rem % 100000;
+  let thousand = Math.floor(rem / 1000);
+  rem = rem % 1000;
+
+  if (crore > 0) str += convert3(crore) + ' Crore ';
+  if (lakh > 0) str += convert3(lakh) + ' Lakh ';
+  if (thousand > 0) str += convert3(thousand) + ' Thousand ';
+  if (rem > 0) str += convert3(rem) + ' ';
+
+  return (str.trim() + ' Rupees Only');
+}
 
 // Common number words mapping
 const NUMBER_WORDS: Record<string, number> = {
@@ -115,7 +150,9 @@ function parseWordsToNumber(text: string): number {
 }
 
 function extractItemFromSegment(segment: string, taxPercent: number): StructuredQuoteItem | null {
-  let seg = segment.trim();
+  let seg = segment.trim().replace(/^[.\s]+|[.\s]+$/g, '');
+  if (!seg || seg.length < 3) return null;
+
   const lower = seg.toLowerCase();
 
   // Guard: Ignore bank details, payment metadata, summary lines, and accounts
@@ -147,28 +184,35 @@ function extractItemFromSegment(segment: string, taxPercent: number): Structured
   let qty = 1;
   let price = 0;
 
-  // 1. Detect qty first
-  const qtyPatterns = [
-    /(?:quantity\s*(?:of|is|:)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten))/i,
-    /^\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+([a-zA-Z])/i,
-    /(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:nos|pcs|units|pieces|items|sets|laptops|monitors|chairs|hours)/i,
-  ];
-
-  for (const pat of qtyPatterns) {
-    const m = seg.match(pat);
-    if (m) {
-      qty = parseWordsToNumber(m[1]) || 1;
-      seg = seg.replace(pat, m[2] ? m[2] : ' ');
-      break;
+  // 1. Detect qty:
+  // Check for leading quantity pattern: "5 Dell UltraSharp..." or "1 Server..."
+  const leadQty = seg.match(/^\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+([a-zA-Z].*)$/i);
+  if (leadQty) {
+    qty = parseWordsToNumber(leadQty[1]) || 1;
+    seg = leadQty[2];
+  } else {
+    // Check for "quantity 1 each" or "5 nos/units"
+    const qtyPatterns = [
+      /(?:quantity\s*(?:of|is|:)?\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten))/i,
+      /(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:nos|pcs|units|pieces|items|sets|laptops|monitors|chairs|hours)/i,
+    ];
+    for (const pat of qtyPatterns) {
+      const m = seg.match(pat);
+      if (m) {
+        qty = parseWordsToNumber(m[1]) || 1;
+        seg = seg.replace(pat, ' ');
+        break;
+      }
     }
   }
 
   // 2. Detect price (strict filtering against bank account numbers and phone numbers)
   const pricePatterns = [
-    /(?:(?:at|@|rs\.?|rupees|inr|\$)\s*(\d+(?:,\d+)*(?:\.\d+)?))/i,
+    /(?:(?:at|@|rs\.?|inr|\$)\s*(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:each|per|\/-)?)/i,
     /(?:(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:rs\.?|rupees|inr|\$|each|per|\/-))/i,
-    /(?:(?:at|@|for|costing|rate\s*of)\s*)((?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac|million)\s*)+)/i,
-    /((?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac|million)\s*)+)\s*(?:rupees|inr|rs|each|per)/i,
+    /(?:(?:at|@|costing)\s*)(\d{3,})/i,
+    /((?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac)\s*)+)\s*(?:rupees|inr|rs|each|per)/i,
+    /(?:(?:at|costing|rate\s*of)\s*)((?:(?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac)\s*)+)/i,
     /\b(\d{3,}(?:\.\d+)?)\b/,
   ];
 
@@ -177,15 +221,11 @@ function extractItemFromSegment(segment: string, taxPercent: number): Structured
     if (m) {
       const valStr = m[1] || m[0];
       const digitsOnly = valStr.replace(/\D/g, '');
-      // Bank account numbers, IFSC digits, or phone numbers have 9+ digits -> REJECT
-      if (digitsOnly.length >= 9) {
-        continue;
-      }
+      if (digitsOnly.length >= 9) continue; // Skip bank/phone
       const parsed = parseWordsToNumber(valStr);
-      // Reasonable ceiling for item unit price <= 1,00,00,000 (1 crore)
       if (parsed > 0 && parsed <= 10000000) {
         price = parsed;
-        seg = seg.replace(pat, ' ');
+        seg = seg.replace(m[0], ' ');
         break;
       }
     }
@@ -203,7 +243,6 @@ function extractItemFromSegment(segment: string, taxPercent: number): Structured
     .replace(/\s+/g, ' ')
     .trim();
 
-  // If item name contains metadata words, reject
   if (
     !name ||
     name.length < 2 ||
@@ -273,8 +312,10 @@ export default function AudioQuoteConverterPage() {
   const [quote, setQuote] = useState<StructuredQuote>(() => createDefaultStructuredQuote());
   const [currencyDropdownOpen, setCurrencyDropdownOpen] = useState<boolean>(false);
   const [showPreviewModal, setShowPreviewModal] = useState<boolean>(false);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
 
   // Refs
+  const printableDocRef = useRef<HTMLDivElement>(null);
   const recognitionRef = useRef<any>(null);
   const transcriptRef = useRef<string>('');
   const timerRef = useRef<any>(null);
@@ -436,10 +477,10 @@ export default function AudioQuoteConverterPage() {
 
     const lower = cleanText.toLowerCase();
 
-    // 1. Client extraction
+    // 1. Client extraction (stops at first period or item delimiter)
     let clientName = 'TechCorp Solutions Pvt Ltd';
     const clientMatch = cleanText.match(
-      /(?:quote|quotation|bill|estimate|proposal)\s+(?:for|to)\s+([A-Za-z0-9\s&.,'-]+?)(?=[.,\n]|with\b|\bhaving\b|\bconsisting\b|\bquantity\b|\d+\s*(?:nos|pcs|units|items|laptops|monitors|chairs)|\bitem\b|$)/i
+      /(?:quote|quotation|bill|estimate|proposal)\s+(?:for|to)\s+([^.\n,]+?)(?=[.,\n]|with\b|\bhaving\b|\bconsisting\b|\bquantity\b|\d+\s*(?:nos|pcs|units|items|laptops|monitors|chairs)|\bitem\b|$)/i
     );
     if (clientMatch && clientMatch[1]) {
       clientName = clientMatch[1].trim().replace(/[.,;]$/, '');
@@ -447,46 +488,40 @@ export default function AudioQuoteConverterPage() {
 
     // 2. Validity extraction
     let validityDays = 15;
-    const validityMatch = lower.match(/(\d+|seven|fifteen|thirty|ten|fourteen)\s+(?:days|day)\s+validity/i);
-    const validForMatch = lower.match(/valid\s+for\s+(\d+|seven|fifteen|thirty|ten|fourteen)\s+days?/i);
+    const validityMatch = cleanText.match(/(?:valid\s+for|validity)\s+(\d+|seven|fifteen|thirty|ten|fourteen)\s*days?/i);
     if (validityMatch) {
       validityDays = parseWordsToNumber(validityMatch[1]) || 15;
-    } else if (validForMatch) {
-      validityDays = parseWordsToNumber(validForMatch[1]) || 15;
     }
 
     // 3. Discount extraction
     let discountPercent = 0;
-    const discountMatch = lower.match(/(\d+|five|ten|fifteen|twenty)\s*(?:%|percent)\s*discount/i);
+    const discountMatch = cleanText.match(/(\d+|five|ten|fifteen|twenty)\s*(?:%|percent)\s*discount/i);
     if (discountMatch) {
       discountPercent = parseWordsToNumber(discountMatch[1]) || 0;
     }
 
     // 4. Tax extraction
     let taxPercent = 18;
-    const taxMatch = lower.match(/(\d+|five|twelve|eighteen|twenty eight)\s*(?:%|percent)\s*(?:gst|tax)/i);
+    const taxMatch = cleanText.match(/(\d+|five|twelve|eighteen|twenty eight)\s*(?:%|percent)\s*(?:gst|tax)/i);
     if (taxMatch) {
       taxPercent = parseWordsToNumber(taxMatch[1]) || 18;
     }
 
-    // 5. Line items extraction
+    // 5. Line items extraction: strip client phrase, discount, tax, and validity clauses first
+    let itemsText = cleanText
+      .replace(/(?:Create\s+a?\s*)?(?:quote|quotation|bill|estimate|proposal)\s+(?:for|to)\s+[^.\n]+(?:\.|$|\n)/i, '')
+      .replace(/(?:Give|Apply|with)?\s*(?:five|ten|\d+)\s*(?:percent|%)\s*discount[.,]?/gi, '')
+      .replace(/(?:eighteen|\d+)\s*(?:percent|%)\s*(?:gst|tax)[.,]?/gi, '')
+      .replace(/Valid\s+for\s+(?:fifteen|thirty|seven|\d+)\s*days?[.,]?/gi, '')
+      .replace(/validity\s+(?:fifteen|thirty|seven|\d+)\s*days?[.,]?/gi, '');
+
     const items: StructuredQuoteItem[] = [];
-    const segments = cleanText
+    const segments = itemsText
       .split(/[,;\n]|\band\b|\balso\b|\bplus\b/i)
-      .map((s) => s.trim())
+      .map((s) => s.trim().replace(/^[.\s]+|[.\s]+$/g, ''))
       .filter((s) => s.length > 3);
 
     for (const segment of segments) {
-      const segLower = segment.toLowerCase();
-      if (
-        (segLower.includes('create a quote') || segLower.includes('create quotation') || segLower.includes('give them') || segLower.includes('apply')) &&
-        !segLower.includes('rupees') &&
-        !segLower.includes('each') &&
-        !/\d{3,}/.test(segLower)
-      ) {
-        continue;
-      }
-
       const item = extractItemFromSegment(segment, taxPercent);
       if (item) {
         items.push(item);
@@ -639,6 +674,24 @@ export default function AudioQuoteConverterPage() {
     } catch {
       setSaveToast('Saved to session storage!');
       setTimeout(() => setSaveToast(''), 3500);
+    }
+  };
+
+  // Download Clean Vector PDF directly
+  const handleDownloadPdf = async () => {
+    if (!printableDocRef.current || isExportingPdf) return;
+    try {
+      setIsExportingPdf(true);
+      const safeClient = (quote.client.name || 'Client').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `Quotation_${quote.quoteNumber}_${safeClient}.pdf`;
+      await downloadElementAsPdf(printableDocRef.current, fileName);
+      setSaveToast(`PDF ${fileName} downloaded successfully!`);
+      setTimeout(() => setSaveToast(''), 4000);
+    } catch (err) {
+      console.error('PDF export error:', err);
+      window.print();
+    } finally {
+      setIsExportingPdf(false);
     }
   };
 
@@ -1356,22 +1409,156 @@ export default function AudioQuoteConverterPage() {
 
                 <button
                   type="button"
-                  onClick={() => setShowPreviewModal(true)}
-                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer"
+                  disabled={isExportingPdf}
+                  onClick={handleDownloadPdf}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-white text-xs sm:text-sm font-bold flex items-center gap-1.5 shadow-md shadow-amber-500/20 transition-all cursor-pointer disabled:opacity-50"
                 >
                   <Download className="w-4 h-4" />
-                  Download PDF
+                  <span>{isExportingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
                 </button>
               </div>
             </div>
           </div>
         )}
 
+        {/* Hidden Off-Screen Printable Document (Always available for 1-click Download PDF) */}
+        <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '794px' }} aria-hidden="true">
+          <div ref={printableDocRef} className="p-8 bg-white text-slate-800 space-y-6 text-xs font-sans">
+            <div className="flex justify-between items-start pb-4 border-b-2 border-slate-900">
+              <div>
+                <h1 className="text-2xl font-black text-slate-900 tracking-tight">iLoveQuote</h1>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 mt-1 inline-block">
+                  {quote.source === 'text' ? '✍️ Processed from Text Prompt AI' : '🎙️ Processed from Voice Speech AI'}
+                </span>
+              </div>
+              <div className="text-right">
+                <h2 className="text-lg font-black text-slate-900">PRICE QUOTATION</h2>
+                <p className="text-slate-600 font-mono text-[11px] mt-0.5">Quote No: <strong>{quote.quoteNumber}</strong></p>
+                <p className="text-slate-500 text-[10px]">Date: {quote.date} | Valid Till: {quote.validUntil}</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                  Quotation Issued By
+                </span>
+                <div className="font-extrabold text-slate-900 text-xs">iLoveQuote Technologies</div>
+                <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                  Plot No. 42, Cyber Gateway, HITEC City<br />
+                  Hyderabad, Telangana, 500081<br />
+                  <strong>GSTIN:</strong> 36AAACI1234F1Z8
+                </p>
+              </div>
+
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                  Quotation Prepared For
+                </span>
+                <div className="font-extrabold text-slate-900 text-xs">
+                  {quote.client.name || 'TechCorp Solutions Pvt Ltd'}
+                </div>
+                <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                  Knowledge Park IV, Commercial Block B<br />
+                  Greater Noida, Uttar Pradesh, 201310<br />
+                  <strong>Attn:</strong> Procurement &amp; Operations
+                </p>
+              </div>
+            </div>
+
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-slate-900 text-white text-[11px] font-bold uppercase">
+                  <th className="py-2.5 px-3 w-8 text-center">#</th>
+                  <th className="py-2.5 px-3">Item Description</th>
+                  <th className="py-2.5 px-3 text-right">Unit Rate</th>
+                  <th className="py-2.5 px-3 text-center w-14">Qty</th>
+                  <th className="py-2.5 px-3 text-right">Amount</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-200">
+                {quote.items.map((item, idx) => (
+                  <tr key={item.id} className={idx % 2 === 1 ? 'bg-slate-50/60' : ''}>
+                    <td className="py-2.5 px-3 text-center text-gray-500">{idx + 1}</td>
+                    <td className="py-2.5 px-3 font-bold text-slate-900">{item.name || 'Item'}</td>
+                    <td className="py-2.5 px-3 text-right font-mono">{formatCurrency(item.unitPrice)}</td>
+                    <td className="py-2.5 px-3 text-center font-mono font-semibold">{item.quantity}</td>
+                    <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                      {formatCurrency(item.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            <div className="grid grid-cols-2 gap-4 pt-2">
+              <div className="space-y-2">
+                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px]">
+                  <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px] mb-1">
+                    Amount in Words:
+                  </span>
+                  <p className="font-semibold text-slate-900">
+                    {numberToIndianWords(quote.pricing.totalAmount)}
+                  </p>
+                </div>
+
+                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600">
+                  <strong>Payment Bank Details:</strong><br />
+                  Bank: HDFC Bank Ltd | A/C: 50200084920192 | IFSC: HDFC0001234
+                </div>
+              </div>
+
+              <div className="space-y-1.5 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div className="flex justify-between text-gray-600">
+                  <span>Subtotal:</span>
+                  <span className="font-mono">{formatCurrency(quote.pricing.subtotal)}</span>
+                </div>
+                {quote.pricing.discountAmount > 0 && (
+                  <div className="flex justify-between text-emerald-700 font-medium">
+                    <span>Trade Discount ({quote.pricing.discountPercent}%):</span>
+                    <span className="font-mono">- {formatCurrency(quote.pricing.discountAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between text-gray-600">
+                  <span>Taxable Value:</span>
+                  <span className="font-mono">
+                    {formatCurrency(quote.pricing.subtotal - quote.pricing.discountAmount)}
+                  </span>
+                </div>
+                {quote.pricing.taxAmount > 0 && (
+                  <div className="flex justify-between text-gray-600">
+                    <span>GST ({quote.pricing.taxPercent}%):</span>
+                    <span className="font-mono">+ {formatCurrency(quote.pricing.taxAmount)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-black text-sm text-gray-900 pt-2 border-t-2 border-slate-900">
+                  <span>Grand Total:</span>
+                  <span className="font-mono text-amber-600 font-bold">
+                    {formatCurrency(quote.pricing.totalAmount)}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="pt-3 border-t border-gray-200 flex justify-between items-end gap-3 text-[11px] text-gray-500">
+              <div className="space-y-1 max-w-sm">
+                <strong>Terms &amp; Conditions:</strong>
+                <p>1. Valid for 15 days from issue date.<br />2. 50% advance along with Purchase Order.<br />3. Official standard hardware warranty applies.</p>
+              </div>
+              <div className="text-right">
+                <div className="w-36 border-b border-dashed border-gray-400 mb-1 ml-auto"></div>
+                <p className="font-bold text-gray-700">Authorized Signatory</p>
+                <p className="text-[10px]">iLoveQuote Technologies</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Modal: Formatted Printable Quote Preview */}
         {showPreviewModal && (
           <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
             <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
-              <div className="flex items-center justify-between pb-4 border-b border-gray-100">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100 no-print">
                 <div className="flex items-center gap-2">
                   <BrandMark size="sm" showSubtext={false} />
                   <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
@@ -1382,8 +1569,18 @@ export default function AudioQuoteConverterPage() {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
+                    disabled={isExportingPdf}
+                    onClick={handleDownloadPdf}
+                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                    title="Download Official PDF"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    <span>{isExportingPdf ? 'Saving...' : 'Download PDF'}</span>
+                  </button>
+                  <button
+                    type="button"
                     onClick={() => window.print()}
-                    className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors"
+                    className="p-2 rounded-xl text-gray-500 hover:bg-gray-100 hover:text-gray-900 transition-colors cursor-pointer"
                     title="Print Document"
                   >
                     <Printer className="w-4 h-4" />
@@ -1391,30 +1588,30 @@ export default function AudioQuoteConverterPage() {
                   <button
                     type="button"
                     onClick={() => setShowPreviewModal(false)}
-                    className="p-2 rounded-xl text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors text-sm font-bold"
+                    className="p-2 rounded-xl text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors text-sm font-bold cursor-pointer"
                   >
                     ✕
                   </button>
                 </div>
               </div>
 
-              {/* Printable Document Body */}
-              <div className="space-y-6 text-xs text-gray-800">
-                <div className="flex justify-between items-start">
+              {/* Printable Document Modal Preview */}
+              <div id="printable-quote-document" className="space-y-6 text-xs text-gray-800">
+                <div className="flex justify-between items-start pb-3 border-b-2 border-slate-900">
                   <div>
-                    <h3 className="text-lg font-black text-gray-900">PRICE QUOTATION</h3>
-                    <p className="text-gray-500 text-xs">Quote No: {quote.quoteNumber}</p>
-                    <span className="text-[10px] text-gray-400">
-                      Generated via {quote.source === 'text' ? 'Natural Language Text AI' : 'Voice Dictation AI'}
+                    <h3 className="text-xl font-black text-slate-900">iLoveQuote</h3>
+                    <span className="text-[10px] text-emerald-700 font-bold uppercase">
+                      {quote.source === 'text' ? '✍️ Text Prompt AI' : '🎙️ Voice Dictation AI'}
                     </span>
                   </div>
                   <div className="text-right">
-                    <p className="text-gray-500 text-[11px]">Date: {quote.date}</p>
-                    <p className="text-gray-500 text-[11px]">Valid Till: {quote.validUntil}</p>
+                    <p className="text-slate-900 font-extrabold text-sm">PRICE QUOTATION</p>
+                    <p className="text-gray-500 text-xs font-mono">Quote No: {quote.quoteNumber}</p>
+                    <p className="text-gray-500 text-[11px]">Date: {quote.date} | Valid Till: {quote.validUntil}</p>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-xl border border-gray-100">
+                <div className="bg-slate-50 p-4 rounded-xl border border-gray-200">
                   <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
                     Quotation Prepared For
                   </span>
@@ -1425,22 +1622,22 @@ export default function AudioQuoteConverterPage() {
 
                 <table className="w-full text-left border-collapse">
                   <thead>
-                    <tr className="border-b-2 border-gray-900 text-[11px] font-bold text-gray-900">
-                      <th className="py-2 w-8">#</th>
-                      <th className="py-2">Item Description</th>
-                      <th className="py-2 text-right">Unit Price</th>
-                      <th className="py-2 text-center w-14">Qty</th>
-                      <th className="py-2 text-right">Amount</th>
+                    <tr className="bg-slate-900 text-white text-[11px] font-bold">
+                      <th className="py-2.5 px-3 w-8 text-center">#</th>
+                      <th className="py-2.5 px-3">Item Description</th>
+                      <th className="py-2.5 px-3 text-right">Unit Price</th>
+                      <th className="py-2.5 px-3 text-center w-14">Qty</th>
+                      <th className="py-2.5 px-3 text-right">Amount</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {quote.items.map((item, idx) => (
-                      <tr key={item.id}>
-                        <td className="py-2.5 text-gray-400">{idx + 1}</td>
-                        <td className="py-2.5 font-semibold text-gray-900">{item.name || 'Item'}</td>
-                        <td className="py-2.5 text-right font-mono">{formatCurrency(item.unitPrice)}</td>
-                        <td className="py-2.5 text-center font-mono">{item.quantity}</td>
-                        <td className="py-2.5 text-right font-mono font-semibold">
+                      <tr key={item.id} className={idx % 2 === 1 ? 'bg-slate-50/60' : ''}>
+                        <td className="py-2.5 px-3 text-center text-gray-400">{idx + 1}</td>
+                        <td className="py-2.5 px-3 font-semibold text-gray-900">{item.name || 'Item'}</td>
+                        <td className="py-2.5 px-3 text-right font-mono">{formatCurrency(item.unitPrice)}</td>
+                        <td className="py-2.5 px-3 text-center font-mono">{item.quantity}</td>
+                        <td className="py-2.5 px-3 text-right font-mono font-semibold">
                           {formatCurrency(item.amount)}
                         </td>
                       </tr>
@@ -1448,8 +1645,24 @@ export default function AudioQuoteConverterPage() {
                   </tbody>
                 </table>
 
-                <div className="flex justify-end pt-3 border-t border-gray-200">
-                  <div className="w-64 space-y-1.5 text-xs">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div className="space-y-2">
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px]">
+                      <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px] mb-1">
+                        Amount in Words:
+                      </span>
+                      <p className="font-semibold text-slate-900">
+                        {numberToIndianWords(quote.pricing.totalAmount)}
+                      </p>
+                    </div>
+
+                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600">
+                      <strong>Payment Bank Details:</strong><br />
+                      Bank: HDFC Bank Ltd | A/C: 50200084920192 | IFSC: HDFC0001234
+                    </div>
+                  </div>
+
+                  <div className="w-full space-y-1.5 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
                     <div className="flex justify-between text-gray-600">
                       <span>Subtotal:</span>
                       <span className="font-mono">{formatCurrency(quote.pricing.subtotal)}</span>
@@ -1466,7 +1679,7 @@ export default function AudioQuoteConverterPage() {
                         <span className="font-mono">{formatCurrency(quote.pricing.taxAmount)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between font-extrabold text-sm text-gray-900 pt-2 border-t border-gray-900">
+                    <div className="flex justify-between font-extrabold text-sm text-gray-900 pt-2 border-t-2 border-slate-900">
                       <span>Grand Total:</span>
                       <span className="font-mono text-amber-600 font-bold">
                         {formatCurrency(quote.pricing.totalAmount)}
@@ -1476,7 +1689,7 @@ export default function AudioQuoteConverterPage() {
                 </div>
 
                 {quote.notes && (
-                  <div className="pt-4 border-t border-gray-200 text-[11px] text-gray-600">
+                  <div className="pt-3 border-t border-gray-200 text-[11px] text-gray-600">
                     <span className="font-bold text-gray-800 block">Notes:</span>
                     <p className="whitespace-pre-line">{quote.notes}</p>
                   </div>
@@ -1485,6 +1698,39 @@ export default function AudioQuoteConverterPage() {
             </div>
           </div>
         )}
+
+        {/* Global Print Media Styles */}
+        <style>{`
+          @media print {
+            body {
+              background: #ffffff !important;
+              margin: 0 !important;
+              padding: 0 !important;
+            }
+            body * {
+              visibility: hidden;
+            }
+            #printable-quote-document, #printable-quote-document * {
+              visibility: visible;
+            }
+            #printable-quote-document {
+              position: absolute !important;
+              left: 0 !important;
+              top: 0 !important;
+              width: 100% !important;
+              max-width: 100% !important;
+              margin: 0 !important;
+              padding: 24px !important;
+              box-shadow: none !important;
+              border: none !important;
+              background: #ffffff !important;
+              z-index: 999999 !important;
+            }
+            .no-print {
+              display: none !important;
+            }
+          }
+        `}</style>
       </div>
     </div>
   );
