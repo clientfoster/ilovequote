@@ -40,7 +40,8 @@ import {
   convertQuoteToInvoiceDraft,
 } from '../types/structuredQuote';
 import BrandMark from '../components/BrandMark';
-import { downloadElementAsPdf } from '../download';
+import html2canvas from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
 
 function numberToIndianWords(num: number): string {
   const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -677,14 +678,45 @@ export default function AudioQuoteConverterPage() {
     }
   };
 
-  // Download Clean Vector PDF directly
+  // Download Clean Vector PDF directly with high-resolution A4 formatting
   const handleDownloadPdf = async () => {
     if (!printableDocRef.current || isExportingPdf) return;
     try {
       setIsExportingPdf(true);
       const safeClient = (quote.client.name || 'Client').replace(/[^a-zA-Z0-9_-]/g, '_');
       const fileName = `Quotation_${quote.quoteNumber}_${safeClient}.pdf`;
-      await downloadElementAsPdf(printableDocRef.current, fileName);
+
+      const element = printableDocRef.current;
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        scale: 2.5,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        windowWidth: 794,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'pt', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      const availableWidth = pageWidth - margin * 2;
+      const availableHeight = pageHeight - margin * 2;
+      const renderHeight = (canvas.height * availableWidth) / canvas.width;
+
+      pdf.addImage(
+        imgData,
+        'PNG',
+        margin,
+        margin,
+        availableWidth,
+        Math.min(renderHeight, availableHeight),
+        undefined,
+        'FAST'
+      );
+
+      pdf.save(fileName);
       setSaveToast(`PDF ${fileName} downloaded successfully!`);
       setTimeout(() => setSaveToast(''), 4000);
     } catch (err) {
@@ -1421,69 +1453,336 @@ export default function AudioQuoteConverterPage() {
           </div>
         )}
 
-        {/* Hidden Off-Screen Printable Document (Always available for 1-click Download PDF) */}
-        <div style={{ position: 'fixed', left: '-9999px', top: '0', width: '794px' }} aria-hidden="true">
-          <div ref={printableDocRef} className="p-8 bg-white text-slate-800 space-y-6 text-xs font-sans">
-            <div className="flex justify-between items-start pb-4 border-b-2 border-slate-900">
+        {/* Printable Document Container (100% Inline Hex Styles for pure html2canvas / jsPDF fidelity) */}
+        <div
+          style={{
+            position: 'fixed',
+            left: '-10000px',
+            top: 0,
+            width: '794px',
+            backgroundColor: '#ffffff',
+            zIndex: -9999,
+            pointerEvents: 'none',
+          }}
+          aria-hidden="true"
+        >
+          <div
+            ref={printableDocRef}
+            style={{
+              width: '794px',
+              boxSizing: 'border-box',
+              padding: '28px 34px',
+              backgroundColor: '#ffffff',
+              color: '#0f172a',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+              lineHeight: 1.4,
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                borderBottom: '2px solid #e2e8f0',
+                paddingBottom: '14px',
+                marginBottom: '16px',
+              }}
+            >
               <div>
-                <h1 className="text-2xl font-black text-slate-900 tracking-tight">iLoveQuote</h1>
-                <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 mt-1 inline-block">
+                <h1
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    color: '#0f172a',
+                    margin: 0,
+                    letterSpacing: '-0.5px',
+                  }}
+                >
+                  iLove<span style={{ color: '#2563eb' }}>Quote</span>
+                </h1>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    marginTop: '4px',
+                    padding: '3px 10px',
+                    backgroundColor: '#ecfdf5',
+                    color: '#065f46',
+                    border: '1px solid #a7f3d0',
+                    borderRadius: '20px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}
+                >
                   {quote.source === 'text' ? '✍️ Processed from Text Prompt AI' : '🎙️ Processed from Voice Speech AI'}
                 </span>
               </div>
-              <div className="text-right">
-                <h2 className="text-lg font-black text-slate-900">PRICE QUOTATION</h2>
-                <p className="text-slate-600 font-mono text-[11px] mt-0.5">Quote No: <strong>{quote.quoteNumber}</strong></p>
-                <p className="text-slate-500 text-[10px]">Date: {quote.date} | Valid Till: {quote.validUntil}</p>
+              <div style={{ textAlign: 'right' }}>
+                <h2
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    margin: 0,
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  PRICE QUOTATION
+                </h2>
+                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#64748b' }}>
+                  <strong>Quote No:</strong> <span style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: 'bold' }}>{quote.quoteNumber}</span>
+                </p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#64748b' }}>
+                  <strong>Date:</strong> {quote.date} | <strong>Valid Till:</strong> {quote.validUntil}
+                </p>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+            {/* Address Cards (Flex Row) */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '16px',
+                marginBottom: '16px',
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    color: '#64748b',
+                    marginBottom: '4px',
+                    fontWeight: 700,
+                  }}
+                >
                   Quotation Issued By
-                </span>
-                <div className="font-extrabold text-slate-900 text-xs">iLoveQuote Technologies</div>
-                <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                </div>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    marginBottom: '3px',
+                  }}
+                >
+                  iLoveQuote Technologies
+                </div>
+                <p style={{ margin: 0, fontSize: '11px', color: '#475569', lineHeight: 1.35 }}>
                   Plot No. 42, Cyber Gateway, HITEC City<br />
                   Hyderabad, Telangana, 500081<br />
-                  <strong>GSTIN:</strong> 36AAACI1234F1Z8
+                  <strong>GSTIN:</strong> 36AAACI1234F1Z8<br />
+                  <strong>Email:</strong> billing@ilovequote.com
                 </p>
               </div>
 
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+              <div
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    color: '#64748b',
+                    marginBottom: '4px',
+                    fontWeight: 700,
+                  }}
+                >
                   Quotation Prepared For
-                </span>
-                <div className="font-extrabold text-slate-900 text-xs">
-                  {quote.client.name || 'TechCorp Solutions Pvt Ltd'}
                 </div>
-                <p className="text-[11px] text-slate-600 mt-0.5 leading-snug">
+                <div
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    marginBottom: '3px',
+                  }}
+                >
+                  {quote.client.name || 'Client / Company Name'}
+                </div>
+                <p style={{ margin: 0, fontSize: '11px', color: '#475569', lineHeight: 1.35 }}>
                   Knowledge Park IV, Commercial Block B<br />
                   Greater Noida, Uttar Pradesh, 201310<br />
-                  <strong>Attn:</strong> Procurement &amp; Operations
+                  <strong>Attn:</strong> Procurement &amp; Operations<br />
+                  <strong>Phone:</strong> +91 98765 43210
                 </p>
               </div>
             </div>
 
-            <table className="w-full text-left border-collapse">
+            {/* Line Items Table */}
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                marginBottom: '16px',
+              }}
+            >
               <thead>
-                <tr className="bg-slate-900 text-white text-[11px] font-bold uppercase">
-                  <th className="py-2.5 px-3 w-8 text-center">#</th>
-                  <th className="py-2.5 px-3">Item Description</th>
-                  <th className="py-2.5 px-3 text-right">Unit Rate</th>
-                  <th className="py-2.5 px-3 text-center w-14">Qty</th>
-                  <th className="py-2.5 px-3 text-right">Amount</th>
+                <tr>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'center',
+                      width: '35px',
+                    }}
+                  >
+                    #
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    Item Description
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'right',
+                      width: '100px',
+                    }}
+                  >
+                    Unit Rate
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'center',
+                      width: '50px',
+                    }}
+                  >
+                    Qty
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'right',
+                      width: '115px',
+                    }}
+                  >
+                    Amount
+                  </th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+              <tbody>
                 {quote.items.map((item, idx) => (
-                  <tr key={item.id} className={idx % 2 === 1 ? 'bg-slate-50/60' : ''}>
-                    <td className="py-2.5 px-3 text-center text-gray-500">{idx + 1}</td>
-                    <td className="py-2.5 px-3 font-bold text-slate-900">{item.name || 'Item'}</td>
-                    <td className="py-2.5 px-3 text-right font-mono">{formatCurrency(item.unitPrice)}</td>
-                    <td className="py-2.5 px-3 text-center font-mono font-semibold">{item.quantity}</td>
-                    <td className="py-2.5 px-3 text-right font-mono font-bold text-slate-900">
+                  <tr
+                    key={item.id}
+                    style={{
+                      backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff',
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#64748b',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {idx + 1}
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#0f172a',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.name || 'Custom Product / Service'}
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal' }}>
+                        {item.description || 'Standard specification'}
+                      </div>
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#334155',
+                        textAlign: 'right',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {formatCurrency(item.unitPrice)}
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#334155',
+                        textAlign: 'center',
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.quantity}
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#0f172a',
+                        textAlign: 'right',
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                      }}
+                    >
                       {formatCurrency(item.amount)}
                     </td>
                   </tr>
@@ -1491,64 +1790,142 @@ export default function AudioQuoteConverterPage() {
               </tbody>
             </table>
 
-            <div className="grid grid-cols-2 gap-4 pt-2">
-              <div className="space-y-2">
-                <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px]">
-                  <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px] mb-1">
-                    Amount in Words:
-                  </span>
-                  <p className="font-semibold text-slate-900">
+            {/* Totals Section (Flex Row) */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: '16px',
+                marginBottom: '16px',
+              }}
+            >
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    fontSize: '11px',
+                  }}
+                >
+                  <strong
+                    style={{
+                      display: 'block',
+                      color: '#64748b',
+                      fontSize: '10px',
+                      textTransform: 'uppercase',
+                      marginBottom: '3px',
+                    }}
+                  >
+                    Total Amount in Words:
+                  </strong>
+                  <p style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
                     {numberToIndianWords(quote.pricing.totalAmount)}
                   </p>
                 </div>
 
-                <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600">
-                  <strong>Payment Bank Details:</strong><br />
+                <div
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '10px',
+                    color: '#64748b',
+                  }}
+                >
+                  <strong style={{ color: '#0f172a' }}>Payment Bank Details:</strong><br />
                   Bank: HDFC Bank Ltd | A/C: 50200084920192 | IFSC: HDFC0001234
                 </div>
               </div>
 
-              <div className="space-y-1.5 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                <div className="flex justify-between text-gray-600">
-                  <span>Subtotal:</span>
-                  <span className="font-mono">{formatCurrency(quote.pricing.subtotal)}</span>
-                </div>
-                {quote.pricing.discountAmount > 0 && (
-                  <div className="flex justify-between text-emerald-700 font-medium">
-                    <span>Trade Discount ({quote.pricing.discountPercent}%):</span>
-                    <span className="font-mono">- {formatCurrency(quote.pricing.discountAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between text-gray-600">
-                  <span>Taxable Value:</span>
-                  <span className="font-mono">
-                    {formatCurrency(quote.pricing.subtotal - quote.pricing.discountAmount)}
-                  </span>
-                </div>
-                {quote.pricing.taxAmount > 0 && (
-                  <div className="flex justify-between text-gray-600">
-                    <span>GST ({quote.pricing.taxPercent}%):</span>
-                    <span className="font-mono">+ {formatCurrency(quote.pricing.taxAmount)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between font-black text-sm text-gray-900 pt-2 border-t-2 border-slate-900">
-                  <span>Grand Total:</span>
-                  <span className="font-mono text-amber-600 font-bold">
-                    {formatCurrency(quote.pricing.totalAmount)}
-                  </span>
-                </div>
+              <div style={{ width: '260px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '4px 6px', color: '#475569' }}>Subtotal:</td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: '#0f172a' }}>
+                        {formatCurrency(quote.pricing.subtotal)}
+                      </td>
+                    </tr>
+                    {quote.pricing.discountAmount > 0 && (
+                      <tr style={{ color: '#059669', fontWeight: 600 }}>
+                        <td style={{ padding: '4px 6px' }}>Discount ({quote.pricing.discountPercent}%):</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>
+                          - {formatCurrency(quote.pricing.discountAmount)}
+                        </td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td style={{ padding: '4px 6px', color: '#475569' }}>Taxable Value:</td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: '#0f172a' }}>
+                        {formatCurrency(quote.pricing.subtotal - quote.pricing.discountAmount)}
+                      </td>
+                    </tr>
+                    {quote.pricing.taxAmount > 0 && (
+                      <tr>
+                        <td style={{ padding: '4px 6px', color: '#475569' }}>GST ({quote.pricing.taxPercent}%):</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: '#0f172a' }}>
+                          + {formatCurrency(quote.pricing.taxAmount)}
+                        </td>
+                      </tr>
+                    )}
+                    <tr
+                      style={{
+                        borderTop: '2px solid #0f172a',
+                        fontWeight: 900,
+                        fontSize: '13px',
+                      }}
+                    >
+                      <td style={{ padding: '8px 6px', color: '#0f172a' }}>Grand Total:</td>
+                      <td
+                        style={{
+                          padding: '8px 6px',
+                          textAlign: 'right',
+                          fontFamily: 'monospace',
+                          color: '#d97706',
+                        }}
+                      >
+                        {formatCurrency(quote.pricing.totalAmount)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
 
-            <div className="pt-3 border-t border-gray-200 flex justify-between items-end gap-3 text-[11px] text-gray-500">
-              <div className="space-y-1 max-w-sm">
-                <strong>Terms &amp; Conditions:</strong>
-                <p>1. Valid for 15 days from issue date.<br />2. 50% advance along with Purchase Order.<br />3. Official standard hardware warranty applies.</p>
+            {/* Terms and Signatory (Flex Row) */}
+            <div
+              style={{
+                borderTop: '1px solid #e2e8f0',
+                paddingTop: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+                fontSize: '10px',
+                color: '#64748b',
+                lineHeight: 1.4,
+              }}
+            >
+              <div style={{ maxWidth: '420px' }}>
+                <strong style={{ color: '#334155' }}>Terms &amp; Conditions:</strong><br />
+                1. Quotation is valid for 15 days from issue date.<br />
+                2. Payment terms: 50% advance along with Purchase Order, balance on completion.<br />
+                3. Standard service warranty and OEM terms apply.
               </div>
-              <div className="text-right">
-                <div className="w-36 border-b border-dashed border-gray-400 mb-1 ml-auto"></div>
-                <p className="font-bold text-gray-700">Authorized Signatory</p>
-                <p className="text-[10px]">iLoveQuote Technologies</p>
+              <div style={{ textAlign: 'right' }}>
+                <div
+                  style={{
+                    width: '150px',
+                    borderBottom: '1px dashed #94a3b8',
+                    marginBottom: '4px',
+                    marginLeft: 'auto',
+                  }}
+                />
+                <strong style={{ color: '#0f172a', display: 'block' }}>Authorized Signatory</strong>
+                <span style={{ fontSize: '9px', color: '#64748b' }}>iLoveQuote Technologies</span>
               </div>
             </div>
           </div>
@@ -1595,105 +1972,131 @@ export default function AudioQuoteConverterPage() {
                 </div>
               </div>
 
-              {/* Printable Document Modal Preview */}
-              <div id="printable-quote-document" className="space-y-6 text-xs text-gray-800">
-                <div className="flex justify-between items-start pb-3 border-b-2 border-slate-900">
+              {/* Printable Document Modal Preview (Matching 100% Inline Hex Styles) */}
+              <div
+                id="printable-quote-document"
+                style={{
+                  width: '100%',
+                  boxSizing: 'border-box',
+                  padding: '20px 24px',
+                  backgroundColor: '#ffffff',
+                  color: '#0f172a',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                  lineHeight: 1.4,
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '12px',
+                }}
+              >
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'flex-start',
+                    borderBottom: '2px solid #e2e8f0',
+                    paddingBottom: '12px',
+                    marginBottom: '14px',
+                  }}
+                >
                   <div>
-                    <h3 className="text-xl font-black text-slate-900">iLoveQuote</h3>
-                    <span className="text-[10px] text-emerald-700 font-bold uppercase">
+                    <h3 style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', margin: 0 }}>
+                      iLove<span style={{ color: '#2563eb' }}>Quote</span>
+                    </h3>
+                    <span
+                      style={{
+                        display: 'inline-block',
+                        marginTop: '3px',
+                        padding: '2px 8px',
+                        backgroundColor: '#ecfdf5',
+                        color: '#065f46',
+                        borderRadius: '12px',
+                        fontSize: '9px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                      }}
+                    >
                       {quote.source === 'text' ? '✍️ Text Prompt AI' : '🎙️ Voice Dictation AI'}
                     </span>
                   </div>
-                  <div className="text-right">
-                    <p className="text-slate-900 font-extrabold text-sm">PRICE QUOTATION</p>
-                    <p className="text-gray-500 text-xs font-mono">Quote No: {quote.quoteNumber}</p>
-                    <p className="text-gray-500 text-[11px]">Date: {quote.date} | Valid Till: {quote.validUntil}</p>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ margin: 0, fontWeight: 800, fontSize: '14px', color: '#0f172a' }}>PRICE QUOTATION</p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#64748b' }}>Quote No: <strong>{quote.quoteNumber}</strong></p>
+                    <p style={{ margin: '1px 0 0 0', fontSize: '10px', color: '#64748b' }}>Date: {quote.date} | Valid Till: {quote.validUntil}</p>
                   </div>
                 </div>
 
-                <div className="bg-slate-50 p-4 rounded-xl border border-gray-200">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
+                <div
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    padding: '12px 14px',
+                    borderRadius: '8px',
+                    border: '1px solid #e2e8f0',
+                    marginBottom: '14px',
+                  }}
+                >
+                  <span style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
                     Quotation Prepared For
                   </span>
-                  <div className="font-bold text-sm text-gray-900">
+                  <div style={{ fontWeight: 800, fontSize: '13px', color: '#0f172a' }}>
                     {quote.client.name || 'Client / Company Name'}
                   </div>
                 </div>
 
-                <table className="w-full text-left border-collapse">
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px' }}>
                   <thead>
-                    <tr className="bg-slate-900 text-white text-[11px] font-bold">
-                      <th className="py-2.5 px-3 w-8 text-center">#</th>
-                      <th className="py-2.5 px-3">Item Description</th>
-                      <th className="py-2.5 px-3 text-right">Unit Price</th>
-                      <th className="py-2.5 px-3 text-center w-14">Qty</th>
-                      <th className="py-2.5 px-3 text-right">Amount</th>
+                    <tr>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '10px', fontWeight: 700, padding: '7px 8px', textAlign: 'center', width: '30px' }}>#</th>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '10px', fontWeight: 700, padding: '7px 8px', textAlign: 'left' }}>Item Description</th>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '10px', fontWeight: 700, padding: '7px 8px', textAlign: 'right', width: '90px' }}>Unit Price</th>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '10px', fontWeight: 700, padding: '7px 8px', textAlign: 'center', width: '45px' }}>Qty</th>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '10px', fontWeight: 700, padding: '7px 8px', textAlign: 'right', width: '95px' }}>Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
+                  <tbody>
                     {quote.items.map((item, idx) => (
-                      <tr key={item.id} className={idx % 2 === 1 ? 'bg-slate-50/60' : ''}>
-                        <td className="py-2.5 px-3 text-center text-gray-400">{idx + 1}</td>
-                        <td className="py-2.5 px-3 font-semibold text-gray-900">{item.name || 'Item'}</td>
-                        <td className="py-2.5 px-3 text-right font-mono">{formatCurrency(item.unitPrice)}</td>
-                        <td className="py-2.5 px-3 text-center font-mono">{item.quantity}</td>
-                        <td className="py-2.5 px-3 text-right font-mono font-semibold">
-                          {formatCurrency(item.amount)}
-                        </td>
+                      <tr key={item.id} style={{ backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
+                        <td style={{ padding: '8px', fontSize: '10px', borderBottom: '1px solid #e2e8f0', textAlign: 'center', color: '#64748b' }}>{idx + 1}</td>
+                        <td style={{ padding: '8px', fontSize: '11px', borderBottom: '1px solid #e2e8f0', fontWeight: 700, color: '#0f172a' }}>{item.name || 'Item'}</td>
+                        <td style={{ padding: '8px', fontSize: '11px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(item.unitPrice)}</td>
+                        <td style={{ padding: '8px', fontSize: '11px', borderBottom: '1px solid #e2e8f0', textAlign: 'center', fontFamily: 'monospace', fontWeight: 700 }}>{item.quantity}</td>
+                        <td style={{ padding: '8px', fontSize: '11px', borderBottom: '1px solid #e2e8f0', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{formatCurrency(item.amount)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
-                  <div className="space-y-2">
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-[11px]">
-                      <span className="font-bold text-slate-500 uppercase tracking-wider block text-[10px] mb-1">
-                        Amount in Words:
-                      </span>
-                      <p className="font-semibold text-slate-900">
-                        {numberToIndianWords(quote.pricing.totalAmount)}
-                      </p>
-                    </div>
-
-                    <div className="p-3 bg-slate-50 rounded-xl border border-slate-200 text-[10px] text-slate-600">
-                      <strong>Payment Bank Details:</strong><br />
-                      Bank: HDFC Bank Ltd | A/C: 50200084920192 | IFSC: HDFC0001234
-                    </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '14px', marginBottom: '14px' }}>
+                  <div style={{ flex: 1, backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                      Amount in Words:
+                    </span>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '11px', color: '#0f172a' }}>
+                      {numberToIndianWords(quote.pricing.totalAmount)}
+                    </p>
                   </div>
 
-                  <div className="w-full space-y-1.5 text-xs bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Subtotal:</span>
-                      <span className="font-mono">{formatCurrency(quote.pricing.subtotal)}</span>
+                  <div style={{ width: '240px', backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
+                      <span style={{ color: '#64748b' }}>Subtotal:</span>
+                      <span style={{ fontFamily: 'monospace' }}>{formatCurrency(quote.pricing.subtotal)}</span>
                     </div>
                     {quote.pricing.discountAmount > 0 && (
-                      <div className="flex justify-between text-emerald-600">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', color: '#059669', marginBottom: '3px' }}>
                         <span>Discount ({quote.pricing.discountPercent}%):</span>
-                        <span className="font-mono">- {formatCurrency(quote.pricing.discountAmount)}</span>
+                        <span style={{ fontFamily: 'monospace' }}>- {formatCurrency(quote.pricing.discountAmount)}</span>
                       </div>
                     )}
                     {quote.pricing.taxAmount > 0 && (
-                      <div className="flex justify-between text-gray-600">
-                        <span>Tax ({quote.pricing.taxPercent}%):</span>
-                        <span className="font-mono">{formatCurrency(quote.pricing.taxAmount)}</span>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginBottom: '3px' }}>
+                        <span style={{ color: '#64748b' }}>GST ({quote.pricing.taxPercent}%):</span>
+                        <span style={{ fontFamily: 'monospace' }}>+ {formatCurrency(quote.pricing.taxAmount)}</span>
                       </div>
                     )}
-                    <div className="flex justify-between font-extrabold text-sm text-gray-900 pt-2 border-t-2 border-slate-900">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '13px', paddingTop: '6px', borderTop: '2px solid #0f172a', color: '#0f172a' }}>
                       <span>Grand Total:</span>
-                      <span className="font-mono text-amber-600 font-bold">
-                        {formatCurrency(quote.pricing.totalAmount)}
-                      </span>
+                      <span style={{ fontFamily: 'monospace', color: '#d97706' }}>{formatCurrency(quote.pricing.totalAmount)}</span>
                     </div>
                   </div>
                 </div>
-
-                {quote.notes && (
-                  <div className="pt-3 border-t border-gray-200 text-[11px] text-gray-600">
-                    <span className="font-bold text-gray-800 block">Notes:</span>
-                    <p className="whitespace-pre-line">{quote.notes}</p>
-                  </div>
-                )}
               </div>
             </div>
           </div>
