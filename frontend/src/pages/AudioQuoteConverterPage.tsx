@@ -42,6 +42,7 @@ import {
 import BrandMark from '../components/BrandMark';
 import html2canvas from 'html2canvas-pro';
 import { jsPDF } from 'jspdf';
+import { parseQuoteWithChatGPT } from '../services/aiQuotationService';
 
 function numberToIndianWords(num: number): string {
   const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
@@ -421,30 +422,69 @@ export default function AudioQuoteConverterPage() {
     processInputPrompt(textInput.trim(), 'text');
   };
 
-  // AI Pipeline Processor
-  const processInputPrompt = (rawText: string, source: 'audio' | 'text' = 'voice' as any) => {
+  // ChatGPT AI Pipeline Processor
+  const processInputPrompt = async (rawText: string, source: 'audio' | 'text' = 'voice' as any) => {
     setIsProcessing(true);
     setLiveTranscript(rawText);
     setProcessingStep(
       source === 'text'
-        ? 'Analyzing quotation text prompt & extracting structured parameters...'
-        : 'Converting speech audio to transcript & recognizing terms...'
+        ? '🤖 ChatGPT AI analyzing quotation prompt & line items...'
+        : '🤖 ChatGPT AI transcribing speech & structuring rates...'
     );
 
-    setTimeout(() => {
-      setProcessingStep('Extracting client name, items, unit quantities, and prices...');
-    }, 800);
+    try {
+      const parsedAiResult = await parseQuoteWithChatGPT(rawText, source === 'text' ? 'text' : 'voice');
 
-    setTimeout(() => {
-      setProcessingStep('Computing subtotal, discounts, GST breakdown, and validity...');
-    }, 1600);
+      setProcessingStep('🤖 Computing subtotal, discounts, GST breakdown & validity...');
 
-    setTimeout(() => {
-      setIsProcessing(false);
+      const today = new Date();
+      const validUntilDate = new Date();
+      validUntilDate.setDate(today.getDate() + (parsedAiResult.validityDays || 15));
+
+      const baseQuote = createDefaultStructuredQuote();
+      const pricing = calculateStructuredQuotePricing(
+        parsedAiResult.items,
+        parsedAiResult.discountPercent,
+        parsedAiResult.taxPercent
+      );
+
+      const generatedQuote: StructuredQuote = {
+        ...baseQuote,
+        quoteNumber: `QT-${String(Math.floor(100 + Math.random() * 900))}`,
+        date: today.toISOString().split('T')[0],
+        validUntil: validUntilDate.toISOString().split('T')[0],
+        source,
+        client: {
+          ...baseQuote.client,
+          name: parsedAiResult.clientName || 'Client / Company',
+          contactPerson: parsedAiResult.clientContactPerson || 'Procurement & Operations',
+          address: parsedAiResult.clientAddress || baseQuote.client.address,
+          phone: parsedAiResult.clientPhone || baseQuote.client.phone,
+          email: parsedAiResult.clientEmail || baseQuote.client.email,
+        },
+        items: parsedAiResult.items,
+        pricing,
+        notes: parsedAiResult.notes || `Quotation generated via ChatGPT AI Engine. Valid for ${parsedAiResult.validityDays} days from date of issue.`,
+        terms: `1. Quotation is valid for ${parsedAiResult.validityDays} days.\n2. Payment terms: 50% advance, balance on delivery.\n3. Taxes calculated as applicable (${parsedAiResult.taxPercent}% GST).`,
+      };
+
+      setQuote(generatedQuote);
       setHasExtracted(true);
-      const extractedQuote = extractQuoteFromPrompt(rawText, source);
-      setQuote(extractedQuote);
-    }, 2200);
+
+      // Auto-sync draft so pricequote dashboard has it immediately
+      try {
+        localStorage.setItem('ilovequote_structured_quote_draft_v1', JSON.stringify(generatedQuote));
+      } catch {
+        // ignore
+      }
+    } catch (err) {
+      console.error('Error generating quote with ChatGPT AI:', err);
+      const fallbackQuote = extractQuoteFromPrompt(rawText, source);
+      setQuote(fallbackQuote);
+      setHasExtracted(true);
+    } finally {
+      setIsProcessing(false);
+    }
   };
 
   // Rule-based NLP Extractor
@@ -1411,6 +1451,21 @@ export default function AudioQuoteConverterPage() {
               </button>
 
               <div className="flex flex-wrap items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => {
+                    try {
+                      localStorage.setItem('ilovequote_structured_quote_draft_v1', JSON.stringify(quote));
+                    } catch {}
+                    navigate('/create-quote2', { state: { quote } });
+                  }}
+                  className="px-4 py-2.5 rounded-xl border border-blue-300 bg-blue-50 hover:bg-blue-100 text-blue-900 text-xs sm:text-sm font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Open and edit this quote directly in the UI pricequote dashboard"
+                >
+                  <FileText className="w-4 h-4 text-blue-600" />
+                  Edit in Price Quote Dashboard
+                </button>
+
                 <button
                   type="button"
                   onClick={handleSaveQuote}

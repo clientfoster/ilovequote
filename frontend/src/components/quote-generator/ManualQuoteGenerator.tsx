@@ -1,5 +1,7 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import html2canvas from 'html2canvas-pro';
+import { jsPDF } from 'jspdf';
 import {
   Building2,
   Users,
@@ -30,7 +32,42 @@ import {
   Settings,
   Truck,
   SlidersHorizontal,
+  CheckCircle2,
 } from 'lucide-react';
+
+function numberToIndianWords(num: number): string {
+  const a = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine', 'Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+  const b = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+  const intVal = Math.floor(num || 0);
+  if (intVal === 0) return 'Zero Rupees Only';
+
+  const convert2 = (n: number): string => {
+    if (n < 20) return a[n];
+    return b[Math.floor(n / 10)] + (n % 10 ? ' ' + a[n % 10] : '');
+  };
+
+  const convert3 = (n: number): string => {
+    if (n >= 100) {
+      return a[Math.floor(n / 100)] + ' Hundred' + (n % 100 ? ' ' + convert2(n % 100) : '');
+    }
+    return convert2(n);
+  };
+
+  let str = '';
+  const crore = Math.floor(intVal / 10000000);
+  let rem = intVal % 10000000;
+  const lakh = Math.floor(rem / 100000);
+  rem = rem % 100000;
+  const thousand = Math.floor(rem / 1000);
+  rem = rem % 1000;
+
+  if (crore > 0) str += convert3(crore) + ' Crore ';
+  if (lakh > 0) str += convert3(lakh) + ' Lakh ';
+  if (thousand > 0) str += convert3(thousand) + ' Thousand ';
+  if (rem > 0) str += convert3(rem) + ' ';
+
+  return (str.trim() + ' Rupees Only');
+}
 import {
   StructuredQuote,
   StructuredQuoteItem,
@@ -58,6 +95,10 @@ const INVOICE_STORAGE_KEY = 'ilovequote_invoice_draft_v1';
 
 export default function ManualQuoteGenerator() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const printableDocRef = useRef<HTMLDivElement>(null);
+  const [isExportingPdf, setIsExportingPdf] = useState<boolean>(false);
+  const [toastMessage, setToastMessage] = useState<string>('');
   const [quote, setQuote] = useState<StructuredQuote>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -115,6 +156,23 @@ export default function ManualQuoteGenerator() {
       // Storage unavailable
     }
   }, [quote]);
+
+  // Listen for quotes passed via navigation state (e.g. from Voice & Text studio)
+  useEffect(() => {
+    if (location.state && (location.state as any).quote) {
+      setQuote((location.state as any).quote);
+      setOpenSections({
+        business: true,
+        client: true,
+        quoteDetails: true,
+        additionalOptions: true,
+        items: true,
+        notes: true,
+      });
+      setToastMessage('✓ Voice & Text Quotation loaded into UI Price Quote Dashboard!');
+      setTimeout(() => setToastMessage(''), 4500);
+    }
+  }, [location.state]);
 
   // Recalculate totals whenever items, discount %, or tax % change
   const handleUpdateItem = (id: string, field: keyof StructuredQuoteItem, value: any) => {
@@ -283,18 +341,62 @@ export default function ManualQuoteGenerator() {
     navigate('/create-invoice');
   };
 
-  // Handle PDF Export / Print
-  const handleDownloadPdf = () => {
-    setShowPreviewModal(true);
+  // Handle crisp direct A4 vector PDF Export
+  const handleDownloadPdf = async () => {
+    if (!printableDocRef.current || isExportingPdf) return;
+    try {
+      setIsExportingPdf(true);
+      const safeClient = (quote.client.name || 'Client').replace(/[^a-zA-Z0-9_-]/g, '_');
+      const fileName = `Quotation_${quote.quoteNumber}_${safeClient}.pdf`;
+
+      const element = printableDocRef.current;
+      const canvas = await html2canvas(element, {
+        backgroundColor: '#ffffff',
+        scale: 2.5,
+        useCORS: true,
+        allowTaint: true,
+        logging: false,
+        windowWidth: 794,
+      });
+
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF('p', 'pt', 'a4');
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 20;
+      const availableWidth = pageWidth - margin * 2;
+      const availableHeight = pageHeight - margin * 2;
+      const renderHeight = (canvas.height * availableWidth) / canvas.width;
+
+      pdf.addImage(
+        imgData,
+        'PNG',
+        margin,
+        margin,
+        availableWidth,
+        Math.min(renderHeight, availableHeight),
+        undefined,
+        'FAST'
+      );
+
+      pdf.save(fileName);
+      setToastMessage(`✓ PDF ${fileName} downloaded successfully!`);
+      setTimeout(() => setToastMessage(''), 4000);
+    } catch (err) {
+      console.error('PDF export error:', err);
+      window.print();
+    } finally {
+      setIsExportingPdf(false);
+    }
   };
 
-  // Handle applying extracted data from Photo or Audio
+  // Handle applying extracted data from Photo, Voice, or Text
   const handleApplyExtractedData = (data: Partial<StructuredQuote>) => {
     setQuote((prev) => {
       const mergedItems = data.items && data.items.length > 0 ? data.items : prev.items;
       const newPricing = calculateStructuredQuotePricing(
         mergedItems,
-        prev.pricing.discountPercent,
+        data.pricing?.discountPercent ?? prev.pricing.discountPercent,
         data.pricing?.taxPercent ?? prev.pricing.taxPercent
       );
 
@@ -314,6 +416,16 @@ export default function ManualQuoteGenerator() {
         source: data.source || prev.source,
       };
     });
+    setOpenSections({
+      business: true,
+      client: true,
+      quoteDetails: true,
+      additionalOptions: true,
+      items: true,
+      notes: true,
+    });
+    setToastMessage('✓ Voice & Text Quotation updated into UI Price Quote Dashboard!');
+    setTimeout(() => setToastMessage(''), 4000);
     setActiveMode('manual');
   };
 
@@ -333,6 +445,14 @@ export default function ManualQuoteGenerator() {
 
   return (
     <div className="min-h-screen bg-slate-50 py-6 px-3 sm:px-6 lg:px-8">
+      {/* Toast Notification Alert */}
+      {toastMessage && (
+        <div className="fixed top-5 right-5 bg-slate-900 text-white text-xs font-bold px-4 py-3 rounded-2xl shadow-2xl z-50 flex items-center gap-2 border border-slate-700 animate-in fade-in slide-in-from-top-3">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       <div className="max-w-3xl mx-auto">
         {/* Top Header Card */}
         <div className="bg-white rounded-2xl border border-gray-200/80 shadow-sm p-4 sm:p-6 mb-6">
@@ -445,7 +565,7 @@ export default function ManualQuoteGenerator() {
               <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 hidden xs:block truncate">Upload bill/photo</p>
             </div>
 
-            {/* Mode 3: From Audio */}
+            {/* Mode 3: Voice & Text AI */}
             <div
               onClick={() => setActiveMode('audio')}
               className={`relative rounded-xl sm:rounded-2xl p-2.5 sm:p-4 border-2 cursor-pointer transition-all text-center sm:text-left ${
@@ -462,20 +582,30 @@ export default function ManualQuoteGenerator() {
               <div className="w-7 h-7 sm:w-9 sm:h-9 rounded-lg sm:rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center mb-1.5 sm:mb-2.5 mx-auto sm:mx-0">
                 <Mic className="w-3.5 h-3.5 sm:w-5 sm:h-5" />
               </div>
-              <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate">From Audio</h3>
-              <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 hidden xs:block truncate">Speak to create</p>
+              <h3 className="text-xs sm:text-sm font-bold text-gray-900 truncate">Voice &amp; Text AI</h3>
+              <p className="text-[10px] sm:text-[11px] text-gray-500 mt-0.5 hidden xs:block truncate">Speak or type prompt</p>
             </div>
           </div>
 
-          {/* Quick Preview Quote Button */}
-          <div className="mt-4">
+          {/* Action Buttons: Preview Quote & Direct Download PDF */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 mt-4">
             <button
               type="button"
               onClick={() => setShowPreviewModal(true)}
-              className="w-full py-2.5 px-4 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100/80 text-blue-900 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs"
+              className="w-full py-2.5 px-4 rounded-xl border border-blue-200 bg-blue-50/60 hover:bg-blue-100/80 text-blue-900 text-xs sm:text-sm font-semibold flex items-center justify-center gap-2 transition-colors shadow-xs cursor-pointer"
             >
               <Eye className="w-4 h-4 text-blue-700" />
               Preview Quote
+            </button>
+
+            <button
+              type="button"
+              disabled={isExportingPdf}
+              onClick={handleDownloadPdf}
+              className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-blue-900 to-indigo-900 hover:from-black hover:to-slate-900 text-white text-xs sm:text-sm font-bold flex items-center justify-center gap-2 shadow-xs transition-all cursor-pointer disabled:opacity-50"
+            >
+              <Download className="w-4 h-4 text-amber-400" />
+              <span>{isExportingPdf ? 'Generating PDF...' : 'Download PDF'}</span>
             </button>
           </div>
         </div>
@@ -1498,254 +1628,669 @@ export default function ManualQuoteGenerator() {
           </div>
         </div>
 
-        {/* Live Preview Modal */}
-        {showPreviewModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 bg-black/60 backdrop-blur-xs">
-            <div className="bg-white rounded-3xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
-              <div className="p-4 px-6 border-b border-gray-200 flex items-center justify-between bg-slate-50">
-                <div className="flex items-center gap-2">
-                  <Eye className="w-4 h-4 text-blue-600" />
-                  <span className="font-bold text-gray-900 text-sm">Quotation Preview ({quote.quoteNumber})</span>
+        {/* Hidden Printable Document for High-Res Vector PDF Export */}
+        <div
+          style={{
+            position: 'fixed',
+            left: '-10000px',
+            top: 0,
+            width: '794px',
+            backgroundColor: '#ffffff',
+            zIndex: -9999,
+            pointerEvents: 'none',
+          }}
+          aria-hidden="true"
+        >
+          <div
+            ref={printableDocRef}
+            style={{
+              width: '794px',
+              boxSizing: 'border-box',
+              padding: '28px 34px',
+              backgroundColor: '#ffffff',
+              color: '#0f172a',
+              fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+              lineHeight: 1.4,
+            }}
+          >
+            {/* Header */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                borderBottom: '2px solid #e2e8f0',
+                paddingBottom: '14px',
+                marginBottom: '16px',
+              }}
+            >
+              <div>
+                <h1
+                  style={{
+                    fontSize: '24px',
+                    fontWeight: 900,
+                    color: '#0f172a',
+                    margin: 0,
+                    letterSpacing: '-0.5px',
+                  }}
+                >
+                  iLove<span style={{ color: '#2563eb' }}>Quote</span>
+                </h1>
+                <span
+                  style={{
+                    display: 'inline-block',
+                    marginTop: '4px',
+                    padding: '3px 10px',
+                    backgroundColor: '#ecfdf5',
+                    color: '#065f46',
+                    border: '1px solid #a7f3d0',
+                    borderRadius: '20px',
+                    fontSize: '10px',
+                    fontWeight: 700,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  {quote.source === 'text'
+                    ? '✍️ Processed from Text Prompt AI'
+                    : quote.source === 'audio'
+                    ? '🎙️ Processed from Voice Speech AI'
+                    : 'Official Price Quotation'}
+                </span>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <h2
+                  style={{
+                    fontSize: '16px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    margin: 0,
+                    letterSpacing: '0.5px',
+                  }}
+                >
+                  PRICE QUOTATION
+                </h2>
+                <p style={{ margin: '2px 0 0 0', fontSize: '11px', color: '#64748b' }}>
+                  <strong>Quote No:</strong>{' '}
+                  <span style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: 'bold' }}>
+                    {quote.quoteNumber}
+                  </span>
+                </p>
+                <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#64748b' }}>
+                  <strong>Date:</strong> {quote.date} | <strong>Valid Till:</strong> {quote.validUntil}
+                </p>
+              </div>
+            </div>
+
+            {/* Address Cards (Flex Row) */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                gap: '16px',
+                marginBottom: '16px',
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    color: '#64748b',
+                    marginBottom: '4px',
+                    fontWeight: 700,
+                  }}
+                >
+                  Quotation Issued By
                 </div>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    marginBottom: '3px',
+                  }}
+                >
+                  {quote.business.name || 'iLoveQuote Technologies'}
+                </div>
+                <p style={{ margin: 0, fontSize: '11px', color: '#475569', lineHeight: 1.35 }}>
+                  {quote.business.address || 'Plot No. 42, Cyber Gateway, HITEC City, Hyderabad, 500081'}<br />
+                  <strong>GSTIN:</strong> 36AAACI1234F1Z8<br />
+                  <strong>Email:</strong> {quote.business.email || 'billing@ilovequote.com'}
+                </p>
+              </div>
+
+              <div
+                style={{
+                  flex: 1,
+                  backgroundColor: '#f8fafc',
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '8px',
+                  padding: '12px 14px',
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: '10px',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.5px',
+                    color: '#64748b',
+                    marginBottom: '4px',
+                    fontWeight: 700,
+                  }}
+                >
+                  Quotation Prepared For
+                </div>
+                <div
+                  style={{
+                    fontSize: '13px',
+                    fontWeight: 800,
+                    color: '#0f172a',
+                    marginBottom: '3px',
+                  }}
+                >
+                  {quote.client.name || 'Client / Company Name'}
+                </div>
+                <p style={{ margin: 0, fontSize: '11px', color: '#475569', lineHeight: 1.35 }}>
+                  {quote.client.address || 'Knowledge Park IV, Commercial Block B, Greater Noida, UP, 201310'}<br />
+                  <strong>Attn:</strong> {quote.client.contactPerson || 'Procurement & Operations'}<br />
+                  <strong>Phone:</strong> {quote.client.phone || '+91 98765 43210'}
+                </p>
+              </div>
+            </div>
+
+            {/* Line Items Table */}
+            <table
+              style={{
+                width: '100%',
+                borderCollapse: 'collapse',
+                marginBottom: '16px',
+              }}
+            >
+              <thead>
+                <tr>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'center',
+                      width: '35px',
+                    }}
+                  >
+                    #
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'left',
+                    }}
+                  >
+                    Item Description
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'right',
+                      width: '100px',
+                    }}
+                  >
+                    Unit Rate
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'center',
+                      width: '50px',
+                    }}
+                  >
+                    Qty
+                  </th>
+                  <th
+                    style={{
+                      backgroundColor: '#0f172a',
+                      color: '#ffffff',
+                      fontSize: '10px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.5px',
+                      padding: '8px 10px',
+                      textAlign: 'right',
+                      width: '115px',
+                    }}
+                  >
+                    Amount
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {quote.items.map((item, idx) => (
+                  <tr
+                    key={item.id}
+                    style={{
+                      backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff',
+                    }}
+                  >
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#64748b',
+                        textAlign: 'center',
+                      }}
+                    >
+                      {idx + 1}
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#0f172a',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.name || 'Product / Service Item'}
+                      <div style={{ fontSize: '10px', color: '#64748b', fontWeight: 'normal' }}>
+                        {item.description || 'Standard specification'}
+                      </div>
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#334155',
+                        textAlign: 'right',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {formatCurrency(item.unitPrice)}
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#334155',
+                        textAlign: 'center',
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {item.quantity}
+                    </td>
+                    <td
+                      style={{
+                        padding: '9px 10px',
+                        fontSize: '11px',
+                        borderBottom: '1px solid #e2e8f0',
+                        color: '#0f172a',
+                        textAlign: 'right',
+                        fontFamily: 'monospace',
+                        fontWeight: 700,
+                      }}
+                    >
+                      {formatCurrency(item.amount)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+
+            {/* Totals Section (Flex Row) */}
+            <div
+              style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: '16px',
+                marginBottom: '16px',
+              }}
+            >
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '10px 12px',
+                    fontSize: '11px',
+                  }}
+                >
+                  <strong
+                    style={{
+                      display: 'block',
+                      color: '#64748b',
+                      fontSize: '10px',
+                      textTransform: 'uppercase',
+                      marginBottom: '3px',
+                    }}
+                  >
+                    Total Amount in Words:
+                  </strong>
+                  <p style={{ margin: 0, fontWeight: 700, color: '#0f172a' }}>
+                    {numberToIndianWords(quote.pricing.totalAmount)}
+                  </p>
+                </div>
+
+                <div
+                  style={{
+                    backgroundColor: '#f8fafc',
+                    border: '1px solid #e2e8f0',
+                    borderRadius: '8px',
+                    padding: '8px 12px',
+                    fontSize: '10px',
+                    color: '#64748b',
+                  }}
+                >
+                  <strong style={{ color: '#0f172a' }}>Payment Bank Details:</strong><br />
+                  Bank: HDFC Bank Ltd | A/C: 50200084920192 | IFSC: HDFC0001234
+                </div>
+              </div>
+
+              <div style={{ width: '260px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '11px' }}>
+                  <tbody>
+                    <tr>
+                      <td style={{ padding: '4px 6px', color: '#475569' }}>Subtotal:</td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: '#0f172a' }}>
+                        {formatCurrency(quote.pricing.subtotal)}
+                      </td>
+                    </tr>
+                    {quote.pricing.discountAmount > 0 && (
+                      <tr style={{ color: '#059669', fontWeight: 600 }}>
+                        <td style={{ padding: '4px 6px' }}>Discount ({quote.pricing.discountPercent}%):</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace' }}>
+                          - {formatCurrency(quote.pricing.discountAmount)}
+                        </td>
+                      </tr>
+                    )}
+                    <tr>
+                      <td style={{ padding: '4px 6px', color: '#475569' }}>Taxable Value:</td>
+                      <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: '#0f172a' }}>
+                        {formatCurrency(quote.pricing.subtotal - quote.pricing.discountAmount)}
+                      </td>
+                    </tr>
+                    {quote.pricing.taxAmount > 0 && (
+                      <tr>
+                        <td style={{ padding: '4px 6px', color: '#475569' }}>GST ({quote.pricing.taxPercent}%):</td>
+                        <td style={{ padding: '4px 6px', textAlign: 'right', fontFamily: 'monospace', color: '#0f172a' }}>
+                          + {formatCurrency(quote.pricing.taxAmount)}
+                        </td>
+                      </tr>
+                    )}
+                    <tr
+                      style={{
+                        borderTop: '2px solid #0f172a',
+                        fontWeight: 900,
+                        fontSize: '13px',
+                      }}
+                    >
+                      <td style={{ padding: '8px 6px', color: '#0f172a' }}>Grand Total:</td>
+                      <td
+                        style={{
+                          padding: '8px 6px',
+                          textAlign: 'right',
+                          fontFamily: 'monospace',
+                          color: '#d97706',
+                        }}
+                      >
+                        {formatCurrency(quote.pricing.totalAmount)}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Terms and Signatory (Flex Row) */}
+            <div
+              style={{
+                borderTop: '1px solid #e2e8f0',
+                paddingTop: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'flex-end',
+                fontSize: '10px',
+                color: '#64748b',
+                lineHeight: 1.4,
+              }}
+            >
+              <div style={{ maxWidth: '420px' }}>
+                <strong style={{ color: '#334155' }}>Terms &amp; Conditions:</strong><br />
+                1. Quotation is valid for {quote.validUntil ? 'the specified validity period' : '15 days'}.<br />
+                2. Payment terms: 50% advance along with Purchase Order, balance on completion.<br />
+                3. Standard service warranty and OEM terms apply.
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div
+                  style={{
+                    width: '150px',
+                    borderBottom: '1px dashed #94a3b8',
+                    marginBottom: '4px',
+                    marginLeft: 'auto',
+                  }}
+                />
+                <strong style={{ color: '#0f172a', display: 'block' }}>Authorized Signatory</strong>
+                <span style={{ fontSize: '9px', color: '#64748b' }}>
+                  {quote.business.name || 'iLoveQuote Technologies'}
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Live Preview Modal (Exact Executive Template) */}
+        {showPreviewModal && (
+          <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+            <div className="bg-white rounded-3xl max-w-2xl w-full p-6 sm:p-8 space-y-6 max-h-[90vh] overflow-y-auto shadow-2xl">
+              <div className="flex items-center justify-between pb-4 border-b border-gray-100 no-print">
+                <div className="flex items-center gap-2">
+                  <BrandMark size="sm" showSubtext={false} />
+                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold">
+                    Official Quotation Document
+                  </span>
+                </div>
+
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => window.print()}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs"
+                    disabled={isExportingPdf}
+                    onClick={handleDownloadPdf}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs disabled:opacity-50 cursor-pointer"
                   >
-                    <Printer className="w-3.5 h-3.5" /> Print / Save PDF
+                    <Download className="w-3.5 h-3.5" />
+                    {isExportingPdf ? 'Exporting...' : 'Download PDF'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-gray-200 hover:bg-gray-100 text-gray-700 text-xs font-semibold shadow-2xs"
+                  >
+                    <Printer className="w-3.5 h-3.5" /> Print
                   </button>
                   <button
                     type="button"
                     onClick={() => setShowPreviewModal(false)}
-                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-200"
+                    className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                   >
                     ✕
                   </button>
                 </div>
               </div>
 
-              {/* Printable Document Body */}
-              <div className="p-6 sm:p-8 overflow-y-auto space-y-6 text-xs text-gray-800">
-                {/* Document Header */}
-                <div className="flex justify-between items-start border-b border-gray-200 pb-5">
+              {/* Exact Styled Preview Sheet */}
+              <div
+                style={{
+                  padding: '16px 20px',
+                  backgroundColor: '#ffffff',
+                  color: '#0f172a',
+                  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif',
+                  lineHeight: 1.4,
+                  border: '1px solid #e2e8f0',
+                  borderRadius: '16px',
+                }}
+              >
+                {/* Header */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #e2e8f0', paddingBottom: '12px', marginBottom: '14px' }}>
                   <div>
-                    <h2 className="text-xl font-black text-blue-950 uppercase tracking-tight">
-                      {quote.business.name || 'Your Business Name'}
+                    <h1 style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.5px' }}>
+                      iLove<span style={{ color: '#2563eb' }}>Quote</span>
+                    </h1>
+                    <span style={{ display: 'inline-block', marginTop: '4px', padding: '2px 8px', backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0', borderRadius: '14px', fontSize: '9px', fontWeight: 700, textTransform: 'uppercase' }}>
+                      {quote.source === 'text' ? '✍️ Processed from Text Prompt AI' : quote.source === 'audio' ? '🎙️ Processed from Voice Speech AI' : 'Official Price Quotation'}
+                    </span>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <h2 style={{ fontSize: '14px', fontWeight: 800, color: '#0f172a', margin: 0 }}>
+                      PRICE QUOTATION
                     </h2>
-                    {quote.business.preparedBy && (
-                      <p className="text-xs text-gray-500 mt-0.5">Prepared By: {quote.business.preparedBy}</p>
-                    )}
-                    {quote.business.address && (
-                      <p className="text-xs text-gray-500 mt-0.5">{quote.business.address}</p>
-                    )}
-                    <p className="text-xs text-gray-500 mt-0.5">
-                      {[quote.business.phone, quote.business.email, quote.business.website]
-                        .filter(Boolean)
-                        .join(' • ')}
+                    <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#64748b' }}>
+                      <strong>Quote No:</strong> <span style={{ fontFamily: 'monospace', color: '#0f172a', fontWeight: 'bold' }}>{quote.quoteNumber}</span>
+                    </p>
+                    <p style={{ margin: '2px 0 0 0', fontSize: '10px', color: '#64748b' }}>
+                      <strong>Date:</strong> {quote.date} | <strong>Valid Till:</strong> {quote.validUntil}
                     </p>
                   </div>
-                  <div className="text-right">
-                    <span className="inline-block px-2.5 py-1 rounded-md bg-blue-100 text-blue-800 font-extrabold text-xs tracking-wider">
-                      PRICE QUOTE
-                    </span>
-                    <p className="font-mono font-bold text-gray-900 text-sm mt-1">{quote.quoteNumber}</p>
-                    <p className="text-gray-500 text-[11px] mt-0.5">Date: {quote.date}</p>
-                    {quote.validUntil && (
-                      <p className="text-gray-500 text-[11px]">Valid Till: {quote.validUntil}</p>
-                    )}
-                    {quote.poNumber && (
-                      <p className="text-gray-500 text-[11px]">PO: {quote.poNumber}</p>
-                    )}
-                  </div>
                 </div>
 
-                {/* Bill To */}
-                <div className="bg-slate-50 p-4 rounded-xl border border-gray-100">
-                  <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
-                    Quotation Prepared For
-                  </span>
-                  <div className="font-bold text-sm text-gray-900">
-                    {quote.client.name || 'Client / Company Name'}
-                  </div>
-                  {quote.client.contactPerson && (
-                    <div className="text-xs text-gray-600">Attn: {quote.client.contactPerson}</div>
-                  )}
-                  {quote.client.address && (
-                    <div className="text-xs text-gray-500">{quote.client.address}</div>
-                  )}
-                  {(quote.client.phone || quote.client.email) && (
-                    <div className="text-xs text-gray-500">
-                      {[quote.client.phone, quote.client.email].filter(Boolean).join(' | ')}
+                {/* Address Cards */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', gap: '12px', marginBottom: '14px' }}>
+                  <div style={{ flex: 1, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b', marginBottom: '3px', fontWeight: 700 }}>
+                      Quotation Issued By
                     </div>
-                  )}
-                </div>
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
+                      {quote.business.name || 'iLoveQuote Technologies'}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '10px', color: '#475569', lineHeight: 1.35 }}>
+                      {quote.business.address || 'Plot No. 42, Cyber Gateway, HITEC City, Hyderabad, 500081'}<br />
+                      <strong>GSTIN:</strong> 36AAACI1234F1Z8<br />
+                      <strong>Email:</strong> {quote.business.email || 'billing@ilovequote.com'}
+                    </p>
+                  </div>
 
-                {/* Shipping Details in Preview */}
-                {quote.shipping?.enabled && (
-                  <div className="bg-slate-50 p-4 rounded-xl border border-gray-100 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-                    <div>
-                      <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
-                        Shipping / Dispatch Details
-                      </span>
-                      {quote.shipping.shippedFromAddress && (
-                        <p className="text-gray-600">
-                          <strong className="text-gray-700">Dispatch From:</strong> {quote.shipping.shippedFromAddress}
-                        </p>
-                      )}
-                      {quote.shipping.transportMode && (
-                        <p className="text-gray-600">
-                          <strong className="text-gray-700">Mode:</strong> {quote.shipping.transportMode}
-                        </p>
-                      )}
-                      {quote.shipping.transporterName && (
-                        <p className="text-gray-600">
-                          <strong className="text-gray-700">Transporter:</strong> {quote.shipping.transporterName}
-                        </p>
-                      )}
-                      {quote.shipping.vehicleOrTrackingNumber && (
-                        <p className="text-gray-600">
-                          <strong className="text-gray-700">Vehicle / Tracking:</strong> {quote.shipping.vehicleOrTrackingNumber}
-                        </p>
-                      )}
+                  <div style={{ flex: 1, backgroundColor: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '10px 12px' }}>
+                    <div style={{ fontSize: '9px', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#64748b', marginBottom: '3px', fontWeight: 700 }}>
+                      Quotation Prepared For
                     </div>
-                    {(quote.shipping.shippedToName || quote.shipping.shippedToAddress) && (
-                      <div>
-                        <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wider block mb-1">
-                          Shipped To
-                        </span>
-                        {quote.shipping.shippedToName && (
-                          <div className="font-semibold text-gray-900">{quote.shipping.shippedToName}</div>
-                        )}
-                        {quote.shipping.shippedToAddress && (
-                          <div className="text-gray-600">{quote.shipping.shippedToAddress}</div>
-                        )}
-                      </div>
-                    )}
+                    <div style={{ fontSize: '12px', fontWeight: 800, color: '#0f172a', marginBottom: '2px' }}>
+                      {quote.client.name || 'Client / Company Name'}
+                    </div>
+                    <p style={{ margin: 0, fontSize: '10px', color: '#475569', lineHeight: 1.35 }}>
+                      {quote.client.address || 'Knowledge Park IV, Commercial Block B, Greater Noida, UP, 201310'}<br />
+                      <strong>Attn:</strong> {quote.client.contactPerson || 'Procurement & Operations'}<br />
+                      <strong>Phone:</strong> {quote.client.phone || '+91 98765 43210'}
+                    </p>
                   </div>
-                )}
+                </div>
 
                 {/* Items Table */}
-                <table className="w-full text-left border-collapse">
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '14px' }}>
                   <thead>
-                    <tr className="border-b-2 border-gray-900 text-[11px] font-bold text-gray-900">
-                      <th className="py-2 w-8">#</th>
-                      <th className="py-2">Item Description</th>
-                      {isColVisible('col-hsn') && <th className="py-2 text-left">HSN/SAC</th>}
-                      {isColVisible('col-gst') && <th className="py-2 text-center">GST %</th>}
-                      <th className="py-2 text-right">Unit Price</th>
-                      {isColVisible('col-qty') && <th className="py-2 text-center w-14">Qty</th>}
-                      {customColumns.map((cc) => (
-                        <th key={cc.id} className="py-2 text-left">
-                          {cc.name}
-                        </th>
-                      ))}
-                      <th className="py-2 text-right">Amount</th>
+                    <tr>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '9px', fontWeight: 700, padding: '7px 8px', textAlign: 'center', width: '30px' }}>#</th>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '9px', fontWeight: 700, padding: '7px 8px', textAlign: 'left' }}>Item Description</th>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '9px', fontWeight: 700, padding: '7px 8px', textAlign: 'right', width: '90px' }}>Unit Rate</th>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '9px', fontWeight: 700, padding: '7px 8px', textAlign: 'center', width: '45px' }}>Qty</th>
+                      <th style={{ backgroundColor: '#0f172a', color: '#ffffff', fontSize: '9px', fontWeight: 700, padding: '7px 8px', textAlign: 'right', width: '95px' }}>Amount</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-200">
-                    {quote.items
-                      .filter((item) => item.name || item.unitPrice > 0)
-                      .map((item, idx) => (
-                        <tr key={item.id}>
-                          <td className="py-2.5 text-gray-400">{idx + 1}</td>
-                          <td className="py-2.5">
-                            <span className="font-semibold text-gray-900">{item.name || 'Untitled Item'}</span>
-                            {item.description && (
-                              <p className="text-[11px] text-gray-500">{item.description}</p>
-                            )}
-                          </td>
-                          {isColVisible('col-hsn') && (
-                            <td className="py-2.5 font-mono">{item.hsnSac || '-'}</td>
-                          )}
-                          {isColVisible('col-gst') && (
-                            <td className="py-2.5 text-center font-mono">{item.taxPercent ?? 18}%</td>
-                          )}
-                          <td className="py-2.5 text-right font-mono">{formatCurrency(item.unitPrice)}</td>
-                          {isColVisible('col-qty') && (
-                            <td className="py-2.5 text-center font-mono">{item.quantity}</td>
-                          )}
-                          {customColumns.map((cc) => (
-                            <td key={cc.id} className="py-2.5">
-                              {item[cc.id] ?? '-'}
-                            </td>
-                          ))}
-                          <td className="py-2.5 text-right font-mono font-semibold">{formatCurrency(item.amount)}</td>
-                        </tr>
-                      ))}
+                  <tbody>
+                    {quote.items.map((item, idx) => (
+                      <tr key={item.id} style={{ backgroundColor: idx % 2 === 1 ? '#f8fafc' : '#ffffff' }}>
+                        <td style={{ padding: '8px', fontSize: '10px', borderBottom: '1px solid #e2e8f0', color: '#64748b', textAlign: 'center' }}>{idx + 1}</td>
+                        <td style={{ padding: '8px', fontSize: '10px', borderBottom: '1px solid #e2e8f0', color: '#0f172a', fontWeight: 700 }}>
+                          {item.name || 'Product / Service Item'}
+                          <div style={{ fontSize: '9px', color: '#64748b', fontWeight: 'normal' }}>{item.description || 'Standard specification'}</div>
+                        </td>
+                        <td style={{ padding: '8px', fontSize: '10px', borderBottom: '1px solid #e2e8f0', color: '#334155', textAlign: 'right', fontFamily: 'monospace' }}>{formatCurrency(item.unitPrice)}</td>
+                        <td style={{ padding: '8px', fontSize: '10px', borderBottom: '1px solid #e2e8f0', color: '#334155', textAlign: 'center', fontFamily: 'monospace', fontWeight: 700 }}>{item.quantity}</td>
+                        <td style={{ padding: '8px', fontSize: '10px', borderBottom: '1px solid #e2e8f0', color: '#0f172a', textAlign: 'right', fontFamily: 'monospace', fontWeight: 700 }}>{formatCurrency(item.amount)}</td>
+                      </tr>
+                    ))}
                   </tbody>
                 </table>
 
-                {/* Pricing Summary */}
-                <div className="flex justify-end pt-3 border-t border-gray-200">
-                  <div className="w-64 space-y-1.5 text-xs">
-                    <div className="flex justify-between text-gray-600">
-                      <span>Subtotal:</span>
-                      <span className="font-mono">{formatCurrency(quote.pricing.subtotal)}</span>
+                {/* Totals Section */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '14px', marginBottom: '14px' }}>
+                  <div style={{ flex: 1, backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <span style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '2px' }}>
+                      Amount in Words:
+                    </span>
+                    <p style={{ margin: 0, fontWeight: 700, fontSize: '10px', color: '#0f172a' }}>
+                      {numberToIndianWords(quote.pricing.totalAmount)}
+                    </p>
+                  </div>
+
+                  <div style={{ width: '230px', backgroundColor: '#f8fafc', padding: '10px 12px', borderRadius: '8px', border: '1px solid #e2e8f0' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '3px' }}>
+                      <span style={{ color: '#64748b' }}>Subtotal:</span>
+                      <span style={{ fontFamily: 'monospace' }}>{formatCurrency(quote.pricing.subtotal)}</span>
                     </div>
                     {quote.pricing.discountAmount > 0 && (
-                      <div className="flex justify-between text-emerald-600">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', color: '#059669', marginBottom: '3px' }}>
                         <span>Discount ({quote.pricing.discountPercent}%):</span>
-                        <span className="font-mono">- {formatCurrency(quote.pricing.discountAmount)}</span>
+                        <span style={{ fontFamily: 'monospace' }}>- {formatCurrency(quote.pricing.discountAmount)}</span>
                       </div>
                     )}
-                    {quote.taxConfig?.taxType !== 'None' && quote.pricing.taxAmount > 0 && (
-                      <>
-                        {quote.taxConfig?.taxType === 'GST (India)' && quote.taxConfig.gstType === 'CGST & SGST' ? (
-                          <>
-                            <div className="flex justify-between text-gray-600">
-                              <span>CGST ({Number((quote.pricing.taxPercent / 2).toFixed(1))}%):</span>
-                              <span className="font-mono">
-                                {formatCurrency(Number((quote.pricing.taxAmount / 2).toFixed(2)))}
-                              </span>
-                            </div>
-                            <div className="flex justify-between text-gray-600">
-                              <span>SGST ({Number((quote.pricing.taxPercent / 2).toFixed(1))}%):</span>
-                              <span className="font-mono">
-                                {formatCurrency(Number((quote.pricing.taxAmount / 2).toFixed(2)))}
-                              </span>
-                            </div>
-                          </>
-                        ) : (
-                          <div className="flex justify-between text-gray-600">
-                            <span>
-                              {quote.taxConfig?.taxType === 'GST (India)' ? 'IGST' : 'Tax'} ({quote.pricing.taxPercent}%):
-                            </span>
-                            <span className="font-mono">{formatCurrency(quote.pricing.taxAmount)}</span>
-                          </div>
-                        )}
-                        {quote.taxConfig?.hasCess && (quote.pricing.cessAmount || 0) > 0 && (
-                          <div className="flex justify-between text-gray-600">
-                            <span>Cess ({quote.taxConfig.cessPercent}%):</span>
-                            <span className="font-mono">+ {formatCurrency(quote.pricing.cessAmount || 0)}</span>
-                          </div>
-                        )}
-                      </>
+                    {quote.pricing.taxAmount > 0 && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '3px' }}>
+                        <span style={{ color: '#64748b' }}>GST ({quote.pricing.taxPercent}%):</span>
+                        <span style={{ fontFamily: 'monospace' }}>+ {formatCurrency(quote.pricing.taxAmount)}</span>
+                      </div>
                     )}
-                    <div className="flex justify-between font-extrabold text-sm text-gray-900 pt-2 border-t border-gray-900">
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 900, fontSize: '12px', paddingTop: '5px', borderTop: '2px solid #0f172a', color: '#0f172a' }}>
                       <span>Grand Total:</span>
-                      <span className="font-mono text-blue-900">{formatCurrency(quote.pricing.totalAmount)}</span>
+                      <span style={{ fontFamily: 'monospace', color: '#d97706' }}>{formatCurrency(quote.pricing.totalAmount)}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* Notes & Terms */}
-                {(quote.notes || quote.terms) && (
-                  <div className="pt-4 border-t border-gray-200 text-[11px] text-gray-600 space-y-2">
-                    {quote.notes && (
-                      <div>
-                        <span className="font-bold text-gray-800 block">Notes:</span>
-                        <p className="whitespace-pre-line">{quote.notes}</p>
-                      </div>
-                    )}
-                    {quote.terms && (
-                      <div>
-                        <span className="font-bold text-gray-800 block">Terms &amp; Conditions:</span>
-                        <p className="whitespace-pre-line">{quote.terms}</p>
-                      </div>
-                    )}
+                {/* Terms and Signatory */}
+                <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '10px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', fontSize: '9px', color: '#64748b' }}>
+                  <div>
+                    <strong style={{ color: '#334155' }}>Terms &amp; Conditions:</strong> 50% advance, balance on delivery.
                   </div>
-                )}
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ width: '120px', borderBottom: '1px dashed #94a3b8', marginBottom: '3px', marginLeft: 'auto' }} />
+                    <strong style={{ color: '#0f172a', display: 'block' }}>Authorized Signatory</strong>
+                    <span>{quote.business.name || 'iLoveQuote Technologies'}</span>
+                  </div>
+                </div>
               </div>
             </div>
           </div>

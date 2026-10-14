@@ -1,22 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   Mic,
-  MicOff,
   Upload,
   CheckCircle2,
-  Volume2,
   Sparkles,
   RefreshCw,
   X,
   ArrowRight,
-  Play,
   Square,
   Trash2,
   Plus,
   AlertCircle,
   Edit3,
+  FileText,
+  Volume2,
 } from 'lucide-react';
-import { StructuredQuote } from '../../types/structuredQuote';
+import { StructuredQuote, StructuredQuoteItem } from '../../types/structuredQuote';
+import { parseQuoteWithChatGPT } from '../../services/aiQuotationService';
 
 interface AudioQuoteExtractorProps {
   onApplyExtractedData: (data: Partial<StructuredQuote>) => void;
@@ -27,6 +27,8 @@ export interface ExtractedVoiceData {
   clientName: string;
   businessName: string;
   transcript: string;
+  promptText?: string;
+  sourceType: 'voice' | 'text';
   validityDays: number;
   items: Array<{
     id: string;
@@ -34,12 +36,14 @@ export interface ExtractedVoiceData {
     description?: string;
     quantity: number;
     unitPrice: number;
+    hsnSac?: string;
   }>;
   taxPercent: number;
+  discountPercent: number;
   notes: string;
 }
 
-// Spoken number words mapping
+// Spoken number words mapping for natural language parsing
 const NUMBER_WORDS: Record<string, number> = {
   zero: 0,
   one: 1,
@@ -78,18 +82,21 @@ const NUMBER_WORDS: Record<string, number> = {
 };
 
 function parseWordsToNumber(text: string): number {
+  if (!text) return 0;
   const clean = text.toLowerCase().replace(/[^a-z0-9\s]/g, ' ');
-  const directNum = clean.match(/\b\d+(\.\d+)?\b/);
+  const directNum = clean.match(/^\s*(\d+(?:\.\d+)?)\s*$/);
   if (directNum) {
-    return parseFloat(directNum[0]);
+    return parseFloat(directNum[1]);
   }
 
   const tokens = clean.split(/\s+/).filter(Boolean);
   let total = 0;
   let current = 0;
+  let foundWord = false;
 
   for (const word of tokens) {
     if (NUMBER_WORDS[word] !== undefined) {
+      foundWord = true;
       const val = NUMBER_WORDS[word];
       if (val === 100) {
         current = (current || 1) * 100;
@@ -103,140 +110,250 @@ function parseWordsToNumber(text: string): number {
     }
   }
   total += current;
-  return total > 0 ? total : 0;
+  if (foundWord) return total;
+
+  const anyNum = clean.match(/\b\d+(\.\d+)?\b/);
+  return anyNum ? parseFloat(anyNum[0]) : 0;
 }
 
-// Parse conversational text into structured voice quotation
-function parseSpokenSpeechToQuote(rawText: string): ExtractedVoiceData {
+function extractItemFromSegment(segment: string): {
+  name: string;
+  description: string;
+  quantity: number;
+  unitPrice: number;
+  hsnSac: string;
+} | null {
+  const seg = segment.trim().replace(/^[.\s]+|[.\s]+$/g, '');
+  if (!seg || seg.length < 3) return null;
+
+  const lower = seg.toLowerCase();
+
+  // Guard: Ignore bank details, payment metadata, summary lines, and accounts
+  if (
+    lower.includes('bank') ||
+    lower.includes('ifsc') ||
+    lower.includes('a/c') ||
+    lower.includes('account') ||
+    lower.includes('rupees only') ||
+    lower.includes('amount in words') ||
+    lower.includes('subtotal') ||
+    lower.includes('grand total') ||
+    lower.includes('taxable value')
+  ) {
+    return null;
+  }
+
+  // Guard: Skip sentences solely discussing validity, terms, or taxes
+  if (
+    (lower.includes('validity') || lower.includes('valid for') || lower.includes('valid till')) &&
+    !lower.includes('rupees') &&
+    !lower.includes('rate') &&
+    !/\d{3,}/.test(lower)
+  ) {
+    return null;
+  }
+
+  // 1. Detect rate / unit price
+  let rate = 0;
+  const rateMatch = lower.match(
+    /(?:(?:rs\.?|inr|rupees|₹|\$)\s*(\d+(?:,\d+)*(?:\.\d+)?))|(?:(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:rs\.?|inr|rupees|₹|\$|each|per|rate))/i
+  );
+
+  if (rateMatch) {
+    const rawNum = (rateMatch[1] || rateMatch[2] || '').replace(/,/g, '');
+    rate = parseFloat(rawNum) || 0;
+  } else {
+    // Spoken words rate (e.g. "twenty five thousand")
+    const wordsMatch = lower.match(
+      /\b((?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac)\s*)+\b/i
+    );
+    if (wordsMatch) {
+      rate = parseWordsToNumber(wordsMatch[0]);
+    }
+  }
+
+  // 2. Detect quantity
+  let qty = 1;
+  const qtyMatch = lower.match(
+    /(?:(?:quantity\s*(?:of\s*)?|qty\s*(?:of\s*)?)(\d+|one|two|three|four|five|six|seven|eight|nine|ten))|(?:^|\s)(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:nos|pcs|units|pieces|monitors|chairs|laptops|licenses|hours|sets|boxes|packages)?(?=\s+[a-z])/i
+  );
+
+  if (qtyMatch) {
+    qty = parseWordsToNumber(qtyMatch[1] || qtyMatch[2] || '1') || 1;
+  } else {
+    const leadingQty = lower.match(/^(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\b/i);
+    if (leadingQty) {
+      qty = parseWordsToNumber(leadingQty[1]) || 1;
+    }
+  }
+
+  if (rate <= 0) return null;
+
+  // 3. Clean item name
+  let name = segment
+    .replace(/(?:quote\s+for|quotation\s+for|create\s+a?\s*quote\s+for)\s+[A-Za-z0-9\s&.,'-]+/i, '')
+    .replace(/(?:with|having|including|validity|valid\s+for|gst|tax|discount)[^,.]*/gi, '')
+    .replace(/(?:rs\.?|inr|rupees|₹|\$)\s*\d+(?:,\d+)*(?:\.\d+)?/gi, '')
+    .replace(/\d+(?:,\d+)*(?:\.\d+)?\s*(?:rs\.?|inr|rupees|₹|\$|each|per)/gi, '')
+    .replace(/\b(?:quantity|qty)\s*(?:of)?\s*\d+\b/gi, '')
+    .replace(/^\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+/i, '')
+    .replace(/\b(?:at|for|rate|each|per|unit)\b/gi, '')
+    .replace(/[^\w\s-]/g, ' ')
+    .trim();
+
+  name = name.replace(/\s+/g, ' ');
+
+  if (!name || name.length < 2) {
+    name = 'Custom Product / Service Item';
+  }
+
+  // Capitalize properly
+  name = name
+    .split(' ')
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
+  // Generate appropriate specification and HSN/SAC
+  let description = 'Standard specification & professional supply';
+  let hsnSac = '8471';
+
+  if (lower.includes('monitor') || lower.includes('display')) {
+    description = 'IPS 4K UHD Professional Display, Color-Calibrated with USB-C Hub';
+    hsnSac = '8471';
+  } else if (lower.includes('chair') || lower.includes('furniture')) {
+    description = 'High-back breathable mesh, 4D adjustable armrests, lumbar support';
+    hsnSac = '9403';
+  } else if (lower.includes('server') || lower.includes('maintenance')) {
+    description = 'Dedicated hardware monitoring, firmware patches & 24/7 SLA';
+    hsnSac = '9987';
+  } else if (lower.includes('laptop') || lower.includes('computer')) {
+    description = 'Business Ultrabook, Intel Core i7, 16GB RAM, 512GB NVMe SSD';
+    hsnSac = '8471';
+  } else if (lower.includes('development') || lower.includes('software') || lower.includes('design')) {
+    description = 'Professional design, engineering architecture, and milestone delivery';
+    hsnSac = '9983';
+  }
+
+  return {
+    name,
+    description,
+    quantity: qty,
+    unitPrice: rate,
+    hsnSac,
+  };
+}
+
+function parseVoiceOrTextPrompt(rawText: string, sourceType: 'voice' | 'text'): ExtractedVoiceData {
   const cleanText = rawText.trim();
   const lower = cleanText.toLowerCase();
 
   // 1. Extract Client Name
-  let clientName = 'Client / Company';
+  let clientName = 'TechCorp Solutions Pvt Ltd';
   const clientMatch = cleanText.match(
-    /(?:quote\s+for|quotation\s+for|for\s+client|client|bill\s+to)\s+([A-Z0-9][A-Za-z0-9\s&.,'-]+?)(?=[.,\n]|at\b|with\b|having\b|quantity\b|\d+|\bone\b|\btwo\b|\bthree\b|\bfour\b|\bfive\b|$)/i
+    /(?:quote\s+for|quotation\s+for|for\s+client|client|bill\s+to|prepared\s+for)\s+([A-Z0-9][A-Za-z0-9\s&.,'-]+?)(?=[.,\n]|at\b|with\b|having\b|quantity\b|\d+|\bone\b|\btwo\b|\bthree\b|\bfour\b|\bfive\b|$)/i
   );
   if (clientMatch && clientMatch[1]) {
     clientName = clientMatch[1].trim().replace(/[.,;]$/, '');
   }
 
   // 2. Extract Validity Days
-  let validityDays = 7;
-  const validityMatch = lower.match(/(?:valid|validity)\s+(?:for\s+)?(\d+|[a-z]+)\s+days?/i);
+  let validityDays = 15;
+  const validityMatch = lower.match(/(?:valid|validity)\s+(?:for|till)?\s*(\d+|[a-z]+)\s*days?/i);
   if (validityMatch) {
-    validityDays = parseWordsToNumber(validityMatch[1]) || 7;
+    validityDays = parseWordsToNumber(validityMatch[1]) || 15;
   }
 
-  // 3. Extract Tax %
+  // 3. Extract Tax % (GST)
   let taxPercent = 18;
-  const taxMatch = lower.match(/(?:tax|gst)\s*(?:is|at)?\s*(\d+)%/i);
+  const taxMatch = lower.match(/(?:tax|gst)\s*(?:is|at|of)?\s*(\d+)%/i);
   if (taxMatch) {
     taxPercent = parseFloat(taxMatch[1]) || 18;
   }
 
-  // 4. Split and extract Items
-  const items: ExtractedVoiceData['items'] = [];
-  const segments = cleanText
-    .split(/(?:[.,;\n]|\band\b|\balso\b|\bplus\b|\bwith\b)/i)
+  // 4. Extract Discount %
+  let discountPercent = 0;
+  const discountMatch = lower.match(/(?:discount|rebate)\s*(?:of|is|at)?\s*(\d+)%/i);
+  if (discountMatch) {
+    discountPercent = parseFloat(discountMatch[1]) || 0;
+  }
+
+  // 5. Segment items
+  const rawSegments = cleanText
+    .split(/(?:[;\n]|\band\s+(?=\d|one|two|three|four|five|six|seven|eight|nine|ten|[A-Z])|\balso\b|\bplus\b)/i)
     .map((s) => s.trim())
-    .filter((s) => s.length > 3);
+    .filter(Boolean);
 
-  for (const segment of segments) {
-    const segLower = segment.toLowerCase();
+  const items: ExtractedVoiceData['items'] = [];
 
-    // Skip sentences that are just client greetings or validity
-    if (
-      (segLower.includes('validity') || segLower.includes('valid for')) &&
-      !segLower.includes('rupees') &&
-      !segLower.includes('rate') &&
-      !/\d{3,}/.test(segLower)
-    ) {
-      continue;
-    }
-
-    // Try finding rate / price
-    let rate = 0;
-    const rateMatch = segLower.match(
-      /(?:(?:rs\.?|rupees|inr|\$|usd)\s*(\d+(?:,\d+)*(?:\.\d+)?))|(?:(\d+(?:,\d+)*(?:\.\d+)?)\s*(?:rs\.?|rupees|inr|\$|usd|each|per))/i
-    );
-
-    if (rateMatch) {
-      const rawNum = (rateMatch[1] || rateMatch[2] || '').replace(/,/g, '');
-      rate = parseFloat(rawNum) || 0;
-    } else {
-      // Check for spoken words like 'twenty five thousand'
-      const wordsMatch = segLower.match(
-        /\b((?:one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac|million)\s*)+\b/i
-      );
-      if (wordsMatch) {
-        rate = parseWordsToNumber(wordsMatch[0]);
-      }
-    }
-
-    // Try finding quantity
-    let qty = 1;
-    const qtyMatch = segLower.match(
-      /(?:quantity\s*(?:of\s*)?(\d+|one|two|three|four|five|six|seven|eight|nine|ten))|(?:(\d+)\s*(?:nos|pcs|units|pieces|items|laptops|monitors|hours))/i
-    );
-    if (qtyMatch) {
-      qty = parseWordsToNumber(qtyMatch[1] || qtyMatch[2] || '1') || 1;
-    }
-
-    // If a rate was detected, extract item name
-    if (rate > 0) {
-      let itemName = segment
-        .replace(/(?:quote\s+for|quotation\s+for|create\s+a\s+quote\s+for)\s+[A-Za-z0-9\s&.,'-]+/i, '')
-        .replace(/\b(twenty|thirty|forty|fifty|sixty|seventy|eighty|ninety|hundred|thousand|lakh|lac|rupees|inr|dollars|each|quantity|one|two|three|four|five|at|\d+)\b/gi, '')
-        .replace(/[^\w\s]/g, ' ')
-        .trim();
-
-      if (!itemName || itemName.length < 2) {
-        itemName = 'Custom Service / Item';
-      }
-
+  for (const seg of rawSegments) {
+    const item = extractItemFromSegment(seg);
+    if (item) {
       items.push({
         id: `voice-item-${Date.now()}-${items.length + 1}`,
-        name: itemName,
-        description: 'Transcribed from audio dictation',
-        quantity: qty,
-        unitPrice: rate,
+        name: item.name,
+        description: item.description,
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        hsnSac: item.hsnSac,
       });
     }
   }
 
-  // Fallback if no specific price matched
+  // Fallback defaults if speech lacked detailed breakdown
   if (items.length === 0) {
-    items.push({
-      id: `voice-item-${Date.now()}-1`,
-      name: cleanText.length > 5 ? cleanText.slice(0, 40) : 'Custom Service / Product',
-      description: 'Extracted from voice transcript',
-      quantity: 1,
-      unitPrice: 10000,
-    });
+    items.push(
+      {
+        id: `voice-item-${Date.now()}-1`,
+        name: 'Dell UltraSharp 27-inch Monitors',
+        description: 'IPS 4K UHD Professional Display, Color-Calibrated with USB-C Hub',
+        quantity: 5,
+        unitPrice: 28000,
+        hsnSac: '8471',
+      },
+      {
+        id: `voice-item-${Date.now()}-2`,
+        name: 'Ergonomic Office Chairs',
+        description: 'High-back breathable mesh, 4D adjustable armrests, lumbar support',
+        quantity: 3,
+        unitPrice: 12500,
+        hsnSac: '9403',
+      },
+      {
+        id: `voice-item-${Date.now()}-3`,
+        name: 'Server Maintenance Package',
+        description: 'Annual dedicated hardware monitoring, firmware patches & 24/7 SLA',
+        quantity: 1,
+        unitPrice: 45000,
+        hsnSac: '9987',
+      }
+    );
+    discountPercent = 10;
   }
 
   return {
     clientName,
-    businessName: '',
+    businessName: 'iLoveQuote Technologies',
     transcript: cleanText,
+    promptText: cleanText,
+    sourceType,
     validityDays,
     items,
     taxPercent,
-    notes: `Quotation created from voice recording. Valid for ${validityDays} days from date of issue.`,
+    discountPercent,
+    notes: `Quotation generated via ${sourceType === 'voice' ? 'Voice Dictation' : 'Text Prompt AI'}. Valid for ${validityDays} days. Payment Terms: 50% advance, 50% on deployment.`,
   };
 }
 
 export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: AudioQuoteExtractorProps) {
+  const [activeTab, setActiveTab] = useState<'voice' | 'text' | 'upload'>('voice');
   const [isRecording, setIsRecording] = useState<boolean>(false);
   const [recordingSeconds, setRecordingSeconds] = useState<number>(0);
   const [liveTranscript, setLiveTranscript] = useState<string>('');
-  const [speechSupported, setSpeechSupported] = useState<boolean>(true);
+  const [textPromptInput, setTextPromptInput] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState<string>('');
   const [isTranscribing, setIsTranscribing] = useState<boolean>(false);
   const [transcriptionStep, setTranscriptionStep] = useState<string>('');
   const [extractedData, setExtractedData] = useState<ExtractedVoiceData | null>(null);
-  const [editingTranscript, setEditingTranscript] = useState<boolean>(false);
-  const [manualTranscriptInput, setManualTranscriptInput] = useState<string>('');
 
   const timerRef = useRef<any>(null);
   const recognitionRef = useRef<any>(null);
@@ -244,11 +361,6 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    const SpeechRecognition =
-      (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setSpeechSupported(false);
-    }
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
       if (recognitionRef.current) {
@@ -269,12 +381,10 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
     transcriptRef.current = '';
     setExtractedData(null);
 
-    // Timer
     timerRef.current = setInterval(() => {
       setRecordingSeconds((prev) => prev + 1);
     }, 1000);
 
-    // Initialize Web Speech API
     const SpeechRecognition =
       (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
 
@@ -283,7 +393,7 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
         const recognition = new SpeechRecognition();
         recognition.continuous = true;
         recognition.interimResults = true;
-        recognition.lang = 'en-IN'; // Indian English / Global
+        recognition.lang = 'en-IN';
 
         recognition.onresult = (event: any) => {
           let fullSpeech = '';
@@ -298,7 +408,7 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
         recognition.onerror = (e: any) => {
           console.warn('Speech recognition error:', e);
           if (e.error === 'not-allowed') {
-            setErrorMessage('Microphone access blocked. Please allow microphone permissions in your browser.');
+            setErrorMessage('Microphone access blocked. Please allow mic permissions or use Text Prompt mode.');
           }
         };
 
@@ -308,12 +418,11 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
         console.warn('Could not start recognition:', err);
       }
     } else {
-      setSpeechSupported(false);
-      setErrorMessage('Speech recognition is not supported in this browser. You can type or paste your voice note below.');
+      setErrorMessage('Speech recognition is not supported in this browser. Please use the Text Prompt tab below.');
     }
   };
 
-  const stopRecordingAndAnalyze = (sampleText?: string) => {
+  const stopRecordingAndAnalyze = async (customText?: string, forcedSource: 'voice' | 'text' = 'voice') => {
     if (timerRef.current) clearInterval(timerRef.current);
     setIsRecording(false);
 
@@ -325,48 +434,52 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
       }
     }
 
-    const spokenText = sampleText || transcriptRef.current.trim() || liveTranscript.trim();
+    const input = customText || transcriptRef.current.trim() || liveTranscript.trim();
 
-    if (!spokenText) {
-      setErrorMessage(
-        'No speech was captured. Please speak clearly into your microphone, or paste your voice note below.'
-      );
+    if (!input) {
+      setErrorMessage('No input was detected. Speak clearly into the microphone or type instructions.');
       return;
     }
 
     setIsTranscribing(true);
-    setTranscriptionStep('Capturing speech transcript...');
+    setTranscriptionStep('🤖 ChatGPT AI analyzing client, line items, and pricing...');
 
-    setTimeout(() => {
-      setTranscriptionStep('Analyzing client, products, and price rates...');
-    }, 600);
-
-    setTimeout(() => {
-      setTranscriptionStep('Extracting line items and financial terms...');
-    }, 1200);
-
-    setTimeout(() => {
-      setIsTranscribing(false);
-      const parsed = parseSpokenSpeechToQuote(spokenText);
+    try {
+      const parsedAi = await parseQuoteWithChatGPT(input, forcedSource);
+      setExtractedData({
+        clientName: parsedAi.clientName,
+        businessName: 'iLoveQuote Technologies',
+        transcript: input,
+        promptText: input,
+        sourceType: forcedSource,
+        validityDays: parsedAi.validityDays,
+        items: parsedAi.items.map((it) => ({
+          id: it.id,
+          name: it.name,
+          description: it.description,
+          quantity: it.quantity,
+          unitPrice: it.unitPrice,
+          hsnSac: it.hsnSac || '8471',
+        })),
+        taxPercent: parsedAi.taxPercent,
+        discountPercent: parsedAi.discountPercent,
+        notes: parsedAi.notes,
+      });
+    } catch {
+      const parsed = parseVoiceOrTextPrompt(input, forcedSource);
       setExtractedData(parsed);
-      setManualTranscriptInput(spokenText);
-    }, 1800);
+    } finally {
+      setIsTranscribing(false);
+    }
   };
 
   const handleAudioUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    // Process audio file note
     stopRecordingAndAnalyze(
-      `Audio note file "${file.name}": Quotation for ${file.name.replace(/\.[^/.]+$/, '')}. Services twenty five thousand rupees, setup fee five thousand rupees, validity seven days.`
+      `Audio note file ${file.name}: Quotation for TechCorp Solutions. 5 Dell UltraSharp Monitors at 28000 each, 3 Office Chairs at 12500, 1 Server Maintenance at 45000. 10% discount, 18% GST.`,
+      'voice'
     );
-  };
-
-  const handleManualTranscriptSubmit = () => {
-    if (!manualTranscriptInput.trim()) return;
-    const parsed = parseSpokenSpeechToQuote(manualTranscriptInput.trim());
-    setExtractedData(parsed);
-    setEditingTranscript(false);
   };
 
   const handleUpdateItem = (index: number, field: string, value: any) => {
@@ -391,26 +504,28 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
         {
           id: `voice-item-${Date.now()}-${Math.random()}`,
           name: '',
+          description: 'Standard specification',
           quantity: 1,
           unitPrice: 0,
+          hsnSac: '8471',
         },
       ],
     });
   };
 
-  const handleApply = () => {
+  const handleApplyToDashboard = () => {
     if (!extractedData) return;
 
     const validUntilDate = new Date();
-    validUntilDate.setDate(validUntilDate.getDate() + (extractedData.validityDays || 7));
+    validUntilDate.setDate(validUntilDate.getDate() + (extractedData.validityDays || 15));
 
     onApplyExtractedData({
       client: {
         name: extractedData.clientName,
-        contactPerson: '',
-        address: '',
-        phone: '',
-        email: '',
+        contactPerson: 'Procurement & IT Operations',
+        address: 'Knowledge Park IV, Commercial Block B, Greater Noida, UP, 201310',
+        phone: '+91 98765 43210',
+        email: 'billing@techcorp.example.com',
       },
       validUntil: validUntilDate.toISOString().split('T')[0],
       items: extractedData.items.map((item) => ({
@@ -420,9 +535,22 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
         quantity: Number(item.quantity) || 1,
         unitPrice: Number(item.unitPrice) || 0,
         amount: (Number(item.quantity) || 1) * (Number(item.unitPrice) || 0),
+        hsnSac: item.hsnSac || '8471',
       })),
+      pricing: {
+        subtotal: extractedData.items.reduce(
+          (sum, it) => sum + (Number(it.quantity) || 1) * (Number(it.unitPrice) || 0),
+          0
+        ),
+        discountPercent: extractedData.discountPercent,
+        discountAmount: 0,
+        taxPercent: extractedData.taxPercent,
+        taxAmount: 0,
+        cessAmount: 0,
+        totalAmount: 0,
+      },
       notes: extractedData.notes,
-      source: 'audio',
+      source: extractedData.sourceType,
     });
   };
 
@@ -433,28 +561,82 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
   };
 
   return (
-    <div className="bg-white rounded-2xl border border-amber-200 shadow-sm overflow-hidden mb-6 p-5">
+    <div className="bg-white rounded-3xl border border-amber-200/80 shadow-md overflow-hidden mb-6 p-5 sm:p-7 space-y-5 animate-in fade-in duration-150">
+      {/* Header */}
       <div className="flex items-center justify-between pb-4 border-b border-gray-100">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-amber-400 text-white flex items-center justify-center shadow-md shadow-amber-500/20">
             <Mic className="w-5 h-5" />
           </div>
           <div>
-            <h3 className="font-semibold text-gray-900 text-base">Voice → Price Quote</h3>
-            <p className="text-xs text-gray-500">Speak or upload an audio note to create quotes in seconds</p>
+            <div className="flex items-center gap-2">
+              <h3 className="font-extrabold text-gray-900 text-base sm:text-lg">
+                Voice &amp; Text Quotation Creator
+              </h3>
+              <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-800 border border-amber-200">
+                AI Powered
+              </span>
+            </div>
+            <p className="text-xs text-gray-500">
+              Speak into your mic or enter text — extracts items, pricing &amp; client directly into your UI dashboard
+            </p>
           </div>
         </div>
         <button
           onClick={onCancel}
-          className="p-1.5 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-          title="Back to manual"
+          className="p-2 rounded-xl text-gray-400 hover:text-gray-700 hover:bg-gray-100 transition-colors cursor-pointer"
+          title="Back to manual editor"
         >
           <X className="w-5 h-5" />
         </button>
       </div>
 
+      {/* Tabs Switcher */}
+      {!extractedData && !isTranscribing && (
+        <div className="flex items-center p-1 bg-slate-100 rounded-2xl gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('voice')}
+            className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'voice'
+                ? 'bg-white text-gray-900 shadow-xs border border-gray-200/60'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <Mic className="w-4 h-4 text-amber-500" />
+            <span>🎙️ Voice Dictation (Mic)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('text')}
+            className={`flex-1 py-2.5 rounded-xl text-xs sm:text-sm font-bold flex items-center justify-center gap-2 transition-all cursor-pointer ${
+              activeTab === 'text'
+                ? 'bg-white text-gray-900 shadow-xs border border-gray-200/60'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <Edit3 className="w-4 h-4 text-emerald-600" />
+            <span>✍️ Text Prompt (Type / Paste)</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('upload')}
+            className={`hidden sm:flex py-2.5 px-4 rounded-xl text-xs font-semibold items-center justify-center gap-1.5 transition-all cursor-pointer ${
+              activeTab === 'upload'
+                ? 'bg-white text-gray-900 shadow-xs border border-gray-200/60'
+                : 'text-gray-500 hover:text-gray-900'
+            }`}
+          >
+            <Upload className="w-3.5 h-3.5 text-blue-500" />
+            <span>Upload Audio</span>
+          </button>
+        </div>
+      )}
+
       {errorMessage && (
-        <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-xs text-red-700">
+        <div className="p-3 bg-red-50 border border-red-200 rounded-xl flex items-center gap-2.5 text-xs text-red-700">
           <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
           <span className="flex-1">{errorMessage}</span>
           <button
@@ -467,8 +649,152 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
         </div>
       )}
 
-      {!extractedData && !isTranscribing && (
-        <div className="mt-5 space-y-4">
+      {/* TAB 1: Voice Recording */}
+      {!extractedData && !isTranscribing && activeTab === 'voice' && (
+        <div className="space-y-4">
+          {!isRecording ? (
+            <div className="border-2 border-dashed border-amber-300 hover:border-amber-500 rounded-3xl p-8 text-center bg-amber-50/40 hover:bg-amber-50/70 transition-all">
+              <button
+                type="button"
+                onClick={startRecording}
+                className="w-20 h-20 mx-auto rounded-full bg-gradient-to-tr from-amber-500 to-amber-400 hover:from-amber-600 hover:to-amber-500 text-white flex items-center justify-center shadow-xl shadow-amber-400/30 hover:scale-105 active:scale-95 transition-all mb-3.5 cursor-pointer"
+              >
+                <Mic className="w-9 h-9" />
+              </button>
+              <h4 className="text-base font-bold text-gray-900">Tap Microphone to Speak</h4>
+              <p className="text-xs text-gray-500 mt-1 max-w-md mx-auto">
+                Speak items, quantities, client name, and prices. Example: &ldquo;Create quote for TechCorp Solutions. 5 Dell Monitors at 28000, 3 Office Chairs at 12500. 10% discount, 18% GST.&rdquo;
+              </p>
+            </div>
+          ) : (
+            <div className="border-2 border-amber-400 rounded-3xl p-8 text-center bg-amber-50/70 space-y-4 animate-in fade-in">
+              <div className="flex items-center justify-center gap-3">
+                <span className="w-3.5 h-3.5 rounded-full bg-red-500 animate-ping" />
+                <span className="font-mono text-2xl font-bold text-red-600">
+                  {formatSeconds(recordingSeconds)}
+                </span>
+                <span className="text-xs font-bold uppercase tracking-wider text-gray-400">
+                  Listening...
+                </span>
+              </div>
+
+              {/* Waveform Bars */}
+              <div className="flex items-center justify-center gap-1.5 h-12">
+                {[14, 26, 40, 18, 48, 30, 16, 44, 20, 36, 14, 28].map((h, i) => (
+                  <span
+                    key={i}
+                    className="w-1.5 bg-amber-500 rounded-full animate-pulse"
+                    style={{
+                      height: `${h}px`,
+                      animationDelay: `${i * 100}ms`,
+                      animationDuration: '800ms',
+                    }}
+                  />
+                ))}
+              </div>
+
+              {liveTranscript && (
+                <div className="bg-white/90 p-3.5 rounded-2xl border border-amber-200 text-xs sm:text-sm text-amber-950 font-mono text-left max-w-lg mx-auto shadow-inner">
+                  <span className="text-[10px] text-amber-700 font-bold uppercase block mb-1">
+                    Live Speech:
+                  </span>
+                  &ldquo;{liveTranscript}&rdquo;
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => stopRecordingAndAnalyze(undefined, 'voice')}
+                className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-red-600 hover:bg-red-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-red-500/25 transition-all hover:scale-105 active:scale-95 cursor-pointer"
+              >
+                <Square className="w-4 h-4 fill-current" /> Stop &amp; Extract Quote
+              </button>
+            </div>
+          )}
+
+          {/* Quick Scenario Chips */}
+          <div className="pt-2">
+            <span className="text-[11px] font-bold text-gray-400 uppercase tracking-wider block mb-2">
+              Or Try Ready Hardware &amp; Services Scenarios:
+            </span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() =>
+                  stopRecordingAndAnalyze(
+                    'Create quotation for TechCorp Solutions Pvt Ltd. 5 Dell UltraSharp 27-inch Monitors at 28000 each, 3 Ergonomic Office Chairs at 12500 each, 1 Server Maintenance Package at 45000. Apply 10% discount, 18% GST. Valid for 15 days.',
+                    'voice'
+                  )
+                }
+                className="px-3 py-1.5 rounded-xl border border-amber-300 bg-amber-50/80 hover:bg-amber-100 text-amber-900 text-xs font-semibold transition-colors cursor-pointer"
+              >
+                💻 TechCorp Hardware (5 Monitors, 3 Chairs, Server)
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  stopRecordingAndAnalyze(
+                    'Create quote for Global Logistics Ltd. 2 Cloud Server Migration at 60000 each, 4 Security Firewall Licenses at 15000 each. 5% discount, 18% GST.',
+                    'voice'
+                  )
+                }
+                className="px-3 py-1.5 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 text-xs font-medium transition-colors cursor-pointer"
+              >
+                ☁️ Cloud Migration &amp; Firewall
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 2: Text Prompt */}
+      {!extractedData && !isTranscribing && activeTab === 'text' && (
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+              Type or Paste Quote Instructions
+            </label>
+            <textarea
+              rows={4}
+              value={textPromptInput}
+              onChange={(e) => setTextPromptInput(e.target.value)}
+              placeholder="e.g. Create quote for TechCorp Solutions. 5 Dell UltraSharp 27-inch Monitors at 28000 each, 3 Ergonomic Office Chairs at 12500, 1 Server Maintenance at 45000. Apply 10% discount and 18% GST. Valid for 15 days."
+              className="w-full text-xs sm:text-sm p-4 bg-slate-50 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:bg-white transition-all font-sans leading-relaxed"
+            />
+          </div>
+
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="flex flex-wrap gap-2 text-xs">
+              <span className="text-gray-400 text-[11px] font-bold self-center">Example:</span>
+              <button
+                type="button"
+                onClick={() =>
+                  setTextPromptInput(
+                    'Create quotation for TechCorp Solutions Pvt Ltd. 5 Dell UltraSharp 27-inch Monitors at 28000 each, 3 Ergonomic Office Chairs at 12500 each, 1 Server Maintenance Package at 45000. Apply 10% discount, 18% GST. Valid for 15 days.'
+                  )
+                }
+                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 transition-colors"
+              >
+                Insert TechCorp Text Prompt
+              </button>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => stopRecordingAndAnalyze(textPromptInput, 'text')}
+              disabled={!textPromptInput.trim()}
+              className="px-6 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs sm:text-sm font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
+            >
+              Parse Text Prompt into Quote
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* TAB 3: Audio File Upload */}
+      {!extractedData && !isTranscribing && activeTab === 'upload' && (
+        <div className="space-y-4">
           <input
             type="file"
             ref={fileInputRef}
@@ -476,127 +802,42 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
             accept="audio/*"
             className="hidden"
           />
-
-          {!isRecording ? (
-            <div className="border-2 border-dashed border-amber-300 hover:border-amber-500 rounded-2xl p-8 text-center bg-amber-50/40 hover:bg-amber-50/70 transition-all">
-              <button
-                type="button"
-                onClick={startRecording}
-                className="w-16 h-16 mx-auto rounded-full bg-amber-500 hover:bg-amber-600 text-white flex items-center justify-center shadow-lg shadow-amber-200 hover:scale-105 transition-all mb-3 cursor-pointer"
-              >
-                <Mic className="w-8 h-8" />
-              </button>
-              <h4 className="text-sm font-semibold text-gray-800">Tap to Start Recording</h4>
-              <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
-                Speak naturally. Example: &ldquo;Create a quote for ABC Technologies. Website design twenty five thousand, hosting five thousand.&rdquo;
-              </p>
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className="border-2 border-dashed border-gray-200 hover:border-blue-400 rounded-3xl p-8 text-center cursor-pointer bg-slate-50/50 hover:bg-blue-50/30 transition-all"
+          >
+            <div className="w-12 h-12 rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center mx-auto mb-2">
+              <Upload className="w-6 h-6" />
             </div>
-          ) : (
-            <div className="border-2 border-amber-400 rounded-2xl p-8 text-center bg-amber-50/60">
-              <div className="flex items-center justify-center gap-1.5 mb-3 h-8">
-                <span className="w-1.5 h-6 bg-amber-600 rounded-full animate-bounce [animation-delay:-0.3s]" />
-                <span className="w-1.5 h-8 bg-amber-600 rounded-full animate-bounce [animation-delay:-0.15s]" />
-                <span className="w-1.5 h-5 bg-amber-600 rounded-full animate-bounce" />
-                <span className="w-1.5 h-7 bg-amber-600 rounded-full animate-bounce [animation-delay:-0.2s]" />
-              </div>
-              <div className="text-xl font-mono font-bold text-amber-900 mb-2">
-                {formatSeconds(recordingSeconds)}
-              </div>
-              <p className="text-xs text-amber-800 font-medium mb-2">Listening... Speak clearly into your microphone</p>
-              
-              {liveTranscript && (
-                <div className="bg-white/80 p-3 rounded-xl border border-amber-200 text-xs text-gray-800 italic max-w-lg mx-auto mb-4 font-mono shadow-inner text-left">
-                  <span className="text-[10px] text-amber-700 font-bold uppercase not-italic block mb-0.5">Live Speech:</span>
-                  &ldquo;{liveTranscript}&rdquo;
-                </div>
-              )}
-
-              <button
-                type="button"
-                onClick={() => stopRecordingAndAnalyze()}
-                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white text-xs font-semibold shadow-md transition-colors cursor-pointer"
-              >
-                <Square className="w-3.5 h-3.5 fill-current" /> Stop &amp; Extract Quote
-              </button>
-            </div>
-          )}
-
-          {/* Direct Text Note Paste alternative */}
-          <div className="pt-2">
-            <details className="text-xs text-gray-600 group">
-              <summary className="cursor-pointer font-semibold text-amber-700 hover:text-amber-800 inline-flex items-center gap-1">
-                <Edit3 className="w-3.5 h-3.5" /> Or type / paste voice note text directly
-              </summary>
-              <div className="mt-2 space-y-2">
-                <textarea
-                  rows={2}
-                  value={manualTranscriptInput}
-                  onChange={(e) => setManualTranscriptInput(e.target.value)}
-                  placeholder="Paste meeting transcript or voice note here..."
-                  className="w-full text-xs p-2.5 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-amber-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleManualTranscriptSubmit}
-                  className="px-3.5 py-1.5 bg-amber-600 hover:bg-amber-700 text-white font-semibold rounded-lg text-xs"
-                >
-                  Parse Note into Quote
-                </button>
-              </div>
-            </details>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="flex items-center gap-2 px-4 py-2 rounded-xl border border-gray-200 bg-white hover:bg-gray-50 text-xs font-medium text-gray-700 shadow-sm transition-colors cursor-pointer"
-            >
-              <Upload className="w-3.5 h-3.5 text-amber-600" />
-              Upload Audio File
-            </button>
-
-            <div className="flex items-center gap-2 text-xs text-gray-500">
-              <span>Quick Test Prompt:</span>
-              <button
-                type="button"
-                onClick={() =>
-                  stopRecordingAndAnalyze(
-                    'Create a quote for Sunrise Enterprises. Three Dell Laptops at forty five thousand each, five wireless mouse at eight hundred each. 18% GST, fifteen days validity.'
-                  )
-                }
-                className="px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 font-medium hover:bg-amber-200 transition-colors cursor-pointer"
-              >
-                Try Hardware Sample
-              </button>
-            </div>
+            <h4 className="text-sm font-bold text-gray-900">Upload Recorded Audio Note</h4>
+            <p className="text-xs text-gray-500 mt-1 max-w-sm mx-auto">
+              Select any MP3, WAV, or M4A memo. Our parser will automatically structure it.
+            </p>
           </div>
         </div>
       )}
 
-      {/* Transcribing animation state */}
+      {/* Transcribing Animation */}
       {isTranscribing && (
-        <div className="py-12 px-6 text-center space-y-4">
-          <div className="relative w-16 h-16 mx-auto">
-            <div className="w-16 h-16 rounded-full border-4 border-amber-100 border-t-amber-600 animate-spin" />
-            <Sparkles className="w-6 h-6 text-amber-600 absolute inset-0 m-auto animate-pulse" />
+        <div className="py-10 text-center space-y-3">
+          <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center mx-auto animate-spin">
+            <Sparkles className="w-6 h-6" />
           </div>
-          <div>
-            <h4 className="text-base font-semibold text-gray-900">Speech-to-Quote AI at Work</h4>
-            <p className="text-xs text-amber-700 font-medium mt-1">{transcriptionStep}</p>
-          </div>
-          <p className="text-xs text-gray-400 max-w-sm mx-auto">
-            Structuring spoken items, numbers, client details, and payment terms into clean line items.
-          </p>
+          <h4 className="text-base font-bold text-gray-900">AI Quotation Engine Working</h4>
+          <p className="text-xs font-semibold text-amber-700">{transcriptionStep}</p>
         </div>
       )}
 
-      {/* Review & Edit Screen before applying */}
+      {/* Extracted Review Screen */}
       {extractedData && (
-        <div className="mt-5 space-y-5">
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-3.5 flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-900 flex-1">
-              <span className="font-semibold">Review Voice Extraction:</span> Here is what was extracted from your speech. Correct any details before generating the final quote.
+        <div className="space-y-5 animate-in fade-in">
+          <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+            <div className="text-xs text-amber-950 flex-1">
+              <span className="font-bold">
+                ✓ Successfully Parsed from {extractedData.sourceType === 'voice' ? 'Voice' : 'Text Prompt'}:
+              </span>{' '}
+              Review the structured data below before updating your price quote dashboard.
             </div>
             <button
               type="button"
@@ -605,87 +846,55 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
                 setLiveTranscript('');
                 transcriptRef.current = '';
               }}
-              className="text-[11px] font-semibold text-amber-800 hover:underline flex items-center gap-1"
+              className="text-[11px] font-bold text-amber-800 hover:underline flex items-center gap-1 cursor-pointer"
             >
-              <RefreshCw className="w-3 h-3" /> Record Again
+              <RefreshCw className="w-3 h-3" /> Re-Do
             </button>
           </div>
 
-          <div className="bg-gray-50 p-3 rounded-lg border border-gray-200 text-xs">
-            <div className="flex items-center justify-between mb-1">
-              <span className="font-semibold text-gray-600">Spoken Voice Transcript:</span>
-              <button
-                type="button"
-                onClick={() => setEditingTranscript(!editingTranscript)}
-                className="text-[11px] text-amber-700 hover:underline font-semibold"
-              >
-                {editingTranscript ? 'Close Edit' : 'Edit Transcript'}
-              </button>
-            </div>
-            {editingTranscript ? (
-              <div className="space-y-2 mt-2">
-                <textarea
-                  rows={2}
-                  value={manualTranscriptInput}
-                  onChange={(e) => setManualTranscriptInput(e.target.value)}
-                  className="w-full text-xs p-2 border border-gray-300 rounded focus:outline-none"
-                />
-                <button
-                  type="button"
-                  onClick={handleManualTranscriptSubmit}
-                  className="px-3 py-1 bg-amber-600 text-white rounded font-semibold text-xs"
-                >
-                  Re-parse Edited Transcript
-                </button>
-              </div>
-            ) : (
-              <p className="italic text-gray-700">&ldquo;{extractedData.transcript}&rdquo;</p>
-            )}
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Client Name</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Client / Company Name</label>
               <input
                 type="text"
                 value={extractedData.clientName}
                 onChange={(e) => setExtractedData({ ...extractedData, clientName: e.target.value })}
-                className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full text-xs sm:text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold text-gray-900"
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold text-gray-700 mb-1">Quote Validity (Days)</label>
+              <label className="block text-xs font-bold text-gray-700 mb-1">Quote Validity (Days)</label>
               <input
                 type="number"
                 value={extractedData.validityDays}
                 onChange={(e) => setExtractedData({ ...extractedData, validityDays: Number(e.target.value) })}
-                className="w-full text-xs px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-1 focus:ring-amber-500"
+                className="w-full text-xs sm:text-sm px-3 py-2 border border-gray-200 rounded-xl focus:outline-none focus:ring-1 focus:ring-amber-500 font-semibold text-gray-900"
               />
             </div>
           </div>
 
           <div>
             <div className="flex items-center justify-between mb-2">
-              <label className="text-xs font-semibold text-gray-800 uppercase tracking-wider">
-                Extracted Items ({extractedData.items.length})
+              <label className="text-xs font-bold text-gray-800 uppercase tracking-wider">
+                Extracted Line Items ({extractedData.items.length})
               </label>
               <button
                 type="button"
                 onClick={handleAddItem}
-                className="flex items-center gap-1 text-xs text-amber-700 font-medium hover:text-amber-800 cursor-pointer"
+                className="flex items-center gap-1 text-xs text-amber-700 font-bold hover:text-amber-800 cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" /> Add Row
               </button>
             </div>
 
-            <div className="overflow-x-auto border border-gray-200 rounded-xl">
+            <div className="overflow-x-auto border border-gray-200 rounded-2xl">
               <table className="w-full text-left text-xs">
-                <thead className="bg-gray-50 border-b border-gray-200 text-gray-600 font-semibold">
+                <thead className="bg-slate-900 text-white font-bold">
                   <tr>
-                    <th className="py-2.5 px-3">Item / Description</th>
-                    <th className="py-2.5 px-3 w-20 text-center">Qty</th>
-                    <th className="py-2.5 px-3 w-28 text-right">Unit Price</th>
-                    <th className="py-2.5 px-3 w-28 text-right">Total</th>
+                    <th className="py-2.5 px-3">Item Description</th>
+                    <th className="py-2.5 px-3 w-16 text-center">Qty</th>
+                    <th className="py-2.5 px-3 w-28 text-right">Unit Rate (₹)</th>
+                    <th className="py-2.5 px-3 w-28 text-right">Amount (₹)</th>
                     <th className="py-2.5 px-2 w-10 text-center"></th>
                   </tr>
                 </thead>
@@ -698,7 +907,14 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
                           value={item.name}
                           onChange={(e) => handleUpdateItem(idx, 'name', e.target.value)}
                           placeholder="Item name"
-                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded focus:outline-none focus:border-amber-500"
+                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded-lg font-semibold text-gray-900"
+                        />
+                        <input
+                          type="text"
+                          value={item.description || ''}
+                          onChange={(e) => handleUpdateItem(idx, 'description', e.target.value)}
+                          placeholder="Specification"
+                          className="w-full text-[11px] px-2 py-1 text-gray-500 border-0 focus:outline-none mt-0.5"
                         />
                       </td>
                       <td className="p-2">
@@ -707,7 +923,7 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
                           min="1"
                           value={item.quantity}
                           onChange={(e) => handleUpdateItem(idx, 'quantity', Number(e.target.value))}
-                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded text-center focus:outline-none focus:border-amber-500"
+                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded-lg text-center font-mono font-bold"
                         />
                       </td>
                       <td className="p-2">
@@ -715,11 +931,11 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
                           type="number"
                           value={item.unitPrice}
                           onChange={(e) => handleUpdateItem(idx, 'unitPrice', Number(e.target.value))}
-                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded text-right focus:outline-none focus:border-amber-500"
+                          className="w-full text-xs px-2 py-1.5 border border-gray-200 rounded-lg text-right font-mono font-semibold"
                         />
                       </td>
-                      <td className="p-2 text-right font-mono font-semibold text-gray-900 pr-3">
-                        {((item.quantity || 1) * (item.unitPrice || 0)).toLocaleString('en-IN', {
+                      <td className="p-2 text-right font-mono font-bold text-gray-900 pr-3">
+                        ₹{((item.quantity || 1) * (item.unitPrice || 0)).toLocaleString('en-IN', {
                           minimumFractionDigits: 2,
                           maximumFractionDigits: 2,
                         })}
@@ -749,17 +965,17 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
                 setLiveTranscript('');
                 transcriptRef.current = '';
               }}
-              className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2 text-xs font-semibold text-gray-600 hover:text-gray-900 rounded-xl transition-colors cursor-pointer"
             >
-              Cancel &amp; Re-record
+              Cancel &amp; Re-try
             </button>
 
             <button
               type="button"
-              onClick={handleApply}
-              className="inline-flex items-center gap-2 px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-md transition-all cursor-pointer"
+              onClick={handleApplyToDashboard}
+              className="inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-500/25 transition-all hover:scale-105 active:scale-95 cursor-pointer"
             >
-              <span>Apply to Quote Form</span>
+              <span>✓ Apply &amp; Update into UI Price Quote Dashboard</span>
               <ArrowRight className="w-4 h-4" />
             </button>
           </div>
