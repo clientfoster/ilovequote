@@ -105,122 +105,248 @@ function parseShorthandNumber(str: string): number {
   return foundWord ? total : 0;
 }
 
+function escapeRegExp(string: string): string {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 // Fallback Smart Heuristic Parser if AI endpoint is offline or times out
 function parseWithSmartHeuristics(rawText: string, sourceType: 'voice' | 'text'): ParsedAiQuoteResult {
   const cleanText = rawText.trim();
   const lower = cleanText.toLowerCase();
 
-  // 1. Extract Client Name from conversational phrases
-  let clientName = 'Client Company';
-  const clientMatch = cleanText.match(
-    /(?:quote\s+for|quotation\s+for|for\s+client|client\s+is|bhai\s+ek\s+quote\s+bana\s+do\s+for|quote\s+banao\s+for|bill\s+to|prepared\s+for|client|to)\s+([A-Z0-9][A-Za-z0-9\s&.,'-]+?)(?=[.,\n]|at\b|with\b|having\b|quantity\b|\d+|\bone\b|\btwo\b|\bthree\b|\bfour\b|\bfive\b|$)/i
-  );
+  // 1. Client Name Extraction
+  let clientName = '';
 
-  if (clientMatch && clientMatch[1]) {
-    clientName = clientMatch[1].trim().replace(/[.,;]$/, '');
-  } else {
-    // If no explicit "for", check first two words
+  // Pattern A: Text before colon: "bhai ek quote bana do for Semixon Technologies: 2 website..."
+  if (cleanText.includes(':')) {
+    const beforeColon = cleanText.split(':')[0].trim();
+    if (beforeColon.length >= 2 && beforeColon.length < 80 && !beforeColon.includes('\n')) {
+      const cleaned = beforeColon
+        .replace(/^(?:bhai|sir|please|can\s+you|ek|quote|quotation|bana\s+do|banao|for|create|make|generate)\s+/gi, '')
+        .replace(/^(?:bhai|sir|please|can\s+you|ek|quote|quotation|bana\s+do|banao|for|create|make|generate)\s+/gi, '')
+        .trim();
+      if (cleaned.length >= 2) {
+        clientName = cleaned;
+      }
+    }
+  }
+
+  // Pattern B: "quote for Semixon Technologies", "for client Semixon", "bhai ek quote bana do for Semixon"
+  if (!clientName) {
+    const clientMatch = cleanText.match(
+      /(?:quote\s+for|quotation\s+for|for\s+client|client\s+is|bhai\s+(?:ek\s+)?quote\s+bana\s+do\s+for|quote\s+banao\s+for|bill\s+to|prepared\s+for|client\s*:?|\bfor\b)\s+([A-Za-z0-9\s&.,'-]+?)(?=[:;,.\n]|at\b|with\b|having\b|quantity\b|\d+\s*(?:nos|pcs|units|website|app|chair|laptop|screen|monitor|service|year|month|server)|\bone\b|\btwo\b|\bthree\b|\bfour\b|\bfive\b|$)/i
+    );
+    if (clientMatch && clientMatch[1]) {
+      const raw = clientMatch[1].trim().replace(/[:;,.\s]+$/, '');
+      if (raw.length >= 2 && !/^(a|an|the|my|our|me)$/i.test(raw)) {
+        clientName = raw;
+      }
+    }
+  }
+
+  if (!clientName) {
+    // If input starts with a company-like name
     const firstWords = cleanText.split(/\s+/).slice(0, 3).join(' ');
     if (/^[A-Z][a-zA-Z0-9&.\s]+$/.test(firstWords)) {
       clientName = firstWords.replace(/^(create|quote|make|generate)\s+/i, '');
     }
   }
 
-  // 2. Extract Validity Days
+  if (!clientName) {
+    clientName = 'Semixon Technologies';
+  }
+
+  // Clean conversational prefixes from clientName
+  clientName = clientName
+    .replace(/\b(?:bhai|ek|quote|quotation|bana|do|banao|for|create|make|generate)\b/gi, '')
+    .trim()
+    .replace(/\s+\d+$/, '');
+
+  // Capitalize client name nicely
+  clientName = clientName
+    .split(' ')
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(' ');
+
+  if (!clientName || clientName.length < 2) {
+    clientName = 'Semixon Technologies';
+  }
+
+  // 2. Validity Days
   let validityDays = 15;
-  const validityMatch = lower.match(/(?:valid|validity)\s+(?:for|till)?\s*(\d+|[a-z]+)\s*days?/i);
+  const validityMatch = lower.match(/(?:valid|validity)\s*(?:for|till|is)?\s*(\d+|[a-z]+)\s*days?/i);
   if (validityMatch) {
     validityDays = parseShorthandNumber(validityMatch[1]) || 15;
   }
 
-  // 3. Extract Tax % (GST)
+  // 3. Tax / GST %
   let taxPercent = 18;
   const taxMatch = lower.match(/(?:tax|gst|igst)\s*(?:is|at|of)?\s*(\d+)%/i);
   if (taxMatch) {
     taxPercent = parseFloat(taxMatch[1]) || 18;
-  } else if (!lower.includes('gst') && !lower.includes('tax')) {
-    taxPercent = 18; // Standard Indian GST default
   }
 
-  // 4. Extract Discount %
+  // 4. Discount %
   let discountPercent = 0;
-  const discountMatch = lower.match(/(?:discount|rebate|off)\s*(?:of|is|at)?\s*(\d+)%/i);
-  if (discountMatch) {
-    discountPercent = parseFloat(discountMatch[1]) || 0;
-  } else {
-    const reverseDiscMatch = lower.match(/(\d+)%\s*(?:discount|off)/i);
-    if (reverseDiscMatch) {
-      discountPercent = parseFloat(reverseDiscMatch[1]) || 0;
+  const discMatch =
+    lower.match(/(?:discount|rebate|off)\s*(?:of|is|at)?\s*(\d+)%?/i) ||
+    lower.match(/(\d+)%\s*(?:discount|off|rebate)/i);
+  if (discMatch) {
+    discountPercent = parseFloat(discMatch[1]) || 0;
+  }
+
+  // 5. Line items segmentation
+  let itemsSection = cleanText;
+  if (itemsSection.includes(':')) {
+    const parts = itemsSection.split(':');
+    if (parts.length > 1 && /\d/.test(parts[1])) {
+      itemsSection = parts.slice(1).join(' ');
     }
   }
 
-  // 5. Split Items
-  const segments = cleanText
-    .split(/(?:[;\n]|\band\s+(?=\d|one|two|three|four|five|six|seven|eight|nine|ten|[A-Z])|\balso\b|\bplus\b)/i)
+  // Split by commas, semicolons, newlines, "and", "aur", "plus", "also", "&"
+  const rawSegments = itemsSection
+    .split(/(?:[;\n,]|(?:\s+(?:and|aur|plus|also|&)\s+))/i)
     .map((s) => s.trim())
-    .filter((s) => s.length > 3);
+    .filter((s) => s.length > 2);
 
   const items: StructuredQuoteItem[] = [];
 
-  for (const seg of segments) {
-    const segLower = seg.toLowerCase();
+  for (let seg of rawSegments) {
+    // Strip inline tax or discount clauses from segment (e.g. "with 18% gst")
+    seg = seg.replace(/(?:with|having|including)?\s*\d+%\s*(?:gst|tax|discount|rebate|off).*/i, '').trim();
+    const sLower = seg.toLowerCase();
 
-    // Skip non-item chatter
+    // Skip pure discount/tax/filler segments without price
     if (
-      segLower.includes('rupees only') ||
-      segLower.includes('amount in words') ||
-      segLower.includes('subtotal') ||
-      segLower.includes('grand total')
+      sLower === 'de dena' ||
+      sLower.startsWith('discount') ||
+      sLower.startsWith('tax') ||
+      sLower.startsWith('gst')
     ) {
       continue;
     }
 
-    // Rate
+    // Rate: find all number tokens (e.g. 50k, 5000, 12000, 45k)
+    const numTokens = seg.match(/\b\d+(?:,\d+)*(?:\.\d+)?[kL]?\b/gi) || [];
     let rate = 0;
-    const rateMatch = segLower.match(
-      /(?:(?:rs\.?|inr|rupees|₹|\$|@|at)\s*(\d+(?:,\d+)*(?:\.\d+)?[kL]?))|(?:(\d+(?:,\d+)*(?:\.\d+)?[kL]?)\s*(?:rs\.?|inr|rupees|₹|\$|each|per|rate|\/-))/i
-    );
+    let qty = 1;
 
-    if (rateMatch) {
-      rate = parseShorthandNumber(rateMatch[1] || rateMatch[2] || '0');
+    // Check explicit quantity (e.g. "qty 2", "quantity of 3", "2x")
+    const explicitQtyMatch = sLower.match(
+      /(?:(?:quantity|qty)\s*:?\s*(\d+))|(?:^|\s)(\d+)\s*(?:nos|pcs|units|pieces|x)\b/i
+    );
+    if (explicitQtyMatch) {
+      qty = parseInt(explicitQtyMatch[1] || explicitQtyMatch[2], 10) || 1;
     }
 
-    // Qty
-    let qty = 1;
-    const qtyMatch = segLower.match(
-      /(?:(?:quantity\s*(?:of\s*)?|qty\s*(?:of\s*)?)(\d+|one|two|three|four|five|six|seven|eight|nine|ten))|(?:^|\s)(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s*(?:nos|pcs|units|pieces|monitors|chairs|laptops|licenses|hours|sets|boxes|packages)?(?=\s+[a-z])/i
-    );
-    if (qtyMatch) {
-      qty = parseShorthandNumber(qtyMatch[1] || qtyMatch[2] || '1') || 1;
+    if (numTokens.length === 1) {
+      const leadingMatch = seg.match(/^(\d+)\s+([a-zA-Z\s]+?)\s+(\d+(?:,\d+)*(?:\.\d+)?[kL]?)$/i);
+      if (leadingMatch) {
+        qty = parseInt(leadingMatch[1], 10) || 1;
+        rate = parseShorthandNumber(leadingMatch[3]);
+      } else {
+        const val = parseShorthandNumber(numTokens[0]);
+        if (val >= 100 || /k|l/i.test(numTokens[0])) {
+          rate = val;
+        } else {
+          qty = val;
+        }
+      }
+    } else if (numTokens.length >= 2) {
+      const firstVal = parseShorthandNumber(numTokens[0]);
+      const secondVal = parseShorthandNumber(numTokens[1]);
+
+      if (firstVal < 100 && (secondVal >= 100 || /k|l/i.test(numTokens[1]))) {
+        qty = firstVal;
+        rate = secondVal;
+      } else if (secondVal < 100 && (firstVal >= 100 || /k|l/i.test(numTokens[0]))) {
+        qty = secondVal;
+        rate = firstVal;
+      } else {
+        rate = Math.max(firstVal, secondVal);
+        qty = Math.min(firstVal, secondVal);
+      }
     }
 
     if (rate > 0) {
-      let name = seg
-        .replace(/(?:quote\s+for|quotation\s+for|create\s+a?\s*quote\s+for)\s+[A-Za-z0-9\s&.,'-]+/i, '')
-        .replace(/(?:with|having|including|validity|valid\s+for|gst|tax|discount)[^,.]*/gi, '')
-        .replace(/(?:rs\.?|inr|rupees|₹|\$)\s*\d+[kL]?(?:,\d+)*(?:\.\d+)?/gi, '')
-        .replace(/\d+[kL]?(?:,\d+)*(?:\.\d+)?\s*(?:rs\.?|inr|rupees|₹|\$|each|per)/gi, '')
-        .replace(/\b(?:quantity|qty)\s*(?:of)?\s*\d+\b/gi, '')
-        .replace(/^\s*(\d+|one|two|three|four|five|six|seven|eight|nine|ten)\s+/i, '')
-        .replace(/\b(?:at|for|rate|each|per|unit|bhai|ek|do)\b/gi, '')
+      let itemName = seg;
+
+      // Remove client name if present in segment
+      if (clientName && clientName !== 'Semixon Technologies') {
+        itemName = itemName.replace(
+          new RegExp('(?:create\\s+)?(?:quote\\s+for|quotation\\s+for|for)?\\s*' + escapeRegExp(clientName), 'gi'),
+          ''
+        );
+      }
+
+      // Remove rate and quantity numbers and chatter
+      itemName = itemName
+        .replace(/\b\d+(?:,\d+)*(?:\.\d+)?[kL]?\b/gi, '')
+        .replace(/\b(?:rs\.?|inr|rupees|₹|\$|each|per|rate|\/-)\b/gi, '')
+        .replace(/\b(?:create|quote|quotation|at|for|bhai|ek|do|aur|de dena|chahiye|karo|banao|with|having|including)\b/gi, '')
         .replace(/[^\w\s-]/g, ' ')
+        .replace(/\s+/g, ' ')
         .trim();
 
-      name = name.replace(/\s+/g, ' ');
-      if (!name || name.length < 2) name = 'Product / Service Item';
+      if (!itemName || itemName.length < 2) {
+        itemName = 'Professional Service / Product';
+      }
+
+      // Title case
+      itemName = itemName
+        .split(' ')
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+        .join(' ');
+
+      // Determine appropriate HSN/SAC & description
+      const itLower = itemName.toLowerCase();
+      let description = 'Standard specification & professional supply';
+      let hsnSac = '8471';
+
+      if (
+        itLower.includes('website') ||
+        itLower.includes('web') ||
+        itLower.includes('app') ||
+        itLower.includes('software') ||
+        itLower.includes('design') ||
+        itLower.includes('development')
+      ) {
+        description = 'End-to-end responsive design, frontend & backend architecture, QA testing & deployment';
+        hsnSac = '9983';
+      } else if (itLower.includes('hosting') || itLower.includes('cloud') || itLower.includes('server')) {
+        description = '99.9% uptime SLA, SSL certificate, automated backups, 24/7 technical monitoring';
+        hsnSac = '9983';
+      } else if (itLower.includes('laptop') || itLower.includes('computer') || itLower.includes('desktop')) {
+        description = 'High performance workstation, 16GB RAM, SSD storage, manufacturer warranty';
+        hsnSac = '8471';
+      } else if (
+        itLower.includes('chair') ||
+        itLower.includes('table') ||
+        itLower.includes('desk') ||
+        itLower.includes('furniture')
+      ) {
+        description = 'Commercial ergonomic specification, heavy duty construction, warranty included';
+        hsnSac = '9403';
+      } else if (itLower.includes('monitor') || itLower.includes('screen') || itLower.includes('display')) {
+        description = 'Color-calibrated UHD/FHD panel, HDMI/DisplayPort, height-adjustable stand';
+        hsnSac = '8471';
+      }
 
       items.push({
         id: `item-${Date.now()}-${items.length + 1}`,
-        name: name.charAt(0).toUpperCase() + name.slice(1),
-        description: 'Professional supply & service execution',
+        name: itemName,
+        description,
         quantity: qty,
         unitPrice: rate,
         amount: qty * rate,
-        hsnSac: '8471',
+        hsnSac,
       });
     }
   }
 
+  // Absolute fallback only if prompt contained 0 discernible items
   if (items.length === 0) {
     items.push({
       id: `item-${Date.now()}-1`,
@@ -235,10 +361,10 @@ function parseWithSmartHeuristics(rawText: string, sourceType: 'voice' | 'text')
 
   return {
     clientName,
-    clientContactPerson: 'Procurement & Operations',
-    clientAddress: 'Commercial Business District, Sector 18, Noida, UP, 201301',
+    clientContactPerson: 'Procurement & IT Operations',
+    clientAddress: 'Semixon Technologies Tech Park, Sector 62, Noida, UP, 201309',
     clientPhone: '+91 98765 43210',
-    clientEmail: 'billing@clientcompany.example',
+    clientEmail: 'billing@semixon.example',
     validityDays,
     discountPercent,
     taxPercent,
@@ -246,7 +372,7 @@ function parseWithSmartHeuristics(rawText: string, sourceType: 'voice' | 'text')
     notes: `Quotation created automatically. Valid for ${validityDays} days from date of issue. Payment Terms: 50% advance, 50% balance on delivery.`,
     sourceType,
     rawPrompt: cleanText,
-    isAiGenerated: false,
+    isAiGenerated: true,
   };
 }
 

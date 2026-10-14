@@ -722,6 +722,19 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
                 type="button"
                 onClick={() =>
                   stopRecordingAndAnalyze(
+                    'bhai ek quote bana do for Semixon Technologies: 2 website design 50k, 1 cloud hosting 5000, aur 10% discount de dena',
+                    'voice'
+                  )
+                }
+                className="px-3 py-1.5 rounded-xl border border-amber-400 bg-amber-100 hover:bg-amber-200 text-amber-950 text-xs font-bold transition-colors cursor-pointer shadow-xs"
+              >
+                🚀 Semixon Tech (2 Web 50k, Hosting 5k, 10% off)
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  stopRecordingAndAnalyze(
                     'Create quotation for TechCorp Solutions Pvt Ltd. 5 Dell UltraSharp 27-inch Monitors at 28000 each, 3 Ergonomic Office Chairs at 12500 each, 1 Server Maintenance Package at 45000. Apply 10% discount, 18% GST. Valid for 15 days.',
                     'voice'
                   )
@@ -771,12 +784,23 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
                 type="button"
                 onClick={() =>
                   setTextPromptInput(
+                    'bhai ek quote bana do for Semixon Technologies: 2 website design 50k, 1 cloud hosting 5000, aur 10% discount de dena'
+                  )
+                }
+                className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 text-emerald-950 font-bold border border-emerald-300 transition-colors cursor-pointer"
+              >
+                🚀 Semixon Demo Prompt
+              </button>
+              <button
+                type="button"
+                onClick={() =>
+                  setTextPromptInput(
                     'Create quotation for TechCorp Solutions Pvt Ltd. 5 Dell UltraSharp 27-inch Monitors at 28000 each, 3 Ergonomic Office Chairs at 12500 each, 1 Server Maintenance Package at 45000. Apply 10% discount, 18% GST. Valid for 15 days.'
                   )
                 }
-                className="px-2.5 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold border border-emerald-200 transition-colors"
+                className="px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold border border-slate-200 transition-colors cursor-pointer"
               >
-                Insert TechCorp Text Prompt
+                TechCorp Hardware
               </button>
             </div>
 
@@ -831,25 +855,35 @@ export default function AudioQuoteExtractor({ onApplyExtractedData, onCancel }: 
       {/* Extracted Review Screen */}
       {extractedData && (
         <div className="space-y-5 animate-in fade-in">
-          <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 flex items-start gap-3">
-            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
-            <div className="text-xs text-amber-950 flex-1">
-              <span className="font-bold">
-                ✓ Successfully Parsed from {extractedData.sourceType === 'voice' ? 'Voice' : 'Text Prompt'}:
-              </span>{' '}
-              Review the structured data below before updating your price quote dashboard.
+          <div className="bg-amber-50/80 border border-amber-200 rounded-2xl p-4 space-y-2">
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex items-start gap-2.5">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
+                <div className="text-xs text-amber-950">
+                  <span className="font-bold">
+                    ✓ Successfully Parsed from {extractedData.sourceType === 'voice' ? 'Voice' : 'Text Prompt'}:
+                  </span>{' '}
+                  Review the structured data below before updating your price quote dashboard.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setExtractedData(null);
+                  setLiveTranscript('');
+                  transcriptRef.current = '';
+                }}
+                className="text-[11px] font-bold text-amber-800 hover:underline flex items-center gap-1 cursor-pointer shrink-0"
+              >
+                <RefreshCw className="w-3 h-3" /> Re-Do
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={() => {
-                setExtractedData(null);
-                setLiveTranscript('');
-                transcriptRef.current = '';
-              }}
-              className="text-[11px] font-bold text-amber-800 hover:underline flex items-center gap-1 cursor-pointer"
-            >
-              <RefreshCw className="w-3 h-3" /> Re-Do
-            </button>
+            {extractedData.promptText && (
+              <div className="p-2.5 bg-white/90 rounded-xl border border-amber-200/80 text-[11px] font-mono text-gray-700">
+                <span className="font-bold text-amber-800 uppercase mr-1 text-[10px]">Detected Input:</span>
+                &ldquo;{extractedData.promptText}&rdquo;
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
