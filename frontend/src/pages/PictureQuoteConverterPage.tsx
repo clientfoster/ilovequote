@@ -89,7 +89,7 @@ export default function PictureQuoteConverterPage() {
   // State
   const [activeTab, setActiveTab] = useState<'upload' | 'camera' | 'samples'>('samples');
   const [quoteData, setQuoteData] = useState<ExtractedPictureQuoteData>(() => {
-    return getSamplePreset('sample-semixon').data;
+    return getSamplePreset('sample-gopi').data;
   });
 
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
@@ -117,8 +117,8 @@ export default function PictureQuoteConverterPage() {
 
   // Initialize first preset image URL on mount
   useEffect(() => {
-    const semixonPreset = getSamplePreset('sample-semixon');
-    setQuoteData(semixonPreset.data);
+    const gopiPreset = getSamplePreset('sample-gopi');
+    setQuoteData(gopiPreset.data);
   }, []);
 
   // Clipboard paste listener
@@ -496,7 +496,7 @@ export default function PictureQuoteConverterPage() {
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider block">
                 Select a Realistic Document to Test 1-Click Extraction:
               </span>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 {SAMPLE_PICTURE_PRESETS.map((preset) => {
                   const isSelected = quoteData.quoteNumber === preset.data.quoteNumber;
                   return (
