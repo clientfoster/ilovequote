@@ -17,6 +17,7 @@ import QRPortfolioPage from './pages/QRPortfolioPage';
 import QuoteExportPage from './pages/QuoteExportPage';
 import CreateQuotePage from './pages/CreateQuotePage';
 import AudioQuoteConverterPage from './pages/AudioQuoteConverterPage';
+import PictureQuoteConverterPage from './pages/PictureQuoteConverterPage';
 import CreateInvoicePage from './pages/CreateInvoicePage';
 import CreateInvoiceBankDetailsPage from './pages/CreateInvoiceBankDetailsPage';
 import CreateInvoiceDesignPage from './pages/CreateInvoiceDesignPage';
@@ -147,7 +148,9 @@ export default function App() {
           <Route path="/create-quote2" element={<CreateQuotePage />} />
           <Route path="/page2" element={<AudioQuoteConverterPage />} />
           <Route path="/audio-quote" element={<AudioQuoteConverterPage />} />
-          <Route path="/create-quote3" element={<AudioQuoteConverterPage />} />
+          <Route path="/page3" element={<PictureQuoteConverterPage />} />
+          <Route path="/picture-quote" element={<PictureQuoteConverterPage />} />
+          <Route path="/pic-to-quote" element={<PictureQuoteConverterPage />} />
           <Route path="/create-invoice" element={<CreateInvoicePage />} />
           <Route path="/create-invoice/bank-details" element={<CreateInvoiceBankDetailsPage />} />
           <Route path="/create-invoice/design" element={<CreateInvoiceDesignPage />} />

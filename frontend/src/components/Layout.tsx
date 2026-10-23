@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Mic,
+  Camera,
 } from 'lucide-react';
 import BrandMark from './BrandMark';
 import { getDisplayAuthUser, signOut } from '../auth';
@@ -81,6 +82,7 @@ export default function Layout({ isAuthed, userName, onLogout }: LayoutProps) {
     { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="w-4 h-4 shrink-0" /> },
     { path: '/quotes', label: 'My Quotes', icon: <FileText className="w-4 h-4 shrink-0" /> },
     { path: '/page2', label: 'Audio to Quote', icon: <Mic className="w-4 h-4 shrink-0" /> },
+    { path: '/page3', label: 'Picture to Quote', icon: <Camera className="w-4 h-4 shrink-0 text-purple-600" /> },
     { path: '/create-invoice', label: 'New Invoice', icon: <FilePlus className="w-4 h-4 shrink-0" /> },
     { path: '/invoices', label: 'My Invoices', icon: <FileSpreadsheet className="w-4 h-4 shrink-0" /> },
     { path: '/items', label: 'Items / Products', icon: <ShoppingBag className="w-4 h-4 shrink-0" /> },
